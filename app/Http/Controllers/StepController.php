@@ -11,7 +11,10 @@ class StepController extends Controller
     public function versions(Step $step): JsonResponse
     {
         $versions = StepVersionResource::collection(
-            $step->versions()->orderBy('version')->get()
+            $step->versions()
+                ->with('inputStep.currentVersion')
+                ->orderBy('version')
+                ->get()
         )->resolve();
 
         return response()->json(['data' => $versions]);

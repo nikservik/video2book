@@ -16,7 +16,6 @@ class Step extends Model
      */
     protected $fillable = [
         'pipeline_id',
-        'name',
         'current_version_id',
     ];
 

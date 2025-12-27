@@ -11,9 +11,11 @@ Route::prefix('pipelines')->group(function (): void {
     Route::post('/', [PipelineController::class, 'store']);
 
     Route::get('{pipeline}/versions', [PipelineController::class, 'versions']);
+    Route::get('{pipeline}', [PipelineController::class, 'show']);
     Route::put('{pipeline}', [PipelineController::class, 'update']);
     Route::post('{pipeline}/archive', [PipelineController::class, 'archive']);
 
+    Route::post('{pipeline}/steps/reorder', [PipelineController::class, 'reorderSteps']);
     Route::post('{pipeline}/steps', [PipelineController::class, 'addStep']);
     Route::post('{pipeline}/steps/{step}/initial-version', [PipelineController::class, 'createInitialStepVersion']);
     Route::post('{pipeline}/steps/{step}/versions', [PipelineController::class, 'updateStep']);

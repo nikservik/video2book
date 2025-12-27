@@ -16,6 +16,8 @@ class StepVersion extends Model
      */
     protected $fillable = [
         'step_id',
+        'input_step_id',
+        'name',
         'type',
         'version',
         'description',
@@ -35,6 +37,16 @@ class StepVersion extends Model
     public function step(): BelongsTo
     {
         return $this->belongsTo(Step::class);
+    }
+
+    public function inputStep(): BelongsTo
+    {
+        return $this->belongsTo(Step::class, 'input_step_id');
+    }
+
+    public function inputStepCurrentVersion(): ?self
+    {
+        return $this->inputStep?->currentVersion;
     }
 
     public function pipelineVersionSteps(): HasMany

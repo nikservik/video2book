@@ -30,22 +30,17 @@ class PipelineApiTest extends TestCase
             ->assertJsonCount(2, 'data.steps');
 
         $pipelineId = $createResponse->json('data.id');
-        $pipeline = Pipeline::with('steps')->findOrFail($pipelineId);
+        $pipeline = Pipeline::with('steps.currentVersion')->findOrFail($pipelineId);
 
-        foreach ($pipeline->steps as $step) {
-            $response = $this->postJson("/api/pipelines/{$pipelineId}/steps/{$step->id}/initial-version", [
-                'type' => 'text',
-                'description' => "{$step->name} description",
-                'prompt' => 'Prompt '.$step->name,
-                'settings' => ['foo' => 'bar'],
-            ]);
+        $this->assertEquals('transcribe', $pipeline->steps->first()->currentVersion?->type);
+        $this->assertEquals('draft', $pipeline->steps->first()->currentVersion?->status);
+        $this->assertEquals(
+            $pipeline->steps->first()->id,
+            $pipeline->steps->get(1)->currentVersion?->input_step_id,
+            'Последующий шаг должен ссылаться на предыдущий как на источник.'
+        );
 
-            $response->assertCreated()
-                ->assertJsonPath('data.type', 'text')
-                ->assertJsonPath('data.version', 1);
-        }
-
-        $version = PipelineVersion::findOrFail($pipeline->fresh()->current_version_id);
+        $version = PipelineVersion::findOrFail($pipeline->current_version_id);
         $this->assertCount(2, $version->versionSteps()->get());
 
         $addStepResponse = $this->postJson("/api/pipelines/{$pipelineId}/steps", [
@@ -68,12 +63,14 @@ class PipelineApiTest extends TestCase
 
         $stepToUpdate = $pipeline->steps()->first();
         $updateStepResponse = $this->postJson("/api/pipelines/{$pipelineId}/steps/{$stepToUpdate->id}/versions", [
+            'name' => 'Updated '.$stepToUpdate->id,
             'type' => 'text',
             'description' => 'Updated description',
             'prompt' => 'Updated prompt',
             'settings' => ['tone' => 'friendly'],
-            'changelog_entry' => 'Tweaked '.$stepToUpdate->name,
+            'changelog_entry' => 'Tweaked '.$stepToUpdate->currentVersion->name,
             'created_by' => $user->id,
+            'mode' => 'new_version',
         ]);
 
         $updateStepResponse->assertOk()
@@ -85,7 +82,9 @@ class PipelineApiTest extends TestCase
             'Step version should increment after update.'
         );
 
-        $stepToRemove = $pipeline->steps()->where('name', 'Glossary')->firstOrFail();
+        $stepToRemove = $pipeline->steps()
+            ->whereHas('currentVersion', fn ($query) => $query->where('name', 'Glossary'))
+            ->firstOrFail();
         $removeResponse = $this->deleteJson("/api/pipelines/{$pipelineId}/steps/{$stepToRemove->id}", [
             'changelog_entry' => 'Removed glossary step',
             'created_by' => $user->id,
@@ -100,11 +99,23 @@ class PipelineApiTest extends TestCase
             'description' => 'Updated description',
             'changelog_entry' => 'Renamed pipeline',
             'created_by' => $user->id,
+            'mode' => 'new_version',
         ]);
 
         $updatePipelineResponse->assertOk()
             ->assertJsonPath('data.current_version.version', 5)
             ->assertJsonPath('data.current_version.title', 'Video2Book Default');
+
+        $currentVersionId = Pipeline::findOrFail($pipelineId)->current_version_id;
+        $reorderResponse = $this->postJson("/api/pipelines/{$pipelineId}/steps/reorder", [
+            'version_id' => $currentVersionId,
+            'from_position' => 2,
+            'to_position' => 1,
+        ]);
+
+        $reorderResponse->assertOk()
+            ->assertJsonPath('data.current_version.version', 6)
+            ->assertJsonPath('data.current_version.steps.0.step.name', 'Summaries');
 
         $archiveResponse = $this->postJson("/api/pipelines/{$pipelineId}/archive");
         $archiveResponse->assertOk()
@@ -127,20 +138,17 @@ class PipelineApiTest extends TestCase
             'steps' => ['Audio', 'Text'],
         ])->json('data.id');
 
-        $pipeline = Pipeline::with('steps')->findOrFail($pipelineId);
-        foreach ($pipeline->steps as $step) {
-            $this->postJson("/api/pipelines/{$pipelineId}/steps/{$step->id}/initial-version", [
-                'type' => $step->name === 'Audio' ? 'transcribe' : 'text',
-                'description' => 'Description '.$step->name,
-                'prompt' => 'Prompt '.$step->name,
-                'settings' => ['mode' => 'default'],
-            ])->assertCreated();
-        }
+        $pipeline = Pipeline::with('steps.currentVersion')->findOrFail($pipelineId);
 
         $listResponse = $this->getJson('/api/pipelines');
         $listResponse->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.current_version.steps.0.step.name', 'Audio');
+
+        $showResponse = $this->getJson("/api/pipelines/{$pipelineId}");
+        $showResponse->assertOk()
+            ->assertJsonPath('data.id', $pipelineId)
+            ->assertJsonPath('data.current_version.steps.1.step.name', 'Text');
 
         $pipelineResponse = $this->getJson("/api/pipelines/{$pipelineId}/versions");
         $pipelineResponse->assertOk()
@@ -151,12 +159,14 @@ class PipelineApiTest extends TestCase
         $versionStepsResponse = $this->getJson("/api/pipeline-versions/{$currentVersionId}/steps");
         $versionStepsResponse->assertOk()
             ->assertJsonCount(2, 'data')
-            ->assertJsonPath('data.0.version.type', 'transcribe');
+            ->assertJsonPath('data.0.version.type', 'transcribe')
+            ->assertJsonPath('data.1.version.input_step_id', $pipeline->steps->first()->id);
 
-        $step = Step::where('pipeline_id', $pipelineId)->firstOrFail();
+        $step = Step::with('currentVersion')->where('pipeline_id', $pipelineId)->firstOrFail();
         $stepVersionsResponse = $this->getJson("/api/steps/{$step->id}/versions");
         $stepVersionsResponse->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.type', $step->name === 'Audio' ? 'transcribe' : 'text');
+            ->assertJsonPath('data.0.type', $step->currentVersion->name === 'Audio' ? 'transcribe' : 'text')
+            ->assertJsonPath('data.0.status', 'draft');
     }
 }
