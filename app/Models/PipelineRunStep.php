@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\Project;
-use App\Models\StepVersion;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
-class ProjectStep extends Model
+class PipelineRunStep extends Model
 {
     use HasFactory;
 
@@ -16,12 +14,14 @@ class ProjectStep extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'project_id',
+        'pipeline_run_id',
         'step_version_id',
+        'position',
         'start_time',
         'end_time',
         'error',
         'result',
+        'status',
         'input_tokens',
         'output_tokens',
         'cost',
@@ -31,6 +31,7 @@ class ProjectStep extends Model
      * @var array<string, string>
      */
     protected $casts = [
+        'position' => 'integer',
         'start_time' => 'datetime',
         'end_time' => 'datetime',
         'cost' => 'decimal:4',
@@ -38,9 +39,9 @@ class ProjectStep extends Model
         'output_tokens' => 'integer',
     ];
 
-    public function project(): BelongsTo
+    public function pipelineRun(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(PipelineRun::class);
     }
 
     public function stepVersion(): BelongsTo

@@ -18,7 +18,9 @@ class ProjectApiTest extends TestCase
     {
         Storage::fake('local');
 
-        $version = $this->createPipelineVersion();
+        $pipeline = Pipeline::query()->create();
+        $version = $this->createPipelineVersion($pipeline, 1);
+        $nextVersion = $this->createPipelineVersion($pipeline, 2);
 
         $createTagResponse = $this->postJson('/api/project-tags', [
             'slug' => 'demo',
@@ -43,7 +45,10 @@ class ProjectApiTest extends TestCase
         ]);
 
         $createProjectResponse->assertCreated()
-            ->assertJsonPath('data.tag', 'demo');
+            ->assertJsonPath('data.tag', 'demo')
+            ->assertJsonPath('data.pipeline_runs.0.pipeline_version.id', $version->id)
+            ->assertJsonPath('data.pipeline_runs.0.status', 'queued')
+            ->assertJsonCount(1, 'data.pipeline_runs');
 
         $projectId = $createProjectResponse->json('data.id');
 
@@ -59,18 +64,24 @@ class ProjectApiTest extends TestCase
         $updateProjectResponse = $this->putJson("/api/projects/{$projectId}", [
             'name' => 'Renamed Project',
             'tag' => 'demo',
-            'pipeline_version_id' => $version->id,
+            'pipeline_version_id' => $nextVersion->id,
             'settings' => ['quality' => 'medium'],
         ]);
 
         $updateProjectResponse->assertOk()
             ->assertJsonPath('data.name', 'Renamed Project')
-            ->assertJsonPath('data.settings.quality', 'medium');
+            ->assertJsonPath('data.settings.quality', 'medium')
+            ->assertJsonPath('data.pipeline_runs.0.pipeline_version.id', $nextVersion->id)
+            ->assertJsonPath('data.pipeline_runs.1.pipeline_version.id', $version->id)
+            ->assertJsonPath('data.pipeline_runs.0.status', 'queued')
+            ->assertJsonPath('data.pipeline_runs.1.status', 'queued')
+            ->assertJsonCount(2, 'data.pipeline_runs');
 
         $listResponse = $this->getJson('/api/projects?tag=demo&search=renamed');
         $listResponse->assertOk()
             ->assertJsonCount(1, 'data')
-            ->assertJsonPath('data.0.name', 'Renamed Project');
+            ->assertJsonPath('data.0.name', 'Renamed Project')
+            ->assertJsonPath('data.0.pipeline_version.version', $nextVersion->version);
 
         $deleteTagAttempt = $this->delete('/api/project-tags/demo');
         $deleteTagAttempt->assertStatus(422);
@@ -80,12 +91,10 @@ class ProjectApiTest extends TestCase
         $deleteTagResponse->assertNoContent();
     }
 
-    private function createPipelineVersion(): PipelineVersion
+    private function createPipelineVersion(Pipeline $pipeline, int $sequence): PipelineVersion
     {
-        $pipeline = Pipeline::query()->create();
-
         $version = $pipeline->versions()->create([
-            'version' => 1,
+            'version' => $sequence,
             'title' => 'Test pipeline',
             'description' => 'Test description',
             'changelog' => 'Init',

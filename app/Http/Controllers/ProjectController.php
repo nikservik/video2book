@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\PipelineRun;
 use App\Models\Project;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -11,7 +12,10 @@ class ProjectController extends Controller
 {
     public function index(Request $request): JsonResponse
     {
-        $query = Project::query()->with(['pipelineVersion', 'tagRelation']);
+        $query = Project::query()->with([
+            'pipelineRuns.pipelineVersion',
+            'tagRelation',
+        ]);
 
         if ($request->filled('tag')) {
             $query->where('tag', $request->input('tag'));
@@ -39,9 +43,11 @@ class ProjectController extends Controller
         $project = Project::query()->create([
             'name' => $data['name'],
             'tag' => $data['tag'],
-            'pipeline_version_id' => $data['pipeline_version_id'],
             'settings' => $data['settings'],
-        ])->load(['pipelineVersion', 'tagRelation']);
+        ]);
+
+        $this->createPipelineRun($project, $data['pipeline_version_id']);
+        $project->load(['pipelineRuns.pipelineVersion', 'tagRelation']);
 
         return response()->json(['data' => $this->transformProject($project)], 201);
     }
@@ -51,13 +57,25 @@ class ProjectController extends Controller
         $data = $request->validate([
             'name' => ['required', 'string', 'max:255'],
             'tag' => ['required', 'exists:project_tags,slug'],
-            'pipeline_version_id' => ['required', 'exists:pipeline_versions,id'],
             'settings' => ['required', 'array'],
+            'pipeline_version_id' => ['nullable', 'exists:pipeline_versions,id'],
         ]);
 
-        $project->update($data);
+        $project->update([
+            'name' => $data['name'],
+            'tag' => $data['tag'],
+            'settings' => $data['settings'],
+        ]);
 
-        return response()->json(['data' => $this->transformProject($project->load(['pipelineVersion', 'tagRelation']))]);
+        if (! empty($data['pipeline_version_id'])) {
+            $this->createPipelineRun($project, $data['pipeline_version_id']);
+        }
+
+        return response()->json([
+            'data' => $this->transformProject(
+                $project->load(['pipelineRuns.pipelineVersion', 'tagRelation'])
+            ),
+        ]);
     }
 
     public function uploadAudio(Request $request, Project $project): JsonResponse
@@ -73,11 +91,24 @@ class ProjectController extends Controller
 
         $project->update(['source_filename' => $path]);
 
-        return response()->json(['data' => $this->transformProject($project->load(['pipelineVersion', 'tagRelation']))]);
+        return response()->json([
+            'data' => $this->transformProject(
+                $project->load(['pipelineRuns.pipelineVersion', 'tagRelation'])
+            ),
+        ]);
     }
 
     private function transformProject(Project $project): array
     {
+        $project->loadMissing('pipelineRuns.pipelineVersion', 'tagRelation');
+
+        $runs = $project->pipelineRuns
+            ->sortByDesc(fn (PipelineRun $run) => $run->id)
+            ->values();
+
+        /** @var PipelineRun|null $currentRun */
+        $currentRun = $runs->first();
+
         return [
             'id' => $project->id,
             'name' => $project->name,
@@ -89,16 +120,47 @@ class ProjectController extends Controller
                 ]
                 : null,
             'source_filename' => $project->source_filename,
-            'pipeline_version' => $project->pipelineVersion
+            'pipeline_version' => $currentRun && $currentRun->pipelineVersion
                 ? [
-                    'id' => $project->pipelineVersion->id,
-                    'version' => $project->pipelineVersion->version,
-                    'title' => $project->pipelineVersion->title,
+                    'id' => $currentRun->pipelineVersion->id,
+                    'version' => $currentRun->pipelineVersion->version,
+                    'title' => $currentRun->pipelineVersion->title,
                 ]
                 : null,
+            'pipeline_runs' => $runs
+                ->map(fn (PipelineRun $run) => [
+                    'id' => $run->id,
+                    'status' => $run->status,
+                    'pipeline_version' => $run->pipelineVersion
+                        ? [
+                            'id' => $run->pipelineVersion->id,
+                            'version' => $run->pipelineVersion->version,
+                            'title' => $run->pipelineVersion->title,
+                        ]
+                        : null,
+                    'state' => $run->state ?? [],
+                    'created_at' => optional($run->created_at)->toISOString(),
+                    'updated_at' => optional($run->updated_at)->toISOString(),
+                ])
+                ->all(),
             'settings' => $project->settings,
             'created_at' => optional($project->created_at)->toISOString(),
             'updated_at' => optional($project->updated_at)->toISOString(),
         ];
+    }
+
+    private function createPipelineRun(Project $project, int $pipelineVersionId): PipelineRun
+    {
+        $latestRun = $project->latestPipelineRun;
+
+        if ($latestRun && $latestRun->pipeline_version_id === $pipelineVersionId) {
+            return $latestRun;
+        }
+
+        return $project->pipelineRuns()->create([
+            'pipeline_version_id' => $pipelineVersionId,
+            'status' => 'queued',
+            'state' => [],
+        ]);
     }
 }

@@ -2,13 +2,11 @@
 
 namespace App\Models;
 
-use App\Models\PipelineVersion;
-use App\Models\ProjectStep;
-use App\Models\ProjectTag;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -21,7 +19,6 @@ class Project extends Model
         'name',
         'tag',
         'source_filename',
-        'pipeline_version_id',
         'settings',
     ];
 
@@ -32,18 +29,18 @@ class Project extends Model
         'settings' => 'array',
     ];
 
-    public function pipelineVersion(): BelongsTo
-    {
-        return $this->belongsTo(PipelineVersion::class);
-    }
-
     public function tagRelation(): BelongsTo
     {
         return $this->belongsTo(ProjectTag::class, 'tag', 'slug');
     }
 
-    public function steps(): HasMany
+    public function pipelineRuns(): HasMany
     {
-        return $this->hasMany(ProjectStep::class);
+        return $this->hasMany(PipelineRun::class);
+    }
+
+    public function latestPipelineRun(): HasOne
+    {
+        return $this->hasOne(PipelineRun::class)->latestOfMany('id');
     }
 }
