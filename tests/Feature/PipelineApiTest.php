@@ -169,4 +169,69 @@ class PipelineApiTest extends TestCase
             ->assertJsonPath('data.0.type', $step->currentVersion->name === 'Audio' ? 'transcribe' : 'text')
             ->assertJsonPath('data.0.status', 'draft');
     }
+
+    public function test_pipeline_update_can_edit_current_version_without_creating_new_one(): void
+    {
+        $user = User::factory()->create();
+
+        $pipelineId = $this->postJson('/api/pipelines', [
+            'title' => 'Pipeline B',
+            'description' => 'Base pipeline',
+            'changelog' => 'Initial release',
+            'created_by' => $user->id,
+            'steps' => ['Audio', 'Text'],
+        ])->json('data.id');
+
+        $response = $this->putJson("/api/pipelines/{$pipelineId}", [
+            'title' => 'Pipeline B Updated',
+            'description' => 'Adjusted copy',
+            'mode' => 'current',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.current_version.version', 1)
+            ->assertJsonPath('data.current_version.title', 'Pipeline B Updated')
+            ->assertJsonPath('data.current_version.description', 'Adjusted copy');
+
+        $pipeline = Pipeline::findOrFail($pipelineId);
+        $this->assertEquals(1, $pipeline->currentVersion->version);
+    }
+
+    public function test_step_update_can_edit_current_version_without_triggering_new_pipeline_version(): void
+    {
+        $user = User::factory()->create();
+
+        $pipelineId = $this->postJson('/api/pipelines', [
+            'title' => 'Pipeline C',
+            'description' => 'Base pipeline',
+            'changelog' => 'Initial release',
+            'created_by' => $user->id,
+            'steps' => ['Audio', 'Text'],
+        ])->json('data.id');
+
+        $step = Pipeline::with('steps')->findOrFail($pipelineId)->steps->first();
+
+        $response = $this->postJson("/api/pipelines/{$pipelineId}/steps/{$step->id}/versions", [
+            'name' => 'Edited Audio',
+            'type' => 'transcribe',
+            'description' => 'Updated description',
+            'prompt' => 'Updated prompt',
+            'settings' => [
+                'provider' => 'anthropic',
+                'model' => 'claude-haiku-4-5',
+                'temperature' => 0.3,
+            ],
+            'mode' => 'current',
+        ]);
+
+        $response->assertOk()
+            ->assertJsonPath('data.current_version.version', 1)
+            ->assertJsonPath('data.current_version.steps.0.version.name', 'Edited Audio');
+
+        $this->assertEquals(
+            'Edited Audio',
+            Step::findOrFail($step->id)->currentVersion?->name,
+            'Название текущей версии шага должно обновиться.'
+        );
+    }
 }
