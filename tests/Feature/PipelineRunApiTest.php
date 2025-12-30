@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessPipelineJob;
+use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
@@ -23,19 +24,21 @@ class PipelineRunApiTest extends TestCase
         [$pipeline, $version] = $this->createPipelineWithSteps();
 
         $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
-        $project = Project::query()->create([
-            'name' => 'Demo project',
+        $project = Project::query()->create(['name' => 'Demo project', 'tags' => 'tag']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson Run',
             'tag' => $tag->slug,
             'settings' => ['quality' => 'high'],
         ]);
 
         $response = $this->postJson('/api/pipeline-runs', [
-            'project_id' => $project->id,
+            'lesson_id' => $lesson->id,
             'pipeline_version_id' => $version->id,
         ]);
 
         $response->assertCreated()
-            ->assertJsonPath('data.project.id', $project->id)
+            ->assertJsonPath('data.lesson.id', $lesson->id)
             ->assertJsonPath('data.pipeline_version.id', $version->id)
             ->assertJsonPath('data.status', 'queued')
             ->assertJsonCount(2, 'data.steps');
@@ -53,15 +56,23 @@ class PipelineRunApiTest extends TestCase
 
         [$pipeline, $version] = $this->createPipelineWithSteps();
         $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
-        $project = Project::query()->create([
-            'name' => 'Queued project',
+        $project = Project::query()->create(['name' => 'Queued project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson 1',
+            'tag' => $tag->slug,
+            'settings' => ['mode' => 'auto'],
+        ]);
+        $lessonB = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson 2',
             'tag' => $tag->slug,
             'settings' => ['mode' => 'auto'],
         ]);
 
         $service = app(\App\Services\Pipeline\PipelineRunService::class);
-        $runA = $service->createRun($project, $version, dispatchJob: false);
-        $runB = $service->createRun($project, $version, dispatchJob: false);
+        $runA = $service->createRun($lesson, $version, dispatchJob: false);
+        $runB = $service->createRun($lessonB, $version, dispatchJob: false);
         $runB->update(['status' => 'running']);
 
         $response = $this->getJson('/api/pipeline-runs/queue');
@@ -76,13 +87,15 @@ class PipelineRunApiTest extends TestCase
 
         [$pipeline, $version] = $this->createPipelineWithSteps();
         $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
-        $project = Project::query()->create([
-            'name' => 'Restarted project',
+        $project = Project::query()->create(['name' => 'Restarted project', 'tags' => 'manual']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Restarted lesson',
             'tag' => $tag->slug,
             'settings' => ['mode' => 'manual'],
         ]);
 
-        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($project, $version, dispatchJob: false);
+        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
 
         $steps = $run->steps()->orderBy('position')->get();
         $firstStep = $steps[0];

@@ -23,8 +23,8 @@ class ProjectTag extends Model
         return 'slug';
     }
 
-    public function projects(): HasMany
+    public function lessons(): HasMany
     {
-        return $this->hasMany(Project::class, 'tag', 'slug');
+        return $this->hasMany(Lesson::class, 'tag', 'slug');
     }
 }

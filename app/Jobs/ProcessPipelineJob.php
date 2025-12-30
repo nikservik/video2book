@@ -20,9 +20,9 @@ class ProcessPipelineJob implements ShouldQueue, ShouldBeUnique
 
     public const QUEUE = 'pipelines';
 
-    public int $timeout = 900;
+    public int $timeout = 1800; // секунды
 
-    public int $uniqueFor = 3600;
+    public int $uniqueFor = 3600; // секунды
 
     public function __construct(public readonly int $pipelineRunId)
     {

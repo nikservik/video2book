@@ -26,7 +26,7 @@ final class PipelineRunProcessingService
     public function handle(int $pipelineRunId): bool
     {
         $run = PipelineRun::query()
-            ->with(['project', 'steps.stepVersion.step'])
+            ->with(['lesson', 'steps.stepVersion.step'])
             ->findOrFail($pipelineRunId);
 
         if (in_array($run->status, ['failed', 'done'], true)) {

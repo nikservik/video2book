@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Project;
+use App\Models\Lesson;
 use App\Models\ProjectTag;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -49,9 +49,9 @@ class ProjectTagController extends Controller
     public function destroy(ProjectTag $projectTag): JsonResponse
     {
         abort_if(
-            Project::query()->where('tag', $projectTag->slug)->exists(),
+            Lesson::query()->where('tag', $projectTag->slug)->exists(),
             422,
-            'Cannot delete a tag with active projects.'
+            'Cannot delete a tag with active lessons.'
         );
 
         $projectTag->delete();

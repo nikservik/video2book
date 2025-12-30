@@ -41,20 +41,20 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
 
     private function handleTranscription(PipelineRun $run, StepVersion $version): PipelineStepResult
     {
-        $project = $run->project;
+        $lesson = $run->lesson;
 
-        if ($project === null || empty($project->source_filename)) {
-            throw new RuntimeException('Для проекта не загружен нормализованный аудио-файл.');
+        if ($lesson === null || empty($lesson->source_filename)) {
+            throw new RuntimeException('Для урока не загружен нормализованный аудио-файл.');
         }
 
         $disk = Storage::disk('local');
 
-        if (! $disk->exists($project->source_filename)) {
+        if (! $disk->exists($lesson->source_filename)) {
             throw new RuntimeException('Нормализованный аудио-файл отсутствует в хранилище.');
         }
 
         $model = Arr::get($version->settings, 'model', 'whisper-1');
-        $filePath = $disk->path($project->source_filename);
+        $filePath = $disk->path($lesson->source_filename);
 
         $handle = fopen($filePath, 'rb');
 

@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\ProcessPipelineJob;
+use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
@@ -27,13 +28,15 @@ class PipelineRunProcessingTest extends TestCase
 
         [$pipeline, $version] = $this->createPipelineWithSteps();
         $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
-        $project = Project::query()->create([
-            'name' => 'Processing project',
+        $project = Project::query()->create(['name' => 'Processing project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Processing lesson',
             'tag' => $tag->slug,
             'settings' => ['quality' => 'medium'],
         ]);
 
-        $run = app(PipelineRunService::class)->createRun($project, $version, dispatchJob: false);
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
 
         $fakeExecutor = new class implements PipelineStepExecutor
         {
@@ -79,13 +82,15 @@ class PipelineRunProcessingTest extends TestCase
 
         [$pipeline, $version] = $this->createPipelineWithSteps();
         $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
-        $project = Project::query()->create([
-            'name' => 'Job project',
+        $project = Project::query()->create(['name' => 'Job project', 'tags' => 'x']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Job lesson',
             'tag' => $tag->slug,
             'settings' => ['quality' => 'high'],
         ]);
 
-        $run = app(PipelineRunService::class)->createRun($project, $version, dispatchJob: false);
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
 
         $fakeExecutor = new class implements PipelineStepExecutor
         {

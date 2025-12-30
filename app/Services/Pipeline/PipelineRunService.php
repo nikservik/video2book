@@ -3,11 +3,11 @@
 namespace App\Services\Pipeline;
 
 use App\Jobs\ProcessPipelineJob;
+use App\Models\Lesson;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
-use App\Models\Project;
 use App\Models\StepVersion;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -16,9 +16,9 @@ use Illuminate\Validation\ValidationException;
 final class PipelineRunService
 {
     /**
-     * Создаёт новый прогон пайплайна для проекта и опционально ставит его в очередь.
+     * Создаёт новый прогон пайплайна для урока и опционально ставит его в очередь.
      */
-    public function createRun(Project $project, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
+    public function createRun(Lesson $lesson, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
     {
         $pipelineVersion->loadMissing('versionSteps.stepVersion.step');
 
@@ -31,8 +31,8 @@ final class PipelineRunService
             ]);
         }
 
-        $run = DB::transaction(function () use ($project, $pipelineVersion, $versionSteps) {
-            $run = $project->pipelineRuns()->create([
+        $run = DB::transaction(function () use ($lesson, $pipelineVersion, $versionSteps) {
+            $run = $lesson->pipelineRuns()->create([
                 'pipeline_version_id' => $pipelineVersion->id,
                 'status' => 'queued',
                 'state' => [],
@@ -60,7 +60,7 @@ final class PipelineRunService
             ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
         }
 
-        return $run->load('pipelineVersion', 'project', 'steps.stepVersion.step');
+        return $run->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
     }
 
     /**
@@ -89,6 +89,6 @@ final class PipelineRunService
 
         ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
 
-        return $run->refresh()->load('pipelineVersion', 'project', 'steps.stepVersion.step');
+        return $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
     }
 }

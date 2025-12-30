@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\LessonController;
 use App\Http\Controllers\PipelineController;
 use App\Http\Controllers\PipelineRunController;
 use App\Http\Controllers\ProjectController;
@@ -33,11 +34,17 @@ Route::prefix('pipeline-runs')->group(function (): void {
     Route::post('{pipelineRun}/restart', [PipelineRunController::class, 'restart']);
 });
 
+Route::prefix('lessons')->group(function (): void {
+    Route::get('/', [LessonController::class, 'index']);
+    Route::post('/', [LessonController::class, 'store']);
+    Route::put('{lesson}', [LessonController::class, 'update']);
+    Route::post('{lesson}/audio', [LessonController::class, 'uploadAudio']);
+});
+
 Route::prefix('projects')->group(function (): void {
     Route::get('/', [ProjectController::class, 'index']);
     Route::post('/', [ProjectController::class, 'store']);
     Route::put('{project}', [ProjectController::class, 'update']);
-    Route::post('{project}/audio', [ProjectController::class, 'uploadAudio']);
 });
 
 Route::prefix('project-tags')->group(function (): void {

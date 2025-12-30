@@ -15,7 +15,7 @@ class PipelineRun extends Model
      * @var list<string>
      */
     protected $fillable = [
-        'project_id',
+        'lesson_id',
         'pipeline_version_id',
         'status',
         'state',
@@ -28,9 +28,9 @@ class PipelineRun extends Model
         'state' => 'array',
     ];
 
-    public function project(): BelongsTo
+    public function lesson(): BelongsTo
     {
-        return $this->belongsTo(Project::class);
+        return $this->belongsTo(Lesson::class);
     }
 
     public function pipelineVersion(): BelongsTo

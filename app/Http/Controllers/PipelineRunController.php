@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Lesson;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
-use App\Models\Project;
 use App\Services\Pipeline\PipelineRunService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,16 +19,16 @@ class PipelineRunController extends Controller
     public function store(Request $request): JsonResponse
     {
         $data = $request->validate([
-            'project_id' => ['required', 'exists:projects,id'],
+            'lesson_id' => ['required', 'exists:lessons,id'],
             'pipeline_version_id' => ['required', 'exists:pipeline_versions,id'],
         ]);
 
-        $project = Project::query()->findOrFail($data['project_id']);
+        $lesson = Lesson::query()->findOrFail($data['lesson_id']);
         $pipelineVersion = PipelineVersion::query()->findOrFail($data['pipeline_version_id']);
 
         $run = $this->pipelineRunService
-            ->createRun($project, $pipelineVersion)
-            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'project');
+            ->createRun($lesson, $pipelineVersion)
+            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson');
 
         return response()->json([
             'data' => $this->transformRun($run),
@@ -39,7 +39,7 @@ class PipelineRunController extends Controller
     {
         $runs = PipelineRun::query()
             ->whereIn('status', ['queued', 'running'])
-            ->with(['project', 'pipelineVersion', 'steps.stepVersion.step'])
+            ->with(['lesson', 'pipelineVersion', 'steps.stepVersion.step'])
             ->orderByDesc('updated_at')
             ->get()
             ->map(fn (PipelineRun $run) => $this->transformRun($run));
@@ -57,7 +57,7 @@ class PipelineRunController extends Controller
 
         $run = $this->pipelineRunService
             ->restartFromStep($pipelineRun, $step)
-            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'project');
+            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson');
 
         return response()->json(['data' => $this->transformRun($run)]);
     }
@@ -68,10 +68,10 @@ class PipelineRunController extends Controller
             'id' => $run->id,
             'status' => $run->status,
             'state' => $run->state ?? [],
-            'project' => $run->project
+            'lesson' => $run->lesson
                 ? [
-                    'id' => $run->project->id,
-                    'name' => $run->project->name,
+                    'id' => $run->lesson->id,
+                    'name' => $run->lesson->name,
                 ]
                 : null,
             'pipeline_version' => $run->pipelineVersion

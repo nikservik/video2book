@@ -4,9 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasOne;
 
 class Project extends Model
 {
@@ -17,30 +15,11 @@ class Project extends Model
      */
     protected $fillable = [
         'name',
-        'tag',
-        'source_filename',
-        'settings',
+        'tags',
     ];
 
-    /**
-     * @var array<string, string>
-     */
-    protected $casts = [
-        'settings' => 'array',
-    ];
-
-    public function tagRelation(): BelongsTo
+    public function lessons(): HasMany
     {
-        return $this->belongsTo(ProjectTag::class, 'tag', 'slug');
-    }
-
-    public function pipelineRuns(): HasMany
-    {
-        return $this->hasMany(PipelineRun::class);
-    }
-
-    public function latestPipelineRun(): HasOne
-    {
-        return $this->hasOne(PipelineRun::class)->latestOfMany('id');
+        return $this->hasMany(Lesson::class);
     }
 }
