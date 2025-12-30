@@ -4,10 +4,12 @@ namespace Tests\Feature;
 
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
+use App\Models\PipelineVersionStep;
 use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;
 
 class ProjectApiTest extends TestCase
@@ -17,6 +19,7 @@ class ProjectApiTest extends TestCase
     public function test_project_tag_and_project_flow(): void
     {
         Storage::fake('local');
+        Queue::fake();
 
         $pipeline = Pipeline::query()->create();
         $version = $this->createPipelineVersion($pipeline, 1);
@@ -103,6 +106,28 @@ class ProjectApiTest extends TestCase
         ]);
 
         $pipeline->update(['current_version_id' => $version->id]);
+
+        $step = $pipeline->steps()->create();
+        $stepVersion = $step->versions()->create([
+            'name' => 'Transcription',
+            'type' => 'transcribe',
+            'version' => 1,
+            'description' => 'Transcribe audio',
+            'prompt' => 'Transcribe the supplied audio',
+            'settings' => [
+                'provider' => 'openai',
+                'model' => 'whisper-1',
+                'temperature' => 0,
+            ],
+            'status' => 'active',
+        ]);
+        $step->update(['current_version_id' => $stepVersion->id]);
+
+        PipelineVersionStep::query()->create([
+            'pipeline_version_id' => $version->id,
+            'step_version_id' => $stepVersion->id,
+            'position' => 1,
+        ]);
 
         return $version;
     }

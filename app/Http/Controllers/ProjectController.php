@@ -3,13 +3,19 @@
 namespace App\Http\Controllers;
 
 use App\Models\PipelineRun;
+use App\Models\PipelineVersion;
 use App\Models\Project;
+use App\Services\Pipeline\PipelineRunService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class ProjectController extends Controller
 {
+    public function __construct(private readonly PipelineRunService $pipelineRunService)
+    {
+    }
+
     public function index(Request $request): JsonResponse
     {
         $query = Project::query()->with([
@@ -45,8 +51,8 @@ class ProjectController extends Controller
             'tag' => $data['tag'],
             'settings' => $data['settings'],
         ]);
-
-        $this->createPipelineRun($project, $data['pipeline_version_id']);
+        $pipelineVersion = PipelineVersion::query()->findOrFail($data['pipeline_version_id']);
+        $this->pipelineRunService->createRun($project, $pipelineVersion);
         $project->load(['pipelineRuns.pipelineVersion', 'tagRelation']);
 
         return response()->json(['data' => $this->transformProject($project)], 201);
@@ -68,7 +74,12 @@ class ProjectController extends Controller
         ]);
 
         if (! empty($data['pipeline_version_id'])) {
-            $this->createPipelineRun($project, $data['pipeline_version_id']);
+            $latestRun = $project->latestPipelineRun;
+
+            if ($latestRun === null || $latestRun->pipeline_version_id !== (int) $data['pipeline_version_id']) {
+                $pipelineVersion = PipelineVersion::query()->findOrFail((int) $data['pipeline_version_id']);
+                $this->pipelineRunService->createRun($project, $pipelineVersion);
+            }
         }
 
         return response()->json([
@@ -147,20 +158,5 @@ class ProjectController extends Controller
             'created_at' => optional($project->created_at)->toISOString(),
             'updated_at' => optional($project->updated_at)->toISOString(),
         ];
-    }
-
-    private function createPipelineRun(Project $project, int $pipelineVersionId): PipelineRun
-    {
-        $latestRun = $project->latestPipelineRun;
-
-        if ($latestRun && $latestRun->pipeline_version_id === $pipelineVersionId) {
-            return $latestRun;
-        }
-
-        return $project->pipelineRuns()->create([
-            'pipeline_version_id' => $pipelineVersionId,
-            'status' => 'queued',
-            'state' => [],
-        ]);
     }
 }

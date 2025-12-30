@@ -5,6 +5,8 @@ namespace App\Providers;
 use App\Services\Llm\LlmCostCalculator;
 use App\Services\Llm\LlmManager;
 use App\Services\Llm\LlmPricing;
+use App\Services\Pipeline\Contracts\PipelineStepExecutor;
+use App\Services\Pipeline\DefaultPipelineStepExecutor;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -31,6 +33,8 @@ class AppServiceProvider extends ServiceProvider
 
             return new LlmManager($providers);
         });
+
+        $this->app->singleton(PipelineStepExecutor::class, DefaultPipelineStepExecutor::class);
     }
 
     /**

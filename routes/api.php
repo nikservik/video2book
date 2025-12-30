@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\PipelineController;
+use App\Http\Controllers\PipelineRunController;
 use App\Http\Controllers\ProjectController;
 use App\Http\Controllers\ProjectTagController;
 use App\Http\Controllers\StepController;
@@ -25,6 +26,12 @@ Route::prefix('pipelines')->group(function (): void {
 Route::get('pipeline-versions/{pipelineVersion}/steps', [PipelineController::class, 'pipelineVersionSteps']);
 
 Route::get('steps/{step}/versions', [StepController::class, 'versions']);
+
+Route::prefix('pipeline-runs')->group(function (): void {
+    Route::get('queue', [PipelineRunController::class, 'queue']);
+    Route::post('/', [PipelineRunController::class, 'store']);
+    Route::post('{pipelineRun}/restart', [PipelineRunController::class, 'restart']);
+});
 
 Route::prefix('projects')->group(function (): void {
     Route::get('/', [ProjectController::class, 'index']);
