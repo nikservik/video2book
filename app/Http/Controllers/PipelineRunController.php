@@ -6,14 +6,20 @@ use App\Models\Lesson;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
+use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineRunService;
+use App\Support\PipelineRunTransformer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Redis;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PipelineRunController extends Controller
 {
-    public function __construct(private readonly PipelineRunService $pipelineRunService)
-    {
+    public function __construct(
+        private readonly PipelineRunService $pipelineRunService,
+        private readonly PipelineEventBroadcaster $eventBroadcaster,
+    ) {
     }
 
     public function store(Request $request): JsonResponse
@@ -28,23 +34,77 @@ class PipelineRunController extends Controller
 
         $run = $this->pipelineRunService
             ->createRun($lesson, $pipelineVersion)
-            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson');
+            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson.project');
 
         return response()->json([
-            'data' => $this->transformRun($run),
+            'data' => PipelineRunTransformer::run($run),
         ], 201);
     }
 
     public function queue(): JsonResponse
     {
-        $runs = PipelineRun::query()
-            ->whereIn('status', ['queued', 'running'])
-            ->with(['lesson', 'pipelineVersion', 'steps.stepVersion.step'])
-            ->orderByDesc('updated_at')
+        $runs = $this->queuedRunsQuery()
             ->get()
-            ->map(fn (PipelineRun $run) => $this->transformRun($run));
+            ->map(fn (PipelineRun $run) => PipelineRunTransformer::run($run, includeResults: false));
 
         return response()->json(['data' => $runs]);
+    }
+
+    public function queueEvents(): StreamedResponse
+    {
+        $runs = $this->queuedRunsQuery()
+            ->get()
+            ->map(fn (PipelineRun $run) => PipelineRunTransformer::run($run, includeResults: false))
+            ->values()
+            ->all();
+
+        return response()->stream(function () use ($runs): void {
+            while (ob_get_level() > 0) {
+                ob_end_flush();
+            }
+
+            @ob_implicit_flush(true);
+            set_time_limit(0);
+
+            $this->sendEvent('queue-snapshot', ['runs' => $runs]);
+
+            $redis = Redis::connection();
+            $stream = PipelineEventBroadcaster::QUEUE_STREAM;
+            $lastId = '$';
+
+            while (true) {
+                if (connection_aborted()) {
+                    break;
+                }
+
+                $messages = $this->readEvents($redis, $stream, $lastId);
+
+                if ($messages === null) {
+                    $this->sendComment('keepalive');
+                    continue;
+                }
+
+                foreach ($messages as $messageId => $payload) {
+                    $lastId = $messageId;
+                    $eventName = $payload['event'] ?? 'queue-update';
+                    $data = $payload['payload'] ?? [];
+                    $this->sendEvent($eventName, $data);
+                }
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
+    public function show(PipelineRun $pipelineRun): JsonResponse
+    {
+        $pipelineRun->load('lesson.project', 'pipelineVersion', 'steps.stepVersion.step');
+
+        return response()->json([
+            'data' => PipelineRunTransformer::run($pipelineRun, includeResults: true),
+        ]);
     }
 
     public function restart(Request $request, PipelineRun $pipelineRun): JsonResponse
@@ -57,52 +117,70 @@ class PipelineRunController extends Controller
 
         $run = $this->pipelineRunService
             ->restartFromStep($pipelineRun, $step)
-            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson');
+            ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson.project');
 
-        return response()->json(['data' => $this->transformRun($run)]);
+        return response()->json(['data' => PipelineRunTransformer::run($run, includeResults: false)]);
     }
 
-    private function transformRun(PipelineRun $run): array
+    /**
+     * @return array<string, array<string, mixed>>
+     */
+    private function readEvents($redis, string $stream, string $lastId): ?array
     {
-        return [
-            'id' => $run->id,
-            'status' => $run->status,
-            'state' => $run->state ?? [],
-            'lesson' => $run->lesson
-                ? [
-                    'id' => $run->lesson->id,
-                    'name' => $run->lesson->name,
-                ]
-                : null,
-            'pipeline_version' => $run->pipelineVersion
-                ? [
-                    'id' => $run->pipelineVersion->id,
-                    'title' => $run->pipelineVersion->title,
-                    'version' => $run->pipelineVersion->version,
-                ]
-                : null,
-            'steps' => $run->steps
-                ->sortBy('position')
-                ->values()
-                ->map(function (PipelineRunStep $step): array {
-                    $stepVersion = $step->stepVersion;
+        /** @var array<string, array<string, array<string, string>>>|null $chunk */
+        $chunk = $redis->xRead([$stream => $lastId], null, 20000);
 
-                    return [
-                        'id' => $step->id,
-                        'position' => $step->position,
-                        'status' => $step->status,
-                        'name' => $stepVersion?->name,
-                        'type' => $stepVersion?->type,
-                        'start_time' => optional($step->start_time)->toISOString(),
-                        'end_time' => optional($step->end_time)->toISOString(),
-                        'input_tokens' => $step->input_tokens,
-                        'output_tokens' => $step->output_tokens,
-                        'cost' => $step->cost,
-                    ];
-                })
-                ->all(),
-            'created_at' => optional($run->created_at)->toISOString(),
-            'updated_at' => optional($run->updated_at)->toISOString(),
-        ];
+        if ($chunk === null || ! isset($chunk[$stream])) {
+            return null;
+        }
+
+        $messages = [];
+
+        foreach ($chunk[$stream] as $messageId => $fields) {
+            $payload = [];
+            $encoded = $fields['payload'] ?? null;
+
+            if (is_string($encoded)) {
+                $decoded = json_decode($encoded, true);
+                if (is_array($decoded)) {
+                    $payload = $decoded;
+                }
+            }
+
+            $messages[$messageId] = [
+                'event' => $fields['event'] ?? 'queue-update',
+                'payload' => $payload,
+            ];
+        }
+
+        return $messages;
+    }
+
+    private function queuedRunsQuery()
+    {
+        return PipelineRun::query()
+            ->whereIn('status', ['queued', 'running'])
+            ->with(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step'])
+            ->orderBy('created_at')
+            ->orderBy('id');
+    }
+
+    private function sendEvent(string $event, array $data): void
+    {
+        echo "event: {$event}\n";
+        echo 'data: '.json_encode($data, JSON_UNESCAPED_UNICODE)."\n\n";
+
+        if (function_exists('flush')) {
+            flush();
+        }
+    }
+
+    private function sendComment(string $comment): void
+    {
+        echo ": {$comment}\n\n";
+
+        if (function_exists('flush')) {
+            flush();
+        }
     }
 }

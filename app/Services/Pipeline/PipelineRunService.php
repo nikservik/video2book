@@ -15,6 +15,10 @@ use Illuminate\Validation\ValidationException;
 
 final class PipelineRunService
 {
+    public function __construct(private readonly PipelineEventBroadcaster $eventBroadcaster)
+    {
+    }
+
     /**
      * Создаёт новый прогон пайплайна для урока и опционально ставит его в очередь.
      */
@@ -60,7 +64,12 @@ final class PipelineRunService
             ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
         }
 
-        return $run->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+        $run->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+
+        $this->eventBroadcaster->queueRunUpdated($run);
+        $this->eventBroadcaster->runUpdated($run);
+
+        return $run;
     }
 
     /**
@@ -89,6 +98,11 @@ final class PipelineRunService
 
         ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
 
-        return $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+        $run = $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+
+        $this->eventBroadcaster->queueRunUpdated($run);
+        $this->eventBroadcaster->runUpdated($run);
+
+        return $run;
     }
 }

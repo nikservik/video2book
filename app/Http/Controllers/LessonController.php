@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Lesson;
 use App\Models\PipelineVersion;
+use App\Models\ProjectTag;
 use App\Services\Pipeline\PipelineRunService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,6 +20,7 @@ class LessonController extends Controller
     {
         $query = Lesson::query()->with([
             'pipelineRuns.pipelineVersion',
+            'pipelineRuns.steps',
             'tagRelation',
             'project',
         ]);
@@ -36,7 +38,11 @@ class LessonController extends Controller
             $query->where('project_id', $request->input('project_id'));
         }
 
-        $lessons = $query->latest()->get()->map(fn (Lesson $lesson) => $this->transformLesson($lesson));
+        $lessons = $query
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Lesson $lesson) => $this->transformLesson($lesson));
 
         return response()->json(['data' => $lessons]);
     }
@@ -46,7 +52,7 @@ class LessonController extends Controller
         $data = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'name' => ['required', 'string', 'max:255'],
-            'tag' => ['required', 'exists:project_tags,slug'],
+            'tag' => ['nullable', 'exists:project_tags,slug'],
             'pipeline_version_id' => ['required', 'exists:pipeline_versions,id'],
             'settings' => ['required', 'array'],
         ]);
@@ -54,14 +60,14 @@ class LessonController extends Controller
         $lesson = Lesson::query()->create([
             'project_id' => $data['project_id'],
             'name' => $data['name'],
-            'tag' => $data['tag'],
+            'tag' => $this->resolveTag($data['tag'] ?? null),
             'settings' => $data['settings'],
         ]);
 
         $pipelineVersion = PipelineVersion::query()->findOrFail($data['pipeline_version_id']);
         $this->pipelineRunService->createRun($lesson, $pipelineVersion);
 
-        $lesson->load(['pipelineRuns.pipelineVersion', 'tagRelation', 'project']);
+        $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project']);
 
         return response()->json(['data' => $this->transformLesson($lesson)], 201);
     }
@@ -71,17 +77,22 @@ class LessonController extends Controller
         $data = $request->validate([
             'project_id' => ['required', 'exists:projects,id'],
             'name' => ['required', 'string', 'max:255'],
-            'tag' => ['required', 'exists:project_tags,slug'],
+            'tag' => ['nullable', 'exists:project_tags,slug'],
             'settings' => ['required', 'array'],
             'pipeline_version_id' => ['nullable', 'exists:pipeline_versions,id'],
         ]);
 
-        $lesson->update([
+        $updatePayload = [
             'project_id' => $data['project_id'],
             'name' => $data['name'],
-            'tag' => $data['tag'],
             'settings' => $data['settings'],
-        ]);
+        ];
+
+        if (array_key_exists('tag', $data)) {
+            $updatePayload['tag'] = $this->resolveTag($data['tag']);
+        }
+
+        $lesson->update($updatePayload);
 
         if (! empty($data['pipeline_version_id'])) {
             $pipelineVersion = PipelineVersion::query()->findOrFail((int) $data['pipeline_version_id']);
@@ -94,7 +105,7 @@ class LessonController extends Controller
 
         return response()->json([
             'data' => $this->transformLesson(
-                $lesson->load(['pipelineRuns.pipelineVersion', 'tagRelation', 'project'])
+                $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
             ),
         ]);
     }
@@ -114,14 +125,14 @@ class LessonController extends Controller
 
         return response()->json([
             'data' => $this->transformLesson(
-                $lesson->load(['pipelineRuns.pipelineVersion', 'tagRelation', 'project'])
+                $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
             ),
         ]);
     }
 
     private function transformLesson(Lesson $lesson): array
     {
-        $lesson->loadMissing('pipelineRuns.pipelineVersion', 'tagRelation', 'project');
+        $lesson->loadMissing('pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project');
 
         $runs = $lesson->pipelineRuns
             ->sortByDesc(fn ($run) => $run->id)
@@ -154,24 +165,47 @@ class LessonController extends Controller
                 ]
                 : null,
             'pipeline_runs' => $runs
-                ->map(fn ($run) => [
-                    'id' => $run->id,
-                    'status' => $run->status,
-                    'pipeline_version' => $run->pipelineVersion
-                        ? [
-                            'id' => $run->pipelineVersion->id,
-                            'version' => $run->pipelineVersion->version,
-                            'title' => $run->pipelineVersion->title,
-                        ]
-                        : null,
-                    'state' => $run->state ?? [],
-                    'created_at' => optional($run->created_at)->toISOString(),
-                    'updated_at' => optional($run->updated_at)->toISOString(),
-                ])
+                ->map(function ($run) {
+                    $steps = $run->relationLoaded('steps') ? $run->steps : collect();
+                    $stepsTotal = $steps?->count() ?? 0;
+                    $stepsCompleted = $steps?->where('status', 'done')->count() ?? 0;
+
+                    return [
+                        'id' => $run->id,
+                        'status' => $run->status,
+                        'pipeline_version' => $run->pipelineVersion
+                            ? [
+                                'id' => $run->pipelineVersion->id,
+                                'version' => $run->pipelineVersion->version,
+                                'title' => $run->pipelineVersion->title,
+                            ]
+                            : null,
+                        'state' => $run->state ?? [],
+                        'steps_total' => $stepsTotal,
+                        'steps_completed' => $stepsCompleted,
+                        'created_at' => optional($run->created_at)->toISOString(),
+                        'updated_at' => optional($run->updated_at)->toISOString(),
+                    ];
+                })
                 ->all(),
             'settings' => $lesson->settings,
             'created_at' => optional($lesson->created_at)->toISOString(),
             'updated_at' => optional($lesson->updated_at)->toISOString(),
         ];
+    }
+
+    private function resolveTag(?string $tag): string
+    {
+        if ($tag !== null) {
+            return $tag;
+        }
+
+        $defaultSlug = 'default';
+
+        ProjectTag::query()->firstOrCreate(['slug' => $defaultSlug], [
+            'description' => null,
+        ]);
+
+        return $defaultSlug;
     }
 }

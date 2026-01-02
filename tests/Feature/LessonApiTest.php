@@ -44,16 +44,26 @@ class LessonApiTest extends TestCase
         $createLessonResponse = $this->postJson('/api/lessons', [
             'project_id' => $project->id,
             'name' => 'First Lesson',
-            'tag' => 'demo',
             'pipeline_version_id' => $version->id,
             'settings' => ['quality' => 'high'],
         ]);
 
         $createLessonResponse->assertCreated()
-            ->assertJsonPath('data.tag', 'demo')
+            ->assertJsonPath('data.tag', 'default')
             ->assertJsonPath('data.project.id', $project->id)
             ->assertJsonPath('data.pipeline_runs.0.pipeline_version.id', $version->id)
+            ->assertJsonPath('data.pipeline_runs.0.steps_total', 1)
+            ->assertJsonPath('data.pipeline_runs.0.steps_completed', 0)
             ->assertJsonCount(1, 'data.pipeline_runs');
+
+        $this->postJson('/api/lessons', [
+            'project_id' => $project->id,
+            'name' => 'Tagged Lesson',
+            'tag' => 'demo',
+            'pipeline_version_id' => $version->id,
+            'settings' => ['quality' => 'high'],
+        ])->assertCreated()
+            ->assertJsonPath('data.tag', 'demo');
 
         $lessonId = $createLessonResponse->json('data.id');
 
@@ -71,7 +81,6 @@ class LessonApiTest extends TestCase
         $updateLessonResponse = $this->putJson("/api/lessons/{$lessonId}", [
             'project_id' => $project->id,
             'name' => 'Renamed Lesson',
-            'tag' => 'demo',
             'pipeline_version_id' => $nextVersion->id,
             'settings' => ['quality' => 'medium'],
         ]);
@@ -82,7 +91,7 @@ class LessonApiTest extends TestCase
             ->assertJsonPath('data.pipeline_runs.0.pipeline_version.id', $nextVersion->id)
             ->assertJsonCount(2, 'data.pipeline_runs');
 
-        $listResponse = $this->getJson('/api/lessons?tag=demo&search=renamed');
+        $listResponse = $this->getJson('/api/lessons?search=renamed');
         $listResponse->assertOk()
             ->assertJsonCount(1, 'data')
             ->assertJsonPath('data.0.name', 'Renamed Lesson');

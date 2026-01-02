@@ -5,6 +5,7 @@ namespace App\Services\Pipeline;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Services\Pipeline\Contracts\PipelineStepExecutor;
+use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineStepResult;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
@@ -12,8 +13,10 @@ use Throwable;
 
 final class PipelineRunProcessingService
 {
-    public function __construct(private readonly PipelineStepExecutor $executor)
-    {
+    public function __construct(
+        private readonly PipelineStepExecutor $executor,
+        private readonly PipelineEventBroadcaster $eventBroadcaster,
+    ) {
     }
 
     /**
@@ -40,6 +43,13 @@ final class PipelineRunProcessingService
 
             return false;
         }
+
+        $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
+        $step = $step->fresh(['stepVersion.step']);
+
+        $this->eventBroadcaster->runUpdated($run);
+        $this->eventBroadcaster->queueRunUpdated($run);
+        $this->eventBroadcaster->stepUpdated($step);
 
         try {
             $input = $this->resolveStepInput($run, $step);
@@ -131,6 +141,17 @@ final class PipelineRunProcessingService
             'output_tokens' => $result->outputTokens,
             'cost' => $result->cost,
         ])->save();
+
+        $step = $step->fresh(['stepVersion.step', 'pipelineRun.lesson.project', 'pipelineRun.pipelineVersion', 'pipelineRun.steps.stepVersion.step']);
+
+        $this->eventBroadcaster->stepUpdated($step);
+
+        $run = $step->pipelineRun;
+
+        if ($run !== null) {
+            $this->eventBroadcaster->runUpdated($run);
+            $this->eventBroadcaster->queueRunUpdated($run);
+        }
     }
 
     private function markStepFailed(PipelineRun $run, PipelineRunStep $step, Throwable $throwable): void
@@ -144,11 +165,21 @@ final class PipelineRunProcessingService
 
             $run->forceFill(['status' => 'failed'])->save();
         });
+
+        $this->eventBroadcaster->stepUpdated($step->fresh(['stepVersion.step']));
+        $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
+        $this->eventBroadcaster->runUpdated($run);
+        $this->eventBroadcaster->queueRunRemoved($run->id);
     }
 
     private function markRunAsCompleted(PipelineRun $run): void
     {
         $run->forceFill(['status' => 'done'])->save();
+
+        $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
+
+        $this->eventBroadcaster->runUpdated($run);
+        $this->eventBroadcaster->queueRunRemoved($run->id);
     }
 
     private function hasPendingSteps(int $runId): bool

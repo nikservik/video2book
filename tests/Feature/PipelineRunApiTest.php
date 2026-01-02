@@ -81,6 +81,40 @@ class PipelineRunApiTest extends TestCase
             ->assertJsonPath('data.0.steps.0', fn ($value) => ! array_key_exists('result', $value));
     }
 
+    public function test_it_shows_pipeline_run_details(): void
+    {
+        Queue::fake();
+
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Show project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson show',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        $step = $run->steps()->orderBy('position')->first();
+        $step?->update([
+            'status' => 'done',
+            'result' => 'TRANSCRIPT',
+            'input_tokens' => 100,
+            'output_tokens' => 200,
+        ]);
+        $run->update(['status' => 'running']);
+
+        $response = $this->getJson("/api/pipeline-runs/{$run->id}");
+
+        $response->assertOk()
+            ->assertJsonPath('data.id', $run->id)
+            ->assertJsonPath('data.lesson.id', $lesson->id)
+            ->assertJsonPath('data.pipeline_version.id', $version->id)
+            ->assertJsonPath('data.steps.0.result', 'TRANSCRIPT')
+            ->assertJsonPath('data.steps.0.status', 'done');
+    }
+
     public function test_it_restarts_run_from_specific_step(): void
     {
         Queue::fake();
