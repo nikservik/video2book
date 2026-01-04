@@ -34,7 +34,7 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
 
         return match ($stepVersion->type) {
             'transcribe' => $this->handleTranscription($run, $stepVersion),
-            'text', 'glossary' => $this->handleTextualStep($stepVersion, $input),
+            'text', 'glossary' => $this->handleTextualStep($run, $stepVersion, $input),
             default => throw new RuntimeException(sprintf('Неизвестный тип шага: %s', $stepVersion->type)),
         };
     }
@@ -74,7 +74,9 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
         try {
             $response = $this->openAIClient->audio()->transcribe($payload);
         } finally {
-            fclose($handle);
+            if (is_resource($handle)) {
+                fclose($handle);
+            }
         }
 
         $minutes = $response->duration !== null ? $response->duration / 60 : null;
@@ -90,7 +92,7 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
         );
     }
 
-    private function handleTextualStep(StepVersion $version, ?string $input): PipelineStepResult
+    private function handleTextualStep(PipelineRun $run, StepVersion $version, ?string $input): PipelineStepResult
     {
         if ($input === null || $input === '') {
             throw new RuntimeException('Входные данные для текстового шага отсутствуют.');

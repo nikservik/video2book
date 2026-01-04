@@ -2,18 +2,15 @@
 
 namespace App\Services\Pipeline;
 
+use App\Models\PipelineQueueEvent;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Support\PipelineRunTransformer;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Redis;
-use Throwable;
 
 final class PipelineEventBroadcaster
 {
-    public const QUEUE_STREAM = 'pipeline:queue-events';
-    private const RUN_STREAM_PREFIX = 'pipeline:run-events:';
-    private const MAX_STREAM_LENGTH = 1000;
+    public const QUEUE_STREAM = 'queue';
+    private const RUN_STREAM_PREFIX = 'run:';
 
     public function queueRunUpdated(PipelineRun $run): void
     {
@@ -62,27 +59,11 @@ final class PipelineEventBroadcaster
 
     private function publish(string $stream, string $event, array $payload): void
     {
-        try {
-            $encoded = json_encode($payload, JSON_UNESCAPED_UNICODE);
-
-            if ($encoded === false) {
-                return;
-            }
-
-            $redis = Redis::connection();
-            $redis->xAdd($stream, '*', [
-                'event' => $event,
-                'payload' => $encoded,
-            ]);
-
-            $redis->xTrim($stream, self::MAX_STREAM_LENGTH, true);
-        } catch (Throwable $throwable) {
-            Log::warning('Failed to publish pipeline event', [
-                'stream' => $stream,
-                'event' => $event,
-                'error' => $throwable->getMessage(),
-            ]);
-        }
+        PipelineQueueEvent::query()->create([
+            'stream' => $stream,
+            'event' => $event,
+            'payload' => $payload,
+        ]);
     }
 
     private function runStream(int $runId): string

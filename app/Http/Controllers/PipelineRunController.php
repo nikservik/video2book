@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Lesson;
+use App\Models\PipelineQueueEvent;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
@@ -11,7 +12,6 @@ use App\Services\Pipeline\PipelineRunService;
 use App\Support\PipelineRunTransformer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Redis;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PipelineRunController extends Controller
@@ -68,19 +68,23 @@ class PipelineRunController extends Controller
 
             $this->sendEvent('queue-snapshot', ['runs' => $runs]);
 
-            $redis = Redis::connection();
             $stream = PipelineEventBroadcaster::QUEUE_STREAM;
-            $lastId = '$';
+            $lastId = 0;
+            $lastKeepAlive = now();
 
             while (true) {
                 if (connection_aborted()) {
                     break;
                 }
 
-                $messages = $this->readEvents($redis, $stream, $lastId);
+                $messages = $this->readEvents($stream, $lastId);
 
-                if ($messages === null) {
-                    $this->sendComment('keepalive');
+                if ($messages === null || count($messages) === 0) {
+                    if ($lastKeepAlive->diffInSeconds(now()) >= 20) {
+                        $this->sendComment('keepalive');
+                        $lastKeepAlive = now();
+                    }
+                    usleep(500000);
                     continue;
                 }
 
@@ -90,6 +94,11 @@ class PipelineRunController extends Controller
                     $data = $payload['payload'] ?? [];
                     $this->sendEvent($eventName, $data);
                 }
+
+                PipelineQueueEvent::query()
+                    ->where('stream', $stream)
+                    ->where('id', '<', max(0, $lastId - 1000))
+                    ->delete();
             }
         }, 200, [
             'Content-Type' => 'text/event-stream',
@@ -125,31 +134,25 @@ class PipelineRunController extends Controller
     /**
      * @return array<string, array<string, mixed>>
      */
-    private function readEvents($redis, string $stream, string $lastId): ?array
+    private function readEvents(string $stream, int $lastId): ?array
     {
-        /** @var array<string, array<string, array<string, string>>>|null $chunk */
-        $chunk = $redis->xRead([$stream => $lastId], null, 20000);
+        $events = PipelineQueueEvent::query()
+            ->where('stream', $stream)
+            ->where('id', '>', $lastId)
+            ->orderBy('id')
+            ->limit(100)
+            ->get();
 
-        if ($chunk === null || ! isset($chunk[$stream])) {
+        if ($events->isEmpty()) {
             return null;
         }
 
         $messages = [];
 
-        foreach ($chunk[$stream] as $messageId => $fields) {
-            $payload = [];
-            $encoded = $fields['payload'] ?? null;
-
-            if (is_string($encoded)) {
-                $decoded = json_decode($encoded, true);
-                if (is_array($decoded)) {
-                    $payload = $decoded;
-                }
-            }
-
-            $messages[$messageId] = [
-                'event' => $fields['event'] ?? 'queue-update',
-                'payload' => $payload,
+        foreach ($events as $event) {
+            $messages[$event->id] = [
+                'event' => $event->event,
+                'payload' => $event->payload ?? [],
             ];
         }
 

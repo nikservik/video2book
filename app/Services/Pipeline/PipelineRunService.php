@@ -9,8 +9,10 @@ use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
 use App\Models\StepVersion;
+use Illuminate\Bus\UniqueLock;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Cache;
 use Illuminate\Validation\ValidationException;
 
 final class PipelineRunService
@@ -96,6 +98,8 @@ final class PipelineRunService
             $run->forceFill(['status' => 'queued'])->save();
         });
 
+        $this->releasePendingRunLocks($run->id);
+
         ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
 
         $run = $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
@@ -104,5 +108,16 @@ final class PipelineRunService
         $this->eventBroadcaster->runUpdated($run);
 
         return $run;
+    }
+
+    private function releasePendingRunLocks(int $pipelineRunId): void
+    {
+        $cacheStore = Cache::store();
+        $job = new ProcessPipelineJob($pipelineRunId);
+
+        (new UniqueLock($cacheStore))->release($job);
+
+        $overlapKey = 'laravel-queue-overlap:'.ProcessPipelineJob::class.':pipeline-run-'.$pipelineRunId;
+        $cacheStore->lock($overlapKey)->forceRelease();
     }
 }

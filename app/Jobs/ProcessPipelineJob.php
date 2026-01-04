@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Models\PipelineRun;
 use App\Services\Pipeline\PipelineRunProcessingService;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldBeUnique;
@@ -42,7 +43,11 @@ class ProcessPipelineJob implements ShouldQueue, ShouldBeUnique
 
     public function uniqueId(): string
     {
-        return "pipeline-run:{$this->pipelineRunId}";
+        $nextStepId = $this->resolveNextStepId();
+
+        return $nextStepId !== null
+            ? "pipeline-run:{$this->pipelineRunId}:step:{$nextStepId}"
+            : "pipeline-run:{$this->pipelineRunId}:complete";
     }
 
     public function handle(PipelineRunProcessingService $service): void
@@ -62,5 +67,23 @@ class ProcessPipelineJob implements ShouldQueue, ShouldBeUnique
         return [
             'pipeline-run:'.$this->pipelineRunId,
         ];
+    }
+
+    private function resolveNextStepId(): ?int
+    {
+        $run = PipelineRun::query()
+            ->with('steps')
+            ->find($this->pipelineRunId);
+
+        if ($run === null) {
+            return null;
+        }
+
+        $step = $run->steps
+            ->whereIn('status', ['pending', 'running'])
+            ->sortBy('position')
+            ->first();
+
+        return $step?->id;
     }
 }
