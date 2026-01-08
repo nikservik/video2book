@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Jobs\DownloadLessonAudioJob;
 use App\Models\Lesson;
 use App\Models\PipelineVersion;
 use App\Models\ProjectTag;
@@ -130,6 +131,30 @@ class LessonController extends Controller
                 $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
             ),
         ]);
+    }
+
+    public function download(Request $request, Lesson $lesson): JsonResponse
+    {
+        $data = $request->validate([
+            'url' => ['required', 'url'],
+        ]);
+
+        $settings = $lesson->settings ?? [];
+        $settings['downloading'] = true;
+        $settings['download_status'] = 'queued';
+        $settings['download_progress'] = 0;
+        $settings['download_error'] = null;
+        $settings['download_source'] = $data['url'];
+
+        $lesson->update(['settings' => $settings]);
+
+        DownloadLessonAudioJob::dispatch($lesson->id, $data['url']);
+
+        return response()->json([
+            'data' => $this->transformLesson(
+                $lesson->fresh(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
+            ),
+        ], 202);
     }
 
     private function transformLesson(Lesson $lesson): array

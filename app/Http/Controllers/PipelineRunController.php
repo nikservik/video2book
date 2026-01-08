@@ -9,6 +9,7 @@ use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineRunService;
+use App\Support\LessonDownloadTransformer;
 use App\Support\PipelineRunTransformer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -57,8 +58,9 @@ class PipelineRunController extends Controller
             ->map(fn (PipelineRun $run) => PipelineRunTransformer::run($run, includeResults: false))
             ->values()
             ->all();
+        $downloads = $this->downloadQueueSnapshot();
 
-        return response()->stream(function () use ($runs): void {
+        return response()->stream(function () use ($runs, $downloads): void {
             while (ob_get_level() > 0) {
                 ob_end_flush();
             }
@@ -66,7 +68,10 @@ class PipelineRunController extends Controller
             @ob_implicit_flush(true);
             set_time_limit(0);
 
-            $this->sendEvent('queue-snapshot', ['runs' => $runs]);
+            $this->sendEvent('queue-snapshot', [
+                'runs' => $runs,
+                'downloads' => $downloads,
+            ]);
 
             $stream = PipelineEventBroadcaster::QUEUE_STREAM;
             $lastId = 0;
@@ -166,6 +171,22 @@ class PipelineRunController extends Controller
             ->with(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step'])
             ->orderBy('created_at')
             ->orderBy('id');
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function downloadQueueSnapshot(): array
+    {
+        return Lesson::query()
+            ->where('settings->downloading', true)
+            ->with('project')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get()
+            ->map(fn (Lesson $lesson) => LessonDownloadTransformer::task($lesson))
+            ->values()
+            ->all();
     }
 
     private function sendEvent(string $event, array $data): void

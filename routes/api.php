@@ -42,6 +42,7 @@ Route::prefix('lessons')->group(function (): void {
     Route::post('/', [LessonController::class, 'store']);
     Route::put('{lesson}', [LessonController::class, 'update']);
     Route::post('{lesson}/audio', [LessonController::class, 'uploadAudio']);
+    Route::post('{lesson}/download', [LessonController::class, 'download']);
 });
 
 Route::prefix('projects')->group(function (): void {

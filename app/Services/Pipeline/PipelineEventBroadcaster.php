@@ -2,9 +2,11 @@
 
 namespace App\Services\Pipeline;
 
+use App\Models\Lesson;
 use App\Models\PipelineQueueEvent;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
+use App\Support\LessonDownloadTransformer;
 use App\Support\PipelineRunTransformer;
 
 final class PipelineEventBroadcaster
@@ -54,6 +56,45 @@ final class PipelineEventBroadcaster
             $this->runStream($step->pipeline_run_id),
             'run-step-updated',
             $payload
+        );
+    }
+
+    public function downloadStarted(Lesson $lesson): void
+    {
+        $this->publish(
+            self::QUEUE_STREAM,
+            'download-started',
+            ['download' => LessonDownloadTransformer::task($lesson)]
+        );
+    }
+
+    public function downloadProgress(Lesson $lesson): void
+    {
+        $this->publish(
+            self::QUEUE_STREAM,
+            'download-progress',
+            ['download' => LessonDownloadTransformer::task($lesson)]
+        );
+    }
+
+    public function downloadCompleted(Lesson $lesson): void
+    {
+        $this->publish(
+            self::QUEUE_STREAM,
+            'download-completed',
+            ['download' => LessonDownloadTransformer::task($lesson)]
+        );
+    }
+
+    public function downloadFailed(Lesson $lesson, string $message): void
+    {
+        $this->publish(
+            self::QUEUE_STREAM,
+            'download-failed',
+            [
+                'download' => LessonDownloadTransformer::task($lesson),
+                'error' => $message,
+            ]
         );
     }
 
