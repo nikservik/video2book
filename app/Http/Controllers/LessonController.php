@@ -65,7 +65,7 @@ class LessonController extends Controller
         ]);
 
         $pipelineVersion = PipelineVersion::query()->findOrFail($data['pipeline_version_id']);
-        $this->pipelineRunService->createRun($lesson, $pipelineVersion);
+        $this->pipelineRunService->createRun($lesson, $pipelineVersion, dispatchJob: false);
 
         $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project']);
 
@@ -122,6 +122,8 @@ class LessonController extends Controller
         Storage::disk('local')->putFileAs('lessons', $file, $lesson->id.'.mp3');
 
         $lesson->update(['source_filename' => $path]);
+
+        $this->pipelineRunService->dispatchQueuedRuns($lesson);
 
         return response()->json([
             'data' => $this->transformLesson(

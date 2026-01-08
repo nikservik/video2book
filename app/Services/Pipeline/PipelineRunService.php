@@ -120,4 +120,15 @@ final class PipelineRunService
         $overlapKey = 'laravel-queue-overlap:'.ProcessPipelineJob::class.':pipeline-run-'.$pipelineRunId;
         $cacheStore->lock($overlapKey)->forceRelease();
     }
+
+    public function dispatchQueuedRuns(Lesson $lesson): void
+    {
+        $lesson->loadMissing('pipelineRuns');
+
+        $lesson->pipelineRuns
+            ->where('status', 'queued')
+            ->each(function (PipelineRun $run): void {
+                ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
+            });
+    }
 }

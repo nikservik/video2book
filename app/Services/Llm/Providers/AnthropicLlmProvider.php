@@ -31,7 +31,7 @@ final class AnthropicLlmProvider implements LlmProvider
             'model' => $request->model,
             'system' => $request->systemMessage()?->content,
             'messages' => $this->formatMessages($request),
-            'max_tokens' => $request->options['max_tokens'] ?? 4096,
+            'max_tokens' => $request->options['max_tokens'] ?? $this->defaultMaxTokens(),
         ], $this->buildOptions($request));
 
         $messages = $this->client->messages();
@@ -170,5 +170,14 @@ final class AnthropicLlmProvider implements LlmProvider
             outputTokens: $usage->outputTokens ?? 0,
             meta: ['provider' => 'anthropic'],
         );
+    }
+
+    private function defaultMaxTokens(): int
+    {
+        if (function_exists('config')) {
+        return (int) config('llm.defaults.anthropic.max_tokens', 64000);
+    }
+
+        return 64000;
     }
 }

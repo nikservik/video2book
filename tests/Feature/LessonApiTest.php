@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessPipelineJob;
 use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
@@ -66,6 +67,9 @@ class LessonApiTest extends TestCase
             ->assertJsonPath('data.tag', 'demo');
 
         $lessonId = $createLessonResponse->json('data.id');
+        $runId = $createLessonResponse->json('data.pipeline_runs.0.id');
+
+        Queue::assertNothingPushed();
 
         $uploadResponse = $this->post("/api/lessons/{$lessonId}/audio", [
             'file' => UploadedFile::fake()->create('normalized.mp3', 100, 'audio/mpeg'),
@@ -75,6 +79,10 @@ class LessonApiTest extends TestCase
             ->assertJsonPath('data.source_filename', 'lessons/'.$lessonId.'.mp3');
 
         Storage::disk('local')->assertExists('lessons/'.$lessonId.'.mp3');
+
+        Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $job) use ($runId) {
+            return $job->pipelineRunId === $runId;
+        });
 
         $nextVersion = $this->createPipelineWithSteps()[1];
 
