@@ -48,6 +48,7 @@ Route::prefix('lessons')->group(function (): void {
 Route::prefix('projects')->group(function (): void {
     Route::get('/', [ProjectController::class, 'index']);
     Route::post('/', [ProjectController::class, 'store']);
+    Route::post('/youtube', [ProjectController::class, 'storeYoutube']);
     Route::put('{project}', [ProjectController::class, 'update']);
 });
 

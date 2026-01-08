@@ -2,19 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Jobs\DownloadLessonAudioJob;
 use App\Models\Lesson;
 use App\Models\PipelineVersion;
-use App\Models\ProjectTag;
+use App\Services\Lesson\LessonDownloadManager;
 use App\Services\Pipeline\PipelineRunService;
+use App\Support\LessonTagResolver;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 
 class LessonController extends Controller
 {
-    public function __construct(private readonly PipelineRunService $pipelineRunService)
-    {
+    public function __construct(
+        private readonly PipelineRunService $pipelineRunService,
+        private readonly LessonDownloadManager $lessonDownloadManager,
+    ) {
     }
 
     public function index(Request $request): JsonResponse
@@ -61,7 +63,7 @@ class LessonController extends Controller
         $lesson = Lesson::query()->create([
             'project_id' => $data['project_id'],
             'name' => $data['name'],
-            'tag' => $this->resolveTag($data['tag'] ?? null),
+            'tag' => LessonTagResolver::resolve($data['tag'] ?? null),
             'settings' => $data['settings'],
         ]);
 
@@ -90,7 +92,7 @@ class LessonController extends Controller
         ];
 
         if (array_key_exists('tag', $data)) {
-            $updatePayload['tag'] = $this->resolveTag($data['tag']);
+            $updatePayload['tag'] = LessonTagResolver::resolve($data['tag']);
         }
 
         $lesson->update($updatePayload);
@@ -139,20 +141,14 @@ class LessonController extends Controller
             'url' => ['required', 'url'],
         ]);
 
-        $settings = $lesson->settings ?? [];
-        $settings['downloading'] = true;
-        $settings['download_status'] = 'queued';
-        $settings['download_progress'] = 0;
-        $settings['download_error'] = null;
-        $settings['download_source'] = $data['url'];
-
-        $lesson->update(['settings' => $settings]);
-
-        DownloadLessonAudioJob::dispatch($lesson->id, $data['url']);
+        $lesson = $this->lessonDownloadManager->startDownload(
+            $lesson->load('project'),
+            $data['url']
+        );
 
         return response()->json([
             'data' => $this->transformLesson(
-                $lesson->fresh(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
+                $lesson->load(['pipelineRuns.pipelineVersion', 'pipelineRuns.steps', 'tagRelation', 'project'])
             ),
         ], 202);
     }
@@ -221,18 +217,4 @@ class LessonController extends Controller
         ];
     }
 
-    private function resolveTag(?string $tag): string
-    {
-        if ($tag !== null) {
-            return $tag;
-        }
-
-        $defaultSlug = 'default';
-
-        ProjectTag::query()->firstOrCreate(['slug' => $defaultSlug], [
-            'description' => null,
-        ]);
-
-        return $defaultSlug;
-    }
 }
