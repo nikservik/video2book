@@ -9,10 +9,13 @@ use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineRunService;
+use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Support\LessonDownloadTransformer;
 use App\Support\PipelineRunTransformer;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Http\Response;
+use Illuminate\Support\Str;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class PipelineRunController extends Controller
@@ -196,6 +199,46 @@ class PipelineRunController extends Controller
             ->loadMissing('steps.stepVersion.step', 'pipelineVersion', 'lesson.project');
 
         return response()->json(['data' => PipelineRunTransformer::run($run, includeResults: false)]);
+    }
+
+    public function exportStepPdf(PipelineRun $pipelineRun, PipelineRunStep $step, PipelineStepPdfExporter $exporter): Response
+    {
+        abort_if($step->pipeline_run_id !== $pipelineRun->id, 404, 'Шаг не принадлежит указанному прогону.');
+
+        $pipelineRun->load('lesson');
+        $step->load('stepVersion');
+
+        abort_if($step->result === null, 422, 'У шага нет результата для экспорта.');
+
+        $pdfContent = $exporter->export($pipelineRun, $step);
+
+        $lessonName = $pipelineRun->lesson?->name ?? 'lesson';
+        $stepName = $step->stepVersion?->name ?? 'step';
+        $filename = Str::slug($lessonName.'-'.$stepName, '_').'.pdf';
+
+        return response($pdfContent, 200, [
+            'Content-Type' => 'application/pdf',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function exportStepMarkdown(PipelineRun $pipelineRun, PipelineRunStep $step): Response
+    {
+        abort_if($step->pipeline_run_id !== $pipelineRun->id, 404, 'Шаг не принадлежит указанному прогону.');
+
+        $pipelineRun->load('lesson');
+        $step->load('stepVersion');
+
+        abort_if($step->result === null, 422, 'У шага нет результата для экспорта.');
+
+        $lessonName = $pipelineRun->lesson?->name ?? 'lesson';
+        $stepName = $step->stepVersion?->name ?? 'step';
+        $filename = Str::slug($lessonName.'-'.$stepName, '_').'.md';
+
+        return response($step->result, 200, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
     }
 
     /**
