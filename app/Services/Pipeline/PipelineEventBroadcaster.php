@@ -12,6 +12,7 @@ use App\Support\PipelineRunTransformer;
 final class PipelineEventBroadcaster
 {
     public const QUEUE_STREAM = 'queue';
+    public const STREAM_EVENT_LIMIT = 1000;
     private const RUN_STREAM_PREFIX = 'run:';
 
     public function queueRunUpdated(PipelineRun $run): void
@@ -100,11 +101,13 @@ final class PipelineEventBroadcaster
 
     private function publish(string $stream, string $event, array $payload): void
     {
-        PipelineQueueEvent::query()->create([
+        $eventRow = PipelineQueueEvent::query()->create([
             'stream' => $stream,
             'event' => $event,
             'payload' => $payload,
         ]);
+
+        $this->cleanupStream($stream, (int) $eventRow->id);
     }
 
     public static function runStreamName(int $runId): string
@@ -115,5 +118,15 @@ final class PipelineEventBroadcaster
     private function runStream(int $runId): string
     {
         return self::runStreamName($runId);
+    }
+
+    private function cleanupStream(string $stream, int $latestId): void
+    {
+        $thresholdId = max(0, $latestId - self::STREAM_EVENT_LIMIT);
+
+        PipelineQueueEvent::query()
+            ->where('stream', $stream)
+            ->where('id', '<=', $thresholdId)
+            ->delete();
     }
 }

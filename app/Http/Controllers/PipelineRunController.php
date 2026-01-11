@@ -102,7 +102,7 @@ class PipelineRunController extends Controller
 
                 PipelineQueueEvent::query()
                     ->where('stream', $stream)
-                    ->where('id', '<', max(0, $lastId - 1000))
+                    ->where('id', '<', max(0, $lastId - PipelineEventBroadcaster::STREAM_EVENT_LIMIT))
                     ->delete();
             }
         }, 200, [
@@ -164,7 +164,7 @@ class PipelineRunController extends Controller
 
                 PipelineQueueEvent::query()
                     ->where('stream', $stream)
-                    ->where('id', '<', max(0, $lastId - 1000))
+                    ->where('id', '<', max(0, $lastId - PipelineEventBroadcaster::STREAM_EVENT_LIMIT))
                     ->delete();
             }
         }, 200, [

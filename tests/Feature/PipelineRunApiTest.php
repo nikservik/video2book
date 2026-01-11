@@ -147,6 +147,35 @@ class PipelineRunApiTest extends TestCase
         $this->assertStringContainsString('"status":"done"', $payload);
     }
 
+    public function test_it_limits_event_history_per_stream(): void
+    {
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Event limit project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Event limit lesson',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+
+        $broadcaster = app(\App\Services\Pipeline\PipelineEventBroadcaster::class);
+
+        $eventsToCreate = \App\Services\Pipeline\PipelineEventBroadcaster::STREAM_EVENT_LIMIT + 50;
+
+        for ($i = 0; $i < $eventsToCreate; $i++) {
+            $broadcaster->queueRunUpdated($run);
+        }
+
+        $count = \App\Models\PipelineQueueEvent::query()
+            ->where('stream', \App\Services\Pipeline\PipelineEventBroadcaster::QUEUE_STREAM)
+            ->count();
+
+        $this->assertLessThanOrEqual(\App\Services\Pipeline\PipelineEventBroadcaster::STREAM_EVENT_LIMIT, $count);
+    }
+
     public function test_it_restarts_run_from_specific_step(): void
     {
         Queue::fake();
