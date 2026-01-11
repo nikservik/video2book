@@ -234,4 +234,49 @@ class PipelineApiTest extends TestCase
             'Название текущей версии шага должно обновиться.'
         );
     }
+
+    public function test_remove_step_relinks_input_chain_to_previous_step(): void
+    {
+        $user = User::factory()->create();
+
+        $pipelineId = $this->postJson('/api/pipelines', [
+            'title' => 'Chain pipeline',
+            'description' => 'Pipeline with linked steps',
+            'changelog' => 'Initial',
+            'created_by' => $user->id,
+            'steps' => ['Audio', 'Text', 'Glossary'],
+        ])->json('data.id');
+
+        $pipeline = Pipeline::with('steps.currentVersion')->findOrFail($pipelineId);
+        $steps = $pipeline->steps;
+        $firstStep = $steps[0];
+        $secondStep = $steps[1];
+        $thirdStep = $steps[2];
+
+        $this->assertEquals($firstStep->id, $secondStep->currentVersion?->input_step_id);
+        $this->assertEquals($secondStep->id, $thirdStep->currentVersion?->input_step_id);
+
+        $removeResponse = $this->deleteJson("/api/pipelines/{$pipelineId}/steps/{$secondStep->id}", [
+            'changelog_entry' => 'Removed middle step',
+            'created_by' => $user->id,
+        ]);
+
+        $removeResponse->assertOk()
+            ->assertJsonCount(2, 'data.current_version.steps');
+
+        $pipeline->refresh()->load('steps.currentVersion', 'currentVersion.versionSteps.stepVersion.step');
+        $updatedFirst = $pipeline->steps()->find($firstStep->id);
+        $updatedThird = $pipeline->steps()->find($thirdStep->id);
+
+        $this->assertEquals(
+            $updatedFirst->id,
+            $updatedThird?->currentVersion?->input_step_id,
+            'После удаления промежуточного шага следующий шаг должен ссылаться на предшествующий.'
+        );
+        $this->assertGreaterThan(
+            $thirdStep->currentVersion?->version ?? 0,
+            $updatedThird?->currentVersion?->version ?? 0,
+            'Должна создаваться новая версия шага при изменении источника.'
+        );
+    }
 }

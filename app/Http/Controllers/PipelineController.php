@@ -297,12 +297,9 @@ class PipelineController extends Controller
 
         $previousVersion = $this->requireCurrentVersion($pipeline);
 
-        $stepsPayload = array_values(array_filter(
-            $this->collectVersionSteps($previousVersion),
-            fn (array $item) => $item['step_id'] !== $step->id
-        ));
+        $pipeline = DB::transaction(function () use ($pipeline, $previousVersion, $data, $step): Pipeline {
+            $stepsPayload = $this->buildStepPayloadAfterRemoval($previousVersion, $step);
 
-        $pipeline = DB::transaction(function () use ($pipeline, $previousVersion, $data, $stepsPayload): Pipeline {
             $this->createPipelineVersionFromPrevious(
                 $pipeline,
                 $previousVersion,
@@ -577,6 +574,65 @@ class PipelineController extends Controller
                 'position' => $position++,
             ]);
         }
+    }
+
+    /**
+     * @return array<int, array{step_id:int, step_version_id:int}>
+     */
+    private function buildStepPayloadAfterRemoval(PipelineVersion $previousVersion, Step $removedStep): array
+    {
+        $previousVersion->loadMissing('versionSteps.stepVersion.step', 'versionSteps.stepVersion.inputStep.currentVersion');
+
+        $orderedSteps = $previousVersion->versionSteps->sortBy('position')->values();
+        $payload = [];
+        $previousStepId = null;
+
+        foreach ($orderedSteps as $versionStep) {
+            $stepVersion = $versionStep->stepVersion;
+            $step = $stepVersion?->step;
+
+            if ($step === null || $stepVersion === null) {
+                continue;
+            }
+
+            if ($step->id === $removedStep->id) {
+                continue;
+            }
+
+            $desiredInputId = $stepVersion->input_step_id;
+            if ($desiredInputId === $removedStep->id) {
+                $desiredInputId = $previousStepId;
+            }
+
+            $stepVersionId = $stepVersion->id;
+
+            if ($desiredInputId !== $stepVersion->input_step_id) {
+                $nextVersionNumber = ($step->versions()->max('version') ?? 0) + 1;
+
+                $newVersion = $step->versions()->create([
+                    'name' => $stepVersion->name,
+                    'type' => $stepVersion->type,
+                    'version' => $nextVersionNumber,
+                    'description' => $stepVersion->description,
+                    'prompt' => $stepVersion->prompt,
+                    'settings' => $stepVersion->settings,
+                    'status' => $stepVersion->status,
+                    'input_step_id' => $desiredInputId,
+                ]);
+
+                $step->update(['current_version_id' => $newVersion->id]);
+                $stepVersionId = $newVersion->id;
+            }
+
+            $payload[] = [
+                'step_id' => $step->id,
+                'step_version_id' => $stepVersionId,
+            ];
+
+            $previousStepId = $step->id;
+        }
+
+        return array_values($payload);
     }
 
     private function transformPipeline(Pipeline $pipeline): array
