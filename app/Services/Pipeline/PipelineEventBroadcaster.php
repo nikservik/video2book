@@ -107,8 +107,13 @@ final class PipelineEventBroadcaster
         ]);
     }
 
-    private function runStream(int $runId): string
+    public static function runStreamName(int $runId): string
     {
         return self::RUN_STREAM_PREFIX.$runId;
+    }
+
+    private function runStream(int $runId): string
+    {
+        return self::runStreamName($runId);
     }
 }

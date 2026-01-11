@@ -115,6 +115,38 @@ class PipelineRunApiTest extends TestCase
             ->assertJsonPath('data.steps.0.status', 'done');
     }
 
+    public function test_it_streams_pipeline_run_snapshot_with_results(): void
+    {
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Streaming project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Streaming lesson',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        $step = $run->steps()->orderBy('position')->first();
+        $step?->update([
+            'status' => 'done',
+            'result' => 'FINISHED STEP',
+        ]);
+        $run->update(['status' => 'done']);
+
+        $response = $this->get("/api/pipeline-runs/{$run->id}/events?once=1");
+
+        $response->assertOk()
+            ->assertHeader('Content-Type', 'text/event-stream; charset=utf-8');
+
+        $payload = $response->streamedContent();
+
+        $this->assertStringContainsString('event: run-snapshot', $payload);
+        $this->assertStringContainsString('"result":"FINISHED STEP"', $payload);
+        $this->assertStringContainsString('"status":"done"', $payload);
+    }
+
     public function test_it_restarts_run_from_specific_step(): void
     {
         Queue::fake();

@@ -32,6 +32,8 @@ Route::prefix('pipeline-runs')->group(function (): void {
     Route::get('queue', [PipelineRunController::class, 'queue']);
     Route::get('events/queue', [PipelineRunController::class, 'queueEvents']);
     Route::post('/', [PipelineRunController::class, 'store']);
+    Route::get('{pipelineRun}/events', [PipelineRunController::class, 'runEvents'])
+        ->whereNumber('pipelineRun');
     Route::get('{pipelineRun}', [PipelineRunController::class, 'show'])
         ->whereNumber('pipelineRun');
     Route::post('{pipelineRun}/restart', [PipelineRunController::class, 'restart']);

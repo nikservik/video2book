@@ -112,6 +112,68 @@ class PipelineRunController extends Controller
         ]);
     }
 
+    public function runEvents(Request $request, PipelineRun $pipelineRun): StreamedResponse
+    {
+        $pipelineRun->load('lesson.project', 'pipelineVersion', 'steps.stepVersion.step');
+
+        $runSnapshot = PipelineRunTransformer::run($pipelineRun, includeResults: true);
+        $stream = PipelineEventBroadcaster::runStreamName($pipelineRun->id);
+        $singleShot = $request->boolean('once');
+
+        return response()->stream(function () use ($runSnapshot, $stream, $singleShot): void {
+            if (! $singleShot) {
+                while (ob_get_level() > 0) {
+                    ob_end_flush();
+                }
+
+                @ob_implicit_flush(true);
+                set_time_limit(0);
+            }
+
+            $this->sendEvent('run-snapshot', ['run' => $runSnapshot]);
+
+            if ($singleShot) {
+                return;
+            }
+
+            $lastId = 0;
+            $lastKeepAlive = now();
+
+            while (true) {
+                if (connection_aborted()) {
+                    break;
+                }
+
+                $messages = $this->readEvents($stream, $lastId);
+
+                if ($messages === null || count($messages) === 0) {
+                    if ($lastKeepAlive->diffInSeconds(now()) >= 20) {
+                        $this->sendComment('keepalive');
+                        $lastKeepAlive = now();
+                    }
+                    usleep(500000);
+                    continue;
+                }
+
+                foreach ($messages as $messageId => $payload) {
+                    $lastId = $messageId;
+                    $eventName = $payload['event'] ?? 'run-updated';
+                    $data = $payload['payload'] ?? [];
+                    $this->sendEvent($eventName, $data);
+                }
+
+                PipelineQueueEvent::query()
+                    ->where('stream', $stream)
+                    ->where('id', '<', max(0, $lastId - 1000))
+                    ->delete();
+            }
+        }, 200, [
+            'Content-Type' => 'text/event-stream',
+            'Cache-Control' => 'no-cache',
+            'X-Accel-Buffering' => 'no',
+        ]);
+    }
+
     public function show(PipelineRun $pipelineRun): JsonResponse
     {
         $pipelineRun->load('lesson.project', 'pipelineVersion', 'steps.stepVersion.step');
