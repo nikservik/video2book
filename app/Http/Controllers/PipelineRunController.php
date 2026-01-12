@@ -122,8 +122,9 @@ class PipelineRunController extends Controller
         $runSnapshot = PipelineRunTransformer::run($pipelineRun, includeResults: true);
         $stream = PipelineEventBroadcaster::runStreamName($pipelineRun->id);
         $singleShot = $request->boolean('once');
+        $runId = $pipelineRun->id;
 
-        return response()->stream(function () use ($runSnapshot, $stream, $singleShot): void {
+        return response()->stream(function () use ($runSnapshot, $stream, $singleShot, $runId): void {
             if (! $singleShot) {
                 while (ob_get_level() > 0) {
                     ob_end_flush();
@@ -134,6 +135,12 @@ class PipelineRunController extends Controller
             }
 
             $this->sendEvent('run-snapshot', ['run' => $runSnapshot]);
+
+            if (in_array($runSnapshot['status'] ?? null, ['done', 'failed'], true)) {
+                $this->sendEvent('run-completed', ['run' => $runSnapshot]);
+                $this->eventBroadcaster->flushRunStream($runId);
+                return;
+            }
 
             if ($singleShot) {
                 return;
@@ -163,6 +170,16 @@ class PipelineRunController extends Controller
                     $eventName = $payload['event'] ?? 'run-updated';
                     $data = $payload['payload'] ?? [];
                     $this->sendEvent($eventName, $data);
+
+                    if (
+                        $eventName === 'run-updated'
+                        && isset($data['run']['status'])
+                        && in_array($data['run']['status'], ['done', 'failed'], true)
+                    ) {
+                        $this->sendEvent('run-completed', $data);
+                        $this->eventBroadcaster->flushRunStream($runId);
+                        return;
+                    }
                 }
 
                 PipelineQueueEvent::query()

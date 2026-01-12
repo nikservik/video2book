@@ -24,7 +24,7 @@ class GeminiLlmProviderTest extends TestCase
         $client = Mockery::mock(ClientContract::class);
         $model = Mockery::mock(GenerativeModelContract::class);
 
-        $client->shouldReceive('generativeModel')->with('gemini-2.5-pro')->andReturn($model);
+        $client->shouldReceive('generativeModel')->with('models/gemini-2.5-pro')->andReturn($model);
         $model->shouldReceive('withSystemInstruction')->andReturnSelf();
         $model->shouldReceive('withGenerationConfig')->andReturnSelf();
 

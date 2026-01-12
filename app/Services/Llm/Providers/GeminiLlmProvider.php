@@ -13,6 +13,7 @@ use Gemini\Contracts\ClientContract;
 use Gemini\Data\Content;
 use Gemini\Data\GenerationConfig;
 use Gemini\Enums\Role;
+use Gemini\Exceptions\ErrorException as GeminiError;
 use Gemini\Responses\GenerativeModel\GenerateContentResponse;
 use Gemini\Responses\StreamResponse as GeminiStreamResponse;
 use Generator;
@@ -27,7 +28,11 @@ final class GeminiLlmProvider implements LlmProvider
 
     public function send(LlmRequest $request): LlmResponse
     {
-        $model = $this->client->generativeModel($request->model);
+        $apiModelName = str_starts_with($request->model, 'models/')
+            ? $request->model
+            : 'models/'.$request->model;
+
+        $model = $this->client->generativeModel($apiModelName);
 
         if ($system = $request->systemMessage()?->content) {
             $model = $model->withSystemInstruction(Content::parse($system, Role::USER));
@@ -39,37 +44,43 @@ final class GeminiLlmProvider implements LlmProvider
 
         $contents = $this->formatMessages($request);
 
-        if ($request->shouldStream()) {
-            /** @var GeminiStreamResponse<GenerateContentResponse> $stream */
-            $stream = $model->streamGenerateContent(...$contents);
+        try {
+            if ($request->shouldStream()) {
+                /** @var GeminiStreamResponse<GenerateContentResponse> $stream */
+                $stream = $model->streamGenerateContent(...$contents);
 
-            return LlmResponse::streaming(function () use ($stream, $request): Generator {
-                $usage = null;
+                return LlmResponse::streaming(function () use ($stream, $request): Generator {
+                    $usage = null;
 
-                foreach ($stream as $response) {
-                    $currentUsage = $this->mapUsage($response);
-                    if ($currentUsage !== null) {
-                        $usage = $this->costCalculator->calculateUsageCost(
-                            provider: 'gemini',
-                            model: $request->model,
-                            usage: $currentUsage,
-                            inputType: $request->inputType(),
-                        );
+                    foreach ($stream as $response) {
+                        $currentUsage = $this->mapUsage($response);
+                        if ($currentUsage !== null) {
+                            $usage = $this->costCalculator->calculateUsageCost(
+                                provider: 'gemini',
+                                model: $request->model,
+                                usage: $currentUsage,
+                                inputType: $request->inputType(),
+                            );
+                        }
+                        $text = $this->extractText($response);
+
+                        if ($text !== '') {
+                            yield LlmResponseChunk::partial($text, ['provider' => 'gemini']);
+                        }
                     }
-                    $text = $this->extractText($response);
 
-                    if ($text !== '') {
-                        yield LlmResponseChunk::partial($text, ['provider' => 'gemini']);
+                    if ($usage !== null) {
+                        yield LlmResponseChunk::final('', $usage);
                     }
-                }
+                });
+            }
 
-                if ($usage !== null) {
-                    yield LlmResponseChunk::final('', $usage);
-                }
-            });
+            $response = $model->generateContent(...$contents);
+        } catch (GeminiError $e) {
+            throw $e;
+        } catch (\Throwable $e) {
+            throw $e;
         }
-
-        $response = $model->generateContent(...$contents);
 
         $usage = $this->mapUsage($response);
         if ($usage !== null) {

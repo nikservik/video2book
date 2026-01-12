@@ -21,7 +21,7 @@ final class PipelineEventBroadcaster
             self::QUEUE_STREAM,
             'queue-run-updated',
             [
-                'run' => PipelineRunTransformer::run($run, includeResults: false),
+                'run' => PipelineRunTransformer::run($run, includeResults: true),
             ]
         );
     }
@@ -58,6 +58,11 @@ final class PipelineEventBroadcaster
             'run-step-updated',
             $payload
         );
+    }
+
+    public function stepCompleted(PipelineRunStep $step): void
+    {
+        $this->stepUpdated($step);
     }
 
     public function downloadStarted(Lesson $lesson): void
@@ -120,6 +125,11 @@ final class PipelineEventBroadcaster
         return self::runStreamName($runId);
     }
 
+    public function flushRunStream(int $runId): void
+    {
+        $this->flushStream($this->runStream($runId));
+    }
+
     private function cleanupStream(string $stream, int $latestId): void
     {
         $thresholdId = max(0, $latestId - self::STREAM_EVENT_LIMIT);
@@ -127,6 +137,13 @@ final class PipelineEventBroadcaster
         PipelineQueueEvent::query()
             ->where('stream', $stream)
             ->where('id', '<=', $thresholdId)
+            ->delete();
+    }
+
+    private function flushStream(string $stream): void
+    {
+        PipelineQueueEvent::query()
+            ->where('stream', $stream)
             ->delete();
     }
 }

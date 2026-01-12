@@ -7,6 +7,9 @@ use App\Models\PipelineRunStep;
 use App\Services\Pipeline\Contracts\PipelineStepExecutor;
 use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineStepResult;
+use App\Services\Llm\Exceptions\HaikuRateLimitExceededException;
+use App\Jobs\ProcessPipelineJob;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\DB;
 use RuntimeException;
 use Throwable;
@@ -49,16 +52,32 @@ final class PipelineRunProcessingService
 
         $this->eventBroadcaster->runUpdated($run);
         $this->eventBroadcaster->queueRunUpdated($run);
-        $this->eventBroadcaster->stepUpdated($step);
 
         try {
             $input = $this->resolveStepInput($run, $step);
             $result = $this->executor->execute($run, $step, $input);
             $this->markStepCompleted($step, $result);
+        } catch (HaikuRateLimitExceededException $e) {
+            $this->deferStepAfterRateLimit($run, $step, $e->retryAfterSeconds());
+
+            return false;
         } catch (Throwable $e) {
+            $stepVersion = $step->stepVersion;
+            $provider = $stepVersion?->settings['provider'] ?? null;
+            if ($provider === 'gemini') {
+                $model = $stepVersion->settings['model'] ?? null;
+                $baseUrl = function_exists('config') ? (config('gemini.base_url') ?: 'default') : 'unknown';
+                Log::error('Gemini step failed', [
+                    'run_id' => $run->id,
+                    'step_id' => $step->id,
+                    'model' => $model,
+                    'base_url' => $baseUrl,
+                    'error' => $e->getMessage(),
+                ]);
+            }
             $this->markStepFailed($run, $step, $e);
 
-            throw $e;
+            return false;
         }
 
         $hasPending = $this->hasPendingSteps($run->id);
@@ -144,7 +163,7 @@ final class PipelineRunProcessingService
 
         $step = $step->fresh(['stepVersion.step', 'pipelineRun.lesson.project', 'pipelineRun.pipelineVersion', 'pipelineRun.steps.stepVersion.step']);
 
-        $this->eventBroadcaster->stepUpdated($step);
+        $this->eventBroadcaster->stepCompleted($step);
 
         $run = $step->pipelineRun;
 
@@ -166,10 +185,11 @@ final class PipelineRunProcessingService
             $run->forceFill(['status' => 'failed'])->save();
         });
 
-        $this->eventBroadcaster->stepUpdated($step->fresh(['stepVersion.step']));
+        $this->eventBroadcaster->stepCompleted($step->fresh(['stepVersion.step']));
         $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
         $this->eventBroadcaster->runUpdated($run);
         $this->eventBroadcaster->queueRunRemoved($run->id);
+        $this->eventBroadcaster->flushRunStream($run->id);
     }
 
     private function markRunAsCompleted(PipelineRun $run): void
@@ -180,6 +200,7 @@ final class PipelineRunProcessingService
 
         $this->eventBroadcaster->runUpdated($run);
         $this->eventBroadcaster->queueRunRemoved($run->id);
+        $this->eventBroadcaster->flushRunStream($run->id);
     }
 
     private function hasPendingSteps(int $runId): bool
@@ -188,5 +209,27 @@ final class PipelineRunProcessingService
             ->where('pipeline_run_id', $runId)
             ->where('status', 'pending')
             ->exists();
+    }
+
+    private function deferStepAfterRateLimit(PipelineRun $run, PipelineRunStep $step, int $retryAfterSeconds): void
+    {
+        DB::transaction(function () use ($run, $step): void {
+            $step->forceFill([
+                'status' => 'pending',
+                'start_time' => null,
+                'end_time' => null,
+            ])->save();
+
+            $run->forceFill(['status' => 'queued'])->save();
+        });
+
+        $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
+
+        $this->eventBroadcaster->queueRunUpdated($run);
+        $this->eventBroadcaster->runUpdated($run);
+
+        ProcessPipelineJob::dispatch($run->id)
+            ->onQueue(ProcessPipelineJob::QUEUE)
+            ->delay($retryAfterSeconds);
     }
 }
