@@ -7,7 +7,6 @@ use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
-use App\Models\Project;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Tests\TestCase;

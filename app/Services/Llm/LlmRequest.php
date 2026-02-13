@@ -8,6 +8,7 @@ namespace App\Services\Llm;
 final class LlmRequest
 {
     public const INPUT_TYPE_TEXT = 'text';
+
     public const INPUT_TYPE_AUDIO = 'audio';
 
     /**
@@ -21,8 +22,7 @@ final class LlmRequest
         public readonly bool $stream = true,
         public readonly array $options = [],
         public readonly string $inputType = self::INPUT_TYPE_TEXT,
-    ) {
-    }
+    ) {}
 
     /**
      * @return MessageList

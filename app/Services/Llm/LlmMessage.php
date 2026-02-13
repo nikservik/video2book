@@ -5,14 +5,15 @@ namespace App\Services\Llm;
 final class LlmMessage
 {
     public const ROLE_SYSTEM = 'system';
+
     public const ROLE_USER = 'user';
+
     public const ROLE_ASSISTANT = 'assistant';
 
     public function __construct(
         public readonly string $role,
         public readonly string $content,
-    ) {
-    }
+    ) {}
 
     public static function system(string $content): self
     {

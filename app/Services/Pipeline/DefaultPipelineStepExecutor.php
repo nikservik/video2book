@@ -20,6 +20,7 @@ use Laravel\Ai\Responses\TranscriptionResponse;
 use Laravel\Ai\Transcription;
 use RuntimeException;
 use Throwable;
+
 use function Laravel\Ai\agent;
 
 final class DefaultPipelineStepExecutor implements PipelineStepExecutor

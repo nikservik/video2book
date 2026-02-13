@@ -100,6 +100,7 @@ class PipelineRunProcessingTest extends TestCase
             {
                 if ($step->position === 1) {
                     $this->firstStepHandled = true;
+
                     return new PipelineStepResult('first');
                 }
 

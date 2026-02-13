@@ -23,8 +23,7 @@ class PipelineRunController extends Controller
     public function __construct(
         private readonly PipelineRunService $pipelineRunService,
         private readonly PipelineEventBroadcaster $eventBroadcaster,
-    ) {
-    }
+    ) {}
 
     public function store(Request $request): JsonResponse
     {
@@ -93,6 +92,7 @@ class PipelineRunController extends Controller
                         $lastKeepAlive = now();
                     }
                     usleep(500000);
+
                     continue;
                 }
 
@@ -139,6 +139,7 @@ class PipelineRunController extends Controller
             if (in_array($runSnapshot['status'] ?? null, ['done', 'failed'], true)) {
                 $this->sendEvent('run-completed', ['run' => $runSnapshot]);
                 $this->eventBroadcaster->flushRunStream($runId);
+
                 return;
             }
 
@@ -162,6 +163,7 @@ class PipelineRunController extends Controller
                         $lastKeepAlive = now();
                     }
                     usleep(500000);
+
                     continue;
                 }
 
@@ -178,6 +180,7 @@ class PipelineRunController extends Controller
                     ) {
                         $this->sendEvent('run-completed', $data);
                         $this->eventBroadcaster->flushRunStream($runId);
+
                         return;
                     }
                 }

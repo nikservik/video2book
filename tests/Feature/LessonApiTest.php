@@ -8,7 +8,6 @@ use App\Models\Pipeline;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
 use App\Models\Project;
-use App\Models\ProjectTag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\Queue;

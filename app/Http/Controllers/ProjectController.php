@@ -17,8 +17,7 @@ class ProjectController extends Controller
     public function __construct(
         private readonly PipelineRunService $pipelineRunService,
         private readonly LessonDownloadManager $lessonDownloadManager,
-    ) {
-    }
+    ) {}
 
     public function index(): JsonResponse
     {

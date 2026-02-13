@@ -52,7 +52,7 @@ class LessonDownloadService
      */
     private function downloadAudio(string $targetDirectory, string $url, ?callable $onProgress = null): string
     {
-        $downloader = new YoutubeDl();
+        $downloader = new YoutubeDl;
         $downloader->setBinPath(config('downloader.binary', 'yt-dlp'));
 
         if ($onProgress !== null) {
@@ -90,7 +90,7 @@ class LessonDownloadService
     {
         $settings = $this->resolveQualitySettings($lesson);
 
-        $format = (new Mp3())
+        $format = (new Mp3)
             ->setAudioKiloBitrate($settings['bitrate'])
             ->setAudioChannels(1);
 

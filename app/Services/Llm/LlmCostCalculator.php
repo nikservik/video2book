@@ -4,9 +4,7 @@ namespace App\Services\Llm;
 
 final class LlmCostCalculator
 {
-    public function __construct(private readonly LlmPricing $pricing)
-    {
-    }
+    public function __construct(private readonly LlmPricing $pricing) {}
 
     public function calculateUsageCost(string $provider, string $model, LlmUsage $usage, string $inputType = LlmRequest::INPUT_TYPE_TEXT): LlmUsage
     {

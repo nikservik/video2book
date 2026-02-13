@@ -12,7 +12,9 @@ use App\Support\PipelineRunTransformer;
 final class PipelineEventBroadcaster
 {
     public const QUEUE_STREAM = 'queue';
+
     public const STREAM_EVENT_LIMIT = 1000;
+
     private const RUN_STREAM_PREFIX = 'run:';
 
     public function queueRunUpdated(PipelineRun $run): void

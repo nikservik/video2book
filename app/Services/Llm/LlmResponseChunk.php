@@ -9,8 +9,7 @@ final class LlmResponseChunk
         public readonly bool $isFinal = false,
         public readonly ?LlmUsage $usage = null,
         public readonly array $meta = [],
-    ) {
-    }
+    ) {}
 
     public static function partial(string $content, array $meta = []): self
     {

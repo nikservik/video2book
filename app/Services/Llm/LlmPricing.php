@@ -6,9 +6,7 @@ use Illuminate\Contracts\Config\Repository;
 
 final class LlmPricing
 {
-    public function __construct(private readonly Repository $config)
-    {
-    }
+    public function __construct(private readonly Repository $config) {}
 
     public function costForTokens(
         string $provider,

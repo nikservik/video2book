@@ -9,13 +9,17 @@ use Illuminate\Support\Str;
 final class AnthropicRateLimiter
 {
     private const LIMIT_TOKENS_PER_MINUTE = 10000;
+
     private const WINDOW_SECONDS = 60;
+
     private const DEFAULT_RETRY_SECONDS = 10;
+
     private const CACHE_KEY = 'anthropic_haiku_token_window';
 
     public function estimateOutputTokens(string $input): int
     {
         $length = mb_strlen($input, 'UTF-8');
+
         // Примерная оценка: ~4 символа на токен.
         return max(1, (int) ceil($length / 4));
     }

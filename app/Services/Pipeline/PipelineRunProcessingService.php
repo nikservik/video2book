@@ -2,15 +2,13 @@
 
 namespace App\Services\Pipeline;
 
+use App\Jobs\ProcessPipelineJob;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
-use App\Services\Pipeline\Contracts\PipelineStepExecutor;
-use App\Services\Pipeline\PipelineEventBroadcaster;
-use App\Services\Pipeline\PipelineStepResult;
 use App\Services\Llm\Exceptions\HaikuRateLimitExceededException;
-use App\Jobs\ProcessPipelineJob;
-use Illuminate\Support\Facades\Log;
+use App\Services\Pipeline\Contracts\PipelineStepExecutor;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Log;
 use RuntimeException;
 use Throwable;
 
@@ -19,8 +17,7 @@ final class PipelineRunProcessingService
     public function __construct(
         private readonly PipelineStepExecutor $executor,
         private readonly PipelineEventBroadcaster $eventBroadcaster,
-    ) {
-    }
+    ) {}
 
     /**
      * Обрабатывает следующий шаг пайплайна.

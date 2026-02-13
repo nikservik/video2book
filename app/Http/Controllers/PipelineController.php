@@ -514,7 +514,7 @@ class PipelineController extends Controller
     }
 
     /**
-     * @param array<int, array{step_id:int, step_version_id:int}>|null $stepPayload
+     * @param  array<int, array{step_id:int, step_version_id:int}>|null  $stepPayload
      */
     private function createPipelineVersionFromPrevious(
         Pipeline $pipeline,
@@ -552,7 +552,7 @@ class PipelineController extends Controller
     private function composeChangelog(?string $existing, string $entry): string
     {
         return collect([$existing, $entry])
-            ->filter(fn (?string $value) => !empty(trim((string) $value)))
+            ->filter(fn (?string $value) => ! empty(trim((string) $value)))
             ->implode("\n");
     }
 

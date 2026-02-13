@@ -38,7 +38,7 @@ class LlmResponseTest extends TestCase
     public function test_stream_cannot_be_consumed_twice(): void
     {
         $response = LlmResponse::streaming(function () {
-            yield LlmResponseChunk::final('done', new LlmUsage());
+            yield LlmResponseChunk::final('done', new LlmUsage);
         });
 
         $response->collect();

@@ -10,9 +10,7 @@ use TCPDF;
 
 class PipelineStepPdfExporter
 {
-    public function __construct(private readonly CommonMarkConverter $markdown)
-    {
-    }
+    public function __construct(private readonly CommonMarkConverter $markdown) {}
 
     /**
      * @return string binary PDF content
@@ -25,7 +23,7 @@ class PipelineStepPdfExporter
 
         $html = $this->renderHtml($title, $step->result ?? '');
 
-        $pdf = new TCPDF();
+        $pdf = new TCPDF;
         $pdf->SetTitle($title);
         $pdf->SetAuthor(config('app.name', 'Video2Book'));
         $pdf->SetMargins(15, 20, 15);

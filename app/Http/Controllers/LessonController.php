@@ -16,8 +16,7 @@ class LessonController extends Controller
     public function __construct(
         private readonly PipelineRunService $pipelineRunService,
         private readonly LessonDownloadManager $lessonDownloadManager,
-    ) {
-    }
+    ) {}
 
     public function index(Request $request): JsonResponse
     {
@@ -216,5 +215,4 @@ class LessonController extends Controller
             'updated_at' => optional($lesson->updated_at)->toISOString(),
         ];
     }
-
 }
