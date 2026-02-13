@@ -1,59 +1,152 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Video2Book
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Серверное приложение для обработки лекций: проекты, уроки, версии пайплайнов, очереди прогонов и интеграции с LLM-провайдерами.
 
-## About Laravel
+Текущая целевая архитектура: **Laravel + Livewire** (без desktop-клиента).
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+## Что делает приложение
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+- Управляет проектами и уроками.
+- Хранит версионируемые пайплайны и шаги.
+- Запускает обработку уроков через очередь `pipelines`.
+- Поддерживает транскрибацию и текстовые шаги через OpenAI / Anthropic / Gemini.
+- Считает usage и стоимость по каждому шагу.
+- Экспортирует результаты шагов в PDF/Markdown.
+- Поддерживает загрузку уроков по YouTube-ссылке через `yt-dlp`.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+## Технологии
 
-## Learning Laravel
+- PHP 8.4+
+- Laravel 12
+- Queue (database driver по умолчанию)
+- Blade + Vite
+- Livewire (целевая серверная UI-архитектура)
+- Laravel AI SDK (`laravel/ai`) как единый слой для OpenAI / Anthropic / Gemini
+- `protonemedia/laravel-ffmpeg` и `norkunas/youtube-dl-php`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+## Быстрый старт
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 1. Установка
 
-## Laravel Sponsors
+```bash
+composer install
+cp .env.example .env
+php artisan key:generate
+php artisan migrate
+npm install
+```
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+### 2. Обязательные `.env` переменные
 
-### Premium Partners
+Минимум:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+- `OPENAI_API_KEY`
+- `ANTHROPIC_API_KEY` (если используете Anthropic)
+- `GEMINI_API_KEY` (если используете Gemini)
 
-## Contributing
+Полезные настройки:
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- `LLM_REQUEST_TIMEOUT=1800`
+- `LLM_ANTHROPIC_MAX_TOKENS=64000`
+- `YTDLP_BINARY=yt-dlp`
+- `QUEUE_CONNECTION=database`
 
-## Code of Conduct
+### 3. Запуск разработки
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+В одном окне:
 
-## Security Vulnerabilities
+```bash
+composer dev
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Или отдельными процессами:
 
-## License
+```bash
+php artisan serve
+php artisan queue:listen --tries=1 --queue=pipelines
+npm run dev
+```
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+## Архитектура репозитория
+
+- `app/Http/Controllers` — API-контроллеры.
+- `app/Jobs` — фоновые задания.
+- `app/Models` — Eloquent-модели.
+- `app/Services/Lesson` — загрузка/подготовка медиа.
+- `app/Services/Pipeline` — запуск шагов, статусы, экспорт.
+- `app/Services/Llm` — интеграция с Laravel AI SDK, usage/cost и лимиты.
+- `routes/api.php` — REST API.
+- `routes/web.php` — веб-маршруты для серверного UI.
+- `resources/views` — Blade-шаблоны.
+- `tests/Feature`, `tests/Unit` — покрытие API/сервисов.
+
+## Доменные сущности
+
+- `Project` — контейнер уроков.
+- `Lesson` — единица обработки (источник + настройки).
+- `Pipeline` / `PipelineVersion` — версия сценария обработки.
+- `Step` / `StepVersion` — шаги версии пайплайна.
+- `PipelineRun` / `PipelineRunStep` — фактический прогон и шаги выполнения.
+- `ProjectTag` — теги проектов/уроков.
+
+## API (основное)
+
+- `GET/POST/PUT /api/projects`
+- `POST /api/projects/youtube`
+- `GET/POST/PUT /api/lessons`
+- `POST /api/lessons/{lesson}/audio`
+- `POST /api/lessons/{lesson}/download`
+- `GET/POST/PUT /api/pipelines`
+- `GET /api/pipeline-versions/{id}/steps`
+- `GET/POST /api/pipeline-runs`
+- `POST /api/pipeline-runs/{run}/restart`
+- `GET /api/pipeline-runs/{run}/steps/{step}/export/pdf`
+- `GET /api/pipeline-runs/{run}/steps/{step}/export/md`
+
+## Livewire-переход
+
+Архитектурное решение на этом этапе: развивать серверный UI на Livewire и использовать существующий доменный/сервисный слой без дублирования логики.
+
+Рекомендованный подход:
+
+1. Строить новые пользовательские сценарии как Livewire-компоненты.
+2. Сложные операции оставлять в сервисах и очередях.
+3. API сохранять как стабильный контракт для внутренних и внешних клиентов.
+
+Текущий статус UI:
+- Базовый серверный layout (`resources/views/layouts/app.blade.php`) уже подключён для web-страниц и содержит верхнюю навигацию, mobile-меню и контентный контейнер.
+- В правой части layout используются кнопка настроек (`cog-8-tooth`, heroicons) и переключатель светлой/тёмной темы (адаптация Tailwind UI под Blade/Livewire), который применяет тему ко всей странице.
+
+## LLM и транскрибация
+
+- Текстовые шаги выполняются через Laravel AI SDK (`config/ai.php`).
+- Для транскрибации с провайдером `gemini` используется multimodal-подход: промт + audio attachment в текстовом запросе к Gemini.
+- Если выбрана модель `whisper-*`, транскрибация идёт через штатный STT Laravel AI SDK.
+- Кастомные прямые SDK-клиенты провайдеров в приложении не используются.
+
+## Проверки качества
+
+```bash
+php artisan test
+./vendor/bin/pint --test
+```
+
+При изменении фронтовых ассетов/шаблонов дополнительно:
+
+```bash
+npm run build
+```
+
+## Документация
+
+- Основные правила разработки: `AGENTS.md`
+- Актуальные документы: `docs/`
+- Архив старых документов: `docs/old/`
+
+## История изменений
+
+- Все изменения фиксируются в `CHANGELOG.md`.
+
+## Лицензия
+
+MIT

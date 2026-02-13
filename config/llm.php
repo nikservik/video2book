@@ -3,11 +3,7 @@
 return [
     'default_stream' => true,
 
-    'providers' => [
-        'openai' => App\Services\Llm\Providers\OpenAiLlmProvider::class,
-        'anthropic' => App\Services\Llm\Providers\AnthropicLlmProvider::class,
-        'gemini' => App\Services\Llm\Providers\GeminiLlmProvider::class,
-    ],
+    'request_timeout' => (int) env('LLM_REQUEST_TIMEOUT', 1800),
 
     'defaults' => [
         'anthropic' => [

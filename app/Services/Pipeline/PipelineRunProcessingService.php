@@ -64,17 +64,14 @@ final class PipelineRunProcessingService
         } catch (Throwable $e) {
             $stepVersion = $step->stepVersion;
             $provider = $stepVersion?->settings['provider'] ?? null;
-            if ($provider === 'gemini') {
-                $model = $stepVersion->settings['model'] ?? null;
-                $baseUrl = function_exists('config') ? (config('gemini.base_url') ?: 'default') : 'unknown';
-                Log::error('Gemini step failed', [
-                    'run_id' => $run->id,
-                    'step_id' => $step->id,
-                    'model' => $model,
-                    'base_url' => $baseUrl,
-                    'error' => $e->getMessage(),
-                ]);
-            }
+            $model = $stepVersion?->settings['model'] ?? null;
+            Log::error('Pipeline step failed', [
+                'run_id' => $run->id,
+                'step_id' => $step->id,
+                'provider' => $provider,
+                'model' => $model,
+                'error' => $e->getMessage(),
+            ]);
             $this->markStepFailed($run, $step, $e);
 
             return false;

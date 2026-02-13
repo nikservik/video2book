@@ -15,23 +15,18 @@ use App\Services\Llm\LlmUsage;
 use App\Services\Pipeline\Contracts\PipelineStepExecutor;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
-use OpenAI\Contracts\ClientContract;
+use Laravel\Ai\Files\Audio;
+use Laravel\Ai\Responses\TranscriptionResponse;
+use Laravel\Ai\Transcription;
 use RuntimeException;
 use Throwable;
-use Gemini\Contracts\ClientContract as GeminiClientContract;
-use Gemini\Data\Blob;
-use Gemini\Data\Content;
-use Gemini\Enums\MimeType;
-use Gemini\Enums\Role;
-use Gemini\Responses\GenerativeModel\GenerateContentResponse;
+use function Laravel\Ai\agent;
 
 final class DefaultPipelineStepExecutor implements PipelineStepExecutor
 {
     public function __construct(
         private readonly LlmManager $llmManager,
         private readonly LlmCostCalculator $costCalculator,
-        private readonly ClientContract $openAIClient,
-        private readonly GeminiClientContract $geminiClient,
         private readonly AnthropicRateLimiter $haikuLimiter,
     ) {}
 
@@ -64,51 +59,53 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
             throw new RuntimeException('Нормализованный аудио-файл отсутствует в хранилище.');
         }
 
-        $provider = Arr::get($version->settings, 'provider', 'openai');
-        $model = Arr::get($version->settings, 'model');
+        $requestedProvider = (string) Arr::get($version->settings, 'provider', 'openai');
+        $provider = $requestedProvider;
+        $model = $this->normalizeTranscriptionModel($provider, Arr::get($version->settings, 'model'));
+        $language = Arr::get($version->settings, 'language');
         $filePath = $disk->path($lesson->source_filename);
+        $prompt = trim((string) $version->prompt);
 
-        if ($provider === 'gemini') {
-            $model = $this->normalizeModel('gemini', $model) ?? 'gemini-3-flash-preview';
-
-            return $this->transcribeWithGemini($filePath, $model, $version->prompt);
+        // Для Gemini транскрибации используем текстовый multimodal вызов с audio attachment.
+        if ($provider === 'gemini' && ! $this->isWhisperModel($model)) {
+            return $this->transcribeWithGemini(
+                filePath: $filePath,
+                model: $model ?? 'gemini-3-flash-preview',
+                prompt: $prompt,
+                requestedProvider: $requestedProvider,
+            );
         }
 
-        $model = $this->normalizeTranscriptionModel($model);
-
-        $handle = fopen($filePath, 'rb');
-
-        if ($handle === false) {
-            throw new RuntimeException('Не удалось открыть аудио-файл для чтения.');
+        // Для Whisper всегда используем стандартный STT из Laravel AI SDK.
+        if ($this->isWhisperModel($model)) {
+            $provider = 'openai';
         }
 
-        $payload = array_filter([
-            'model' => $model,
-            'file' => $handle,
-            'response_format' => 'text',
-            'temperature' => Arr::get($version->settings, 'temperature'),
-            'language' => Arr::get($version->settings, 'language'),
-            'prompt' => $version->prompt,
-        ], static fn ($value) => $value !== null);
+        $pending = Transcription::fromPath($filePath, $this->detectAudioMime($filePath));
 
-        try {
-            $response = $this->openAIClient->audio()->transcribe($payload);
-        } finally {
-            if (is_resource($handle)) {
-                fclose($handle);
-            }
+        if (is_string($language) && $language !== '') {
+            $pending->language($language);
         }
 
-        $minutes = $response->duration !== null ? $response->duration / 60 : null;
-        $cost = $minutes !== null ? $this->costCalculator->whisper($minutes) : null;
+        $response = $pending->generate($provider, $model);
+
+        $usage = $this->mapTranscriptionUsage(
+            provider: $provider,
+            model: $model,
+            response: $response,
+        );
 
         return new PipelineStepResult(
             output: $response->text,
-            cost: $cost,
+            inputTokens: $usage?->inputTokens,
+            outputTokens: $usage?->outputTokens,
+            cost: $usage?->cost,
             meta: array_filter([
-                'language' => $response->language,
-                'duration' => $response->duration,
-            ], static fn ($value) => $value !== null),
+                'provider' => $provider,
+                'provider_requested' => $requestedProvider,
+                'model' => $response->meta->model ?? $model,
+                'segments' => $response->segments->count(),
+            ], static fn (mixed $value): bool => $value !== null),
         );
     }
 
@@ -119,7 +116,7 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
         }
 
         $settings = $version->settings ?? [];
-        $provider = $settings['provider'] ?? 'openai';
+        $provider = (string) ($settings['provider'] ?? 'openai');
         $model = $this->normalizeModel($provider, $settings['model'] ?? null);
 
         if ($model === null) {
@@ -198,123 +195,145 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
         }
 
         if ($provider === 'gemini') {
-            // совместимость со старыми названиями
-            if ($model === 'gemini-3-flash') {
+            // Совместимость со старыми названиями.
+            if ($model === 'gemini-3-flash' || $model === 'gemini-3.0-flash') {
                 return 'gemini-3-flash-preview';
-            }
-
-            if ($model === 'gemini-3.0-flash') {
-                return 'gemini-3-flash-preview';
-            }
-
-            if (str_starts_with($model, 'models/')) {
-                return substr($model, strlen('models/'));
             }
         }
 
         return $model;
     }
 
-    private function normalizeTranscriptionModel(?string $model): string
+    private function normalizeTranscriptionModel(string $provider, ?string $model): ?string
     {
-        if (is_string($model) && str_starts_with($model, 'whisper')) {
+        if ($provider === 'gemini') {
+            if ($model === null || $model === '') {
+                return 'gemini-3-flash-preview';
+            }
+
+            if ($model === 'gemini-3-flash' || $model === 'gemini-3.0-flash') {
+                return 'gemini-3-flash-preview';
+            }
+
             return $model;
         }
 
-        return 'whisper-1';
+        if ($model === null || $model === '') {
+            return 'whisper-1';
+        }
+
+        if (str_starts_with($model, 'gemini-')) {
+            return 'whisper-1';
+        }
+
+        return $model;
     }
 
-    private function transcribeWithGemini(string $filePath, string $model, ?string $prompt): PipelineStepResult
-    {
-        $audio = file_get_contents($filePath);
+    private function transcribeWithGemini(
+        string $filePath,
+        string $model,
+        string $prompt,
+        string $requestedProvider,
+    ): PipelineStepResult {
+        $instruction = $prompt !== ''
+            ? $prompt
+            : 'Transcribe this audio accurately in the source language. Preserve punctuation and paragraph breaks.';
 
-        if ($audio === false) {
-            throw new RuntimeException('Не удалось прочитать аудио-файл для транскрибации.');
-        }
+        $response = agent()->prompt(
+            prompt: $instruction,
+            attachments: [Audio::fromPath($filePath, $this->detectAudioMime($filePath))],
+            provider: 'gemini',
+            model: $model,
+            timeout: (int) config('llm.request_timeout', 1800),
+        );
 
-        $mimeType = $this->detectAudioMime($filePath);
-        $blob = new Blob($mimeType, base64_encode($audio));
-
-        $instruction = trim((string) $prompt);
-        $parts = [$blob];
-
-        if ($instruction !== '') {
-            $parts[] = $instruction;
-        } else {
-            $parts[] = 'Transcribe this audio to text in the original language. Keep paragraphs and punctuation.';
-        }
-
-        $response = $this->geminiClient
-            ->generativeModel($model)
-            ->generateContent(
-                Content::parse($parts, Role::USER)
-            );
-
-        $text = $this->extractGeminiText($response);
-        $usage = $this->mapGeminiUsage($response);
-
-        if ($usage !== null) {
-            $usage = $this->costCalculator->calculateUsageCost(
-                provider: 'gemini',
-                model: $model,
-                usage: $usage,
-                inputType: LlmRequest::INPUT_TYPE_AUDIO,
-            );
-        }
+        $usage = $this->mapGeminiTextUsage($response->usage->promptTokens, $response->usage->completionTokens, $model);
 
         return new PipelineStepResult(
-            output: $text,
+            output: $response->text,
             inputTokens: $usage?->inputTokens,
             outputTokens: $usage?->outputTokens,
             cost: $usage?->cost,
-            meta: $usage?->meta ?? [],
+            meta: array_filter([
+                'provider' => 'gemini',
+                'provider_requested' => $requestedProvider,
+                'model' => $response->meta->model ?? $model,
+            ], static fn (mixed $value): bool => $value !== null),
         );
     }
 
-    private function detectAudioMime(string $filePath): MimeType
+    private function mapGeminiTextUsage(int $inputTokens, int $outputTokens, string $model): ?LlmUsage
     {
-        return match (strtolower(pathinfo($filePath, PATHINFO_EXTENSION))) {
-            'wav' => MimeType::AUDIO_WAV,
-            'aiff' => MimeType::AUDIO_AIFF,
-            'aac' => MimeType::AUDIO_AAC,
-            'ogg' => MimeType::AUDIO_OGG,
-            'flac' => MimeType::AUDIO_FLAC,
-            default => MimeType::AUDIO_MP3,
-        };
-    }
-
-    private function extractGeminiText(GenerateContentResponse $response): string
-    {
-        $buffer = '';
-
-        foreach ($response->candidates as $candidate) {
-            foreach ($candidate->content->parts as $part) {
-                if ($part->text !== null) {
-                    $buffer .= $part->text;
-                }
-            }
-        }
-
-        return $buffer;
-    }
-
-    private function mapGeminiUsage(GenerateContentResponse $response): ?LlmUsage
-    {
-        $usage = $response->usageMetadata;
-
-        if ($usage === null) {
+        if ($inputTokens === 0 && $outputTokens === 0) {
             return null;
         }
 
-        $candidatesTokens = $usage->candidatesTokenCount ?? max(0, $usage->totalTokenCount - $usage->promptTokenCount);
+        return $this->costCalculator->calculateUsageCost(
+            provider: 'gemini',
+            model: $model,
+            usage: new LlmUsage(
+                inputTokens: $inputTokens,
+                outputTokens: $outputTokens,
+                meta: [
+                    'provider' => 'gemini',
+                ],
+            ),
+            inputType: LlmRequest::INPUT_TYPE_AUDIO,
+        );
+    }
 
-        return new LlmUsage(
-            inputTokens: $usage->promptTokenCount,
-            outputTokens: $candidatesTokens,
-            meta: [
-                'total_tokens' => $usage->totalTokenCount,
-                'provider' => 'gemini',
-            ],
+    private function isWhisperModel(?string $model): bool
+    {
+        if (! is_string($model) || $model === '') {
+            return false;
+        }
+
+        return str_starts_with(strtolower($model), 'whisper');
+    }
+
+    private function detectAudioMime(string $filePath): string
+    {
+        return match (strtolower(pathinfo($filePath, PATHINFO_EXTENSION))) {
+            'wav' => 'audio/wav',
+            'aiff' => 'audio/aiff',
+            'aac' => 'audio/aac',
+            'ogg' => 'audio/ogg',
+            'flac' => 'audio/flac',
+            default => 'audio/mpeg',
+        };
+    }
+
+    private function mapTranscriptionUsage(string $provider, ?string $model, TranscriptionResponse $response): ?LlmUsage
+    {
+        $usage = $response->usage;
+
+        if ($usage->promptTokens === 0 && $usage->completionTokens === 0) {
+            return null;
+        }
+
+        $resolvedModel = $response->meta->model ?? $model;
+
+        if (! is_string($resolvedModel) || $resolvedModel === '') {
+            return new LlmUsage(
+                inputTokens: $usage->promptTokens,
+                outputTokens: $usage->completionTokens,
+                meta: [
+                    'provider' => $provider,
+                ],
+            );
+        }
+
+        return $this->costCalculator->calculateUsageCost(
+            provider: $provider,
+            model: $resolvedModel,
+            usage: new LlmUsage(
+                inputTokens: $usage->promptTokens,
+                outputTokens: $usage->completionTokens,
+                meta: [
+                    'provider' => $provider,
+                ],
+            ),
+            inputType: LlmRequest::INPUT_TYPE_AUDIO,
         );
     }
 }

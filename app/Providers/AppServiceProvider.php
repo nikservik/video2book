@@ -8,6 +8,7 @@ use App\Services\Llm\LlmPricing;
 use App\Services\Pipeline\Contracts\PipelineStepExecutor;
 use App\Services\Pipeline\DefaultPipelineStepExecutor;
 use Illuminate\Support\ServiceProvider;
+use Laravel\Ai\AiManager as LaravelAiManager;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -25,13 +26,13 @@ class AppServiceProvider extends ServiceProvider
         });
 
         $this->app->singleton(LlmManager::class, function ($app): LlmManager {
-            $providers = [];
-
-            foreach (config('llm.providers', []) as $name => $class) {
-                $providers[$name] = $app->make($class);
-            }
-
-            return new LlmManager($providers);
+            return new LlmManager(
+                ai: $app->make(LaravelAiManager::class),
+                costCalculator: $app->make(LlmCostCalculator::class),
+                providers: array_keys((array) config('ai.providers', [])),
+                requestTimeout: (int) config('llm.request_timeout', 1800),
+                anthropicMaxTokens: (int) config('llm.defaults.anthropic.max_tokens', 64000),
+            );
         });
 
         $this->app->singleton(PipelineStepExecutor::class, DefaultPipelineStepExecutor::class);
