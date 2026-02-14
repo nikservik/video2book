@@ -4,16 +4,21 @@ namespace App\Livewire;
 
 use App\Actions\Pipeline\GetPipelineVersionOptionsAction;
 use App\Actions\Project\AddPipelineVersionToLessonAction;
+use App\Actions\Project\BuildProjectStepResultsArchiveAction;
 use App\Actions\Project\CreateProjectLessonFromYoutubeAction;
 use App\Actions\Project\DeleteProjectAction;
 use App\Actions\Project\DeleteProjectLessonAction;
 use App\Actions\Project\DeleteProjectPipelineRunAction;
+use App\Actions\Project\GetProjectExportPipelineStepOptionsAction;
 use App\Actions\Project\UpdateProjectLessonNameAction;
 use App\Actions\Project\UpdateProjectNameAction;
 use App\Models\Project;
 use App\Services\Project\ProjectDetailsQuery;
 use Illuminate\Contracts\View\View;
+use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 use Livewire\Component;
 
 class ProjectShowPage extends Component
@@ -33,6 +38,8 @@ class ProjectShowPage extends Component
     public bool $showCreateLessonModal = false;
 
     public bool $showAddPipelineToLessonModal = false;
+
+    public bool $showProjectExportModal = false;
 
     public string $editableProjectName = '';
 
@@ -64,6 +71,15 @@ class ProjectShowPage extends Component
 
     public ?int $addingPipelineVersionId = null;
 
+    public string $projectExportFormat = 'pdf';
+
+    public ?string $projectExportSelection = null;
+
+    /**
+     * @var array<int, array{id:int,label:string,steps:array<int, array{id:int,name:string}>}>
+     */
+    public array $projectExportPipelineOptions = [];
+
     /**
      * @var array<int, array{id:int,label:string}>
      */
@@ -83,6 +99,7 @@ class ProjectShowPage extends Component
         $this->showRenameLessonModal = false;
         $this->showRenameProjectModal = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
         $this->resetErrorBag();
 
         $this->newLessonName = '';
@@ -164,6 +181,7 @@ class ProjectShowPage extends Component
         $this->showDeleteRunAlert = false;
         $this->showRenameLessonModal = false;
         $this->showRenameProjectModal = false;
+        $this->showProjectExportModal = false;
         $this->resetErrorBag();
 
         $this->addingPipelineLessonId = $lesson->id;
@@ -244,6 +262,145 @@ class ProjectShowPage extends Component
         );
     }
 
+    public function openProjectExportModal(string $format, GetProjectExportPipelineStepOptionsAction $getProjectExportPipelineStepOptionsAction): void
+    {
+        if (! in_array($format, ['pdf', 'md'], true)) {
+            return;
+        }
+
+        $this->showCreateLessonModal = false;
+        $this->showAddPipelineToLessonModal = false;
+        $this->showDeleteProjectAlert = false;
+        $this->showDeleteLessonAlert = false;
+        $this->showDeleteRunAlert = false;
+        $this->showRenameLessonModal = false;
+        $this->showRenameProjectModal = false;
+        $this->resetErrorBag();
+
+        $this->projectExportFormat = $format;
+        $this->projectExportPipelineOptions = $getProjectExportPipelineStepOptionsAction->handle($this->project);
+        $this->projectExportSelection = $this->resolvePreferredProjectExportSelection($this->projectExportPipelineOptions);
+        $this->showProjectExportModal = true;
+    }
+
+    public function closeProjectExportModal(): void
+    {
+        $this->showProjectExportModal = false;
+        $this->projectExportSelection = null;
+        $this->projectExportPipelineOptions = [];
+    }
+
+    public function downloadProjectResults(BuildProjectStepResultsArchiveAction $buildProjectStepResultsArchiveAction)
+    {
+        $availableSelections = $this->availableProjectExportSelections();
+
+        $validated = validator([
+            'projectExportSelection' => $this->projectExportSelection,
+        ], [
+            'projectExportSelection' => ['required', 'string', Rule::in($availableSelections)],
+        ], [], [
+            'projectExportSelection' => 'шаг для скачивания',
+        ])->validate();
+
+        [$pipelineVersionId, $stepVersionId] = $this->parseProjectExportSelection($validated['projectExportSelection']);
+
+        abort_if($pipelineVersionId === null || $stepVersionId === null, 422, 'Невалидный выбор шага для скачивания.');
+
+        try {
+            $archive = $buildProjectStepResultsArchiveAction->handle(
+                project: $this->project,
+                pipelineVersionId: $pipelineVersionId,
+                stepVersionId: $stepVersionId,
+                format: $this->projectExportFormat,
+            );
+        } catch (ValidationException $exception) {
+            $this->addError(
+                'projectExportSelection',
+                $exception->errors()['projectExportSelection'][0] ?? 'Не удалось подготовить результаты для скачивания.'
+            );
+
+            return null;
+        }
+
+        $this->showProjectExportModal = false;
+
+        return response()->streamDownload(function () use ($archive): void {
+            $stream = fopen($archive['archive_path'], 'rb');
+
+            if ($stream !== false) {
+                fpassthru($stream);
+                fclose($stream);
+            }
+
+            File::deleteDirectory($archive['cleanup_dir']);
+        }, $archive['download_filename'], [
+            'Content-Type' => $archive['content_type'],
+        ]);
+    }
+
+    public function getProjectExportTitleProperty(): string
+    {
+        return sprintf('Скачивание проекта в %s', Str::upper($this->projectExportFormat));
+    }
+
+    public function isProjectExportPipelineExpanded(int $pipelineVersionId): bool
+    {
+        [$selectedPipelineVersionId] = $this->parseProjectExportSelection($this->projectExportSelection);
+
+        return $selectedPipelineVersionId === $pipelineVersionId;
+    }
+
+    /**
+     * @param  array<int, array{id:int,label:string,steps:array<int, array{id:int,name:string}>}>  $pipelineOptions
+     */
+    private function resolvePreferredProjectExportSelection(array $pipelineOptions): ?string
+    {
+        $defaultPipelineVersionId = $this->project->default_pipeline_version_id;
+
+        if ($defaultPipelineVersionId !== null) {
+            $defaultPipeline = collect($pipelineOptions)->firstWhere('id', $defaultPipelineVersionId);
+
+            if (is_array($defaultPipeline) && data_get($defaultPipeline, 'steps.0.id') !== null) {
+                return $defaultPipeline['id'].':'.$defaultPipeline['steps'][0]['id'];
+            }
+        }
+
+        $firstPipelineId = data_get($pipelineOptions, '0.id');
+        $firstStepId = data_get($pipelineOptions, '0.steps.0.id');
+
+        if ($firstPipelineId === null || $firstStepId === null) {
+            return null;
+        }
+
+        return $firstPipelineId.':'.$firstStepId;
+    }
+
+    /**
+     * @return array<int, string>
+     */
+    private function availableProjectExportSelections(): array
+    {
+        return collect($this->projectExportPipelineOptions)
+            ->flatMap(fn (array $pipeline) => collect($pipeline['steps'])
+                ->map(fn (array $step): string => $pipeline['id'].':'.$step['id']))
+            ->values()
+            ->all();
+    }
+
+    /**
+     * @return array{0:?int,1:?int}
+     */
+    private function parseProjectExportSelection(?string $selection): array
+    {
+        if ($selection === null || ! preg_match('/^\d+:\d+$/', $selection)) {
+            return [null, null];
+        }
+
+        [$pipelineVersionId, $stepVersionId] = explode(':', $selection, 2);
+
+        return [(int) $pipelineVersionId, (int) $stepVersionId];
+    }
+
     public function pipelineRunStatusLabel(?string $status): string
     {
         return match ($status) {
@@ -274,6 +431,7 @@ class ProjectShowPage extends Component
         $this->showRenameLessonModal = false;
         $this->showRenameProjectModal = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
         $this->showDeleteProjectAlert = true;
     }
 
@@ -290,6 +448,7 @@ class ProjectShowPage extends Component
         $this->showRenameLessonModal = false;
         $this->showDeleteProjectAlert = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
         $this->resetErrorBag();
         $this->editableProjectName = $this->project->name;
         $this->editableProjectReferer = $this->project->referer ?? '';
@@ -373,6 +532,7 @@ class ProjectShowPage extends Component
         $this->showDeleteRunAlert = false;
         $this->showDeleteProjectAlert = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
 
         $this->deletingLessonId = $lesson->id;
         $this->deletingLessonName = $lesson->name;
@@ -408,6 +568,7 @@ class ProjectShowPage extends Component
         $this->showDeleteRunAlert = false;
         $this->showRenameProjectModal = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
         $this->resetErrorBag();
 
         $this->editingLessonId = $lesson->id;
@@ -458,6 +619,7 @@ class ProjectShowPage extends Component
         $this->showRenameProjectModal = false;
         $this->showRenameLessonModal = false;
         $this->showAddPipelineToLessonModal = false;
+        $this->showProjectExportModal = false;
 
         $this->deletingRunId = $pipelineRun->id;
         $this->deletingRunLabel = sprintf(
@@ -483,6 +645,11 @@ class ProjectShowPage extends Component
 
         $this->project = app(ProjectDetailsQuery::class)->get($this->project->fresh());
         $this->closeDeleteRunAlert();
+    }
+
+    public function refreshProjectLessons(): void
+    {
+        $this->project = app(ProjectDetailsQuery::class)->get($this->project->fresh());
     }
 
     public function render(): View

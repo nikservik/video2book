@@ -8,13 +8,17 @@ use App\Livewire\ProjectShowPage;
 use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineRun;
+use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
 use App\Models\Project;
 use App\Models\ProjectTag;
+use App\Models\Step;
+use App\Models\StepVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -49,9 +53,12 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('md:grid-cols-2', false)
             ->assertSee('Добавить урок')
             ->assertSee('Редактировать проект')
+            ->assertSee('Скачать проект в PDF')
+            ->assertSee('Скачать проект в MD')
             ->assertSee('Удалить проект')
             ->assertDontSee('data-create-lesson-modal', false)
             ->assertDontSee('data-add-pipeline-to-lesson-modal', false)
+            ->assertDontSee('data-project-export-modal', false)
             ->assertDontSee('data-rename-project-modal', false)
             ->assertDontSee('data-rename-lesson-modal', false)
             ->assertDontSee('data-delete-project-alert', false)
@@ -136,6 +143,18 @@ class ProjectShowPageTest extends TestCase
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runDone]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runQueued]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runRunning]), false);
+    }
+
+    public function test_project_page_has_polling_for_lessons_list(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с поллингом',
+            'tags' => null,
+        ]);
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
     public function test_delete_project_alert_can_be_opened_and_closed(): void
@@ -545,6 +564,203 @@ class ProjectShowPageTest extends TestCase
         );
     }
 
+    public function test_refresh_project_lessons_updates_pipeline_run_statuses(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект со статусами',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок статусов',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'queued',
+            'state' => [],
+        ]);
+
+        $component = Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSee('В очереди');
+
+        $run->update(['status' => 'running']);
+
+        $component
+            ->call('refreshProjectLessons')
+            ->assertSee('Обработка');
+    }
+
+    public function test_project_export_modal_opens_with_text_steps_and_prefers_project_default_pipeline(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект для экспорта',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок для экспорта',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersionA, $stepVersionsA] = $this->createPipelineWithCustomSteps([
+            ['name' => 'Транскрибация', 'type' => 'transcribe'],
+            ['name' => 'Текстовый шаг A', 'type' => 'text'],
+            ['name' => 'Глоссарий', 'type' => 'glossary'],
+        ]);
+        [, $pipelineVersionB, $stepVersionsB] = $this->createPipelineWithCustomSteps([
+            ['name' => 'Текстовый шаг B', 'type' => 'text'],
+        ]);
+
+        $project->update([
+            'default_pipeline_version_id' => $pipelineVersionB->id,
+        ]);
+
+        $runA = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersionA->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+        $runB = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersionB->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runA->id,
+            'step_version_id' => $stepVersionsA['transcribe']->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => 'transcribe',
+        ]);
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runA->id,
+            'step_version_id' => $stepVersionsA['text']->id,
+            'position' => 2,
+            'status' => 'done',
+            'result' => 'text A',
+        ]);
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runA->id,
+            'step_version_id' => $stepVersionsA['glossary']->id,
+            'position' => 3,
+            'status' => 'done',
+            'result' => 'glossary',
+        ]);
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runB->id,
+            'step_version_id' => $stepVersionsB['text']->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => 'text B',
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project->fresh()])
+            ->assertSet('showProjectExportModal', false)
+            ->call('openProjectExportModal', 'pdf')
+            ->assertSet('showProjectExportModal', true)
+            ->assertSet('projectExportFormat', 'pdf')
+            ->assertSet('projectExportSelection', $pipelineVersionB->id.':'.$stepVersionsB['text']->id)
+            ->assertSee('Скачивание проекта в PDF')
+            ->assertSee('Текстовый шаг A')
+            ->assertSee('Текстовый шаг B')
+            ->assertDontSee('Транскрибация')
+            ->assertDontSee('Глоссарий');
+    }
+
+    public function test_project_export_download_creates_zip_for_selected_step_and_skips_unprocessed_lessons(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект Архив',
+            'tags' => null,
+        ]);
+
+        $lessonWithResult = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $lessonWithoutResult = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 2',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $stepVersions] = $this->createPipelineWithCustomSteps([
+            ['name' => 'Текстовый экспорт', 'type' => 'text'],
+        ]);
+
+        $runWithResult = PipelineRun::query()->create([
+            'lesson_id' => $lessonWithResult->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+        $runWithoutResult = PipelineRun::query()->create([
+            'lesson_id' => $lessonWithoutResult->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runWithResult->id,
+            'step_version_id' => $stepVersions['text']->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => '# Результат урока 1',
+        ]);
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runWithoutResult->id,
+            'step_version_id' => $stepVersions['text']->id,
+            'position' => 1,
+            'status' => 'pending',
+            'result' => null,
+        ]);
+
+        $expectedFilename = Str::slug($project->name.'-'.$stepVersions['text']->name.'-md', '_').'.zip';
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->call('openProjectExportModal', 'md')
+            ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
+            ->call('downloadProjectResults')
+            ->assertSet('showProjectExportModal', false)
+            ->assertFileDownloaded($expectedFilename, contentType: 'application/zip');
+    }
+
     public function test_delete_project_confirm_uses_action_and_removes_project(): void
     {
         ProjectTag::query()->create([
@@ -803,5 +1019,58 @@ class ProjectShowPageTest extends TestCase
         ]);
 
         return [$pipeline, $version];
+    }
+
+    /**
+     * @param  array<int, array{name:string,type:string}>  $steps
+     * @return array{0: Pipeline, 1: PipelineVersion, 2: array<string, StepVersion>}
+     */
+    private function createPipelineWithCustomSteps(array $steps): array
+    {
+        $pipeline = Pipeline::query()->create();
+        $version = $pipeline->versions()->create([
+            'version' => 1,
+            'title' => 'Пайплайн с шагами',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+        $pipeline->update(['current_version_id' => $version->id]);
+
+        $stepVersions = [];
+
+        foreach ($steps as $index => $stepData) {
+            $step = Step::query()->create([
+                'pipeline_id' => $pipeline->id,
+                'current_version_id' => null,
+            ]);
+
+            $stepVersion = StepVersion::query()->create([
+                'step_id' => $step->id,
+                'input_step_id' => null,
+                'name' => $stepData['name'],
+                'type' => $stepData['type'],
+                'version' => 1,
+                'description' => null,
+                'prompt' => 'Prompt',
+                'settings' => [
+                    'provider' => 'openai',
+                    'model' => 'gpt-4o-mini',
+                ],
+                'status' => 'active',
+            ]);
+
+            $step->update(['current_version_id' => $stepVersion->id]);
+
+            PipelineVersionStep::query()->create([
+                'pipeline_version_id' => $version->id,
+                'step_version_id' => $stepVersion->id,
+                'position' => $index + 1,
+            ]);
+
+            $stepVersions[$stepData['type']] = $stepVersion;
+        }
+
+        return [$pipeline, $version, $stepVersions];
     }
 }
