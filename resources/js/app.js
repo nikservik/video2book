@@ -1,4 +1,5 @@
 import './bootstrap';
+import '@tailwindplus/elements';
 
 const THEME_KEY = 'video2book:theme';
 

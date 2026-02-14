@@ -93,7 +93,7 @@
 - Любые правки backend/Livewire сопровождаем тестами.
 - Минимальный набор перед PR:
   - `php artisan test`
-  - `./vendor/bin/pint --test`
+  - `./vendor/bin/pint`
 - Для изменений веб-слоя добавляем feature-тесты HTTP/Livewire-сценариев.
 
 ## Код-стайл и качество

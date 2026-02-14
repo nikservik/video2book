@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>@yield('title', config('app.name', 'Video2Book'))</title>
+    <title>{{ $title ?? config('app.name', 'Video2Book') }}</title>
     <script>
         (() => {
             const themeKey = 'video2book:theme';
@@ -43,22 +43,16 @@
                         <img src="{{ asset('favicon.png') }}" alt="Video2Book" class="h-8 w-auto">
                     </div>
                     <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                        <a href="{{ url('/') }}"
-                           class="inline-flex items-center border-b-2 px-1 pt-1 text-sm font-medium {{ request()->is('/') ? 'border-indigo-600 text-gray-900 dark:border-indigo-500 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200' }}">
-                            Dashboard
-                        </a>
-                        <a href="#"
-                           class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200">
-                            Team
-                        </a>
-                        <a href="#"
-                           class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200">
-                            Projects
-                        </a>
-                        <a href="#"
-                           class="inline-flex items-center border-b-2 border-transparent px-1 pt-1 text-sm font-medium text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200">
-                            Calendar
-                        </a>
+                        @foreach (config('navigation.main', []) as $item)
+                            <a href="{{ route($item['route']) }}"
+                               wire:navigate
+                               data-menu-item="{{ $item['key'] }}"
+                               data-active="{{ request()->routeIs($item['active']) ? 'true' : 'false' }}"
+                               aria-current="{{ request()->routeIs($item['active']) ? 'page' : 'false' }}"
+                               class="inline-flex items-center border-b-2 px-1 pt-1 font-medium {{ request()->routeIs($item['active']) ? 'border-indigo-600 text-gray-900 dark:border-indigo-500 dark:text-white' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700 dark:text-gray-400 dark:hover:border-white/20 dark:hover:text-gray-200' }}">
+                                {{ $item['label'] }}
+                            </a>
+                        @endforeach
                     </div>
                 </div>
                 <div class="hidden sm:ml-6 sm:flex sm:items-center sm:gap-3">
@@ -133,22 +127,16 @@
 
         <div id="mobile-menu" class="hidden sm:hidden">
             <div class="space-y-1 pt-2 pb-3">
-                <a href="{{ url('/') }}"
-                   class="block border-l-4 py-2 pr-4 pl-3 text-base font-medium {{ request()->is('/') ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-600/10 dark:text-indigo-300' : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:border-white/20 dark:hover:bg-white/5 dark:hover:text-gray-200' }}">
-                    Dashboard
-                </a>
-                <a href="#"
-                   class="block border-l-4 border-transparent py-2 pr-4 pl-3 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:border-white/20 dark:hover:bg-white/5 dark:hover:text-gray-200">
-                    Team
-                </a>
-                <a href="#"
-                   class="block border-l-4 border-transparent py-2 pr-4 pl-3 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:border-white/20 dark:hover:bg-white/5 dark:hover:text-gray-200">
-                    Projects
-                </a>
-                <a href="#"
-                   class="block border-l-4 border-transparent py-2 pr-4 pl-3 text-base font-medium text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:border-white/20 dark:hover:bg-white/5 dark:hover:text-gray-200">
-                    Calendar
-                </a>
+                @foreach (config('navigation.main', []) as $item)
+                    <a href="{{ route($item['route']) }}"
+                       wire:navigate
+                       data-menu-item="{{ $item['key'] }}"
+                       data-active="{{ request()->routeIs($item['active']) ? 'true' : 'false' }}"
+                       aria-current="{{ request()->routeIs($item['active']) ? 'page' : 'false' }}"
+                       class="block border-l-4 py-2 pr-4 pl-3 font-medium {{ request()->routeIs($item['active']) ? 'border-indigo-600 bg-indigo-50 text-indigo-700 dark:border-indigo-500 dark:bg-indigo-600/10 dark:text-indigo-300' : 'border-transparent text-gray-600 hover:border-gray-300 hover:bg-gray-50 hover:text-gray-800 dark:text-gray-400 dark:hover:border-white/20 dark:hover:bg-white/5 dark:hover:text-gray-200' }}">
+                        {{ $item['label'] }}
+                    </a>
+                @endforeach
             </div>
             <div class="border-t border-gray-200 px-4 py-3 dark:border-gray-700">
                 <div class="flex items-center justify-between">
@@ -204,17 +192,56 @@
         </div>
     </nav>
 
-    <div class="py-10">
+    <div class="pb-10">
         <header>
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-                <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
-                    @yield('heading', 'Dashboard')
-                </h1>
+                @if (! empty($breadcrumbs))
+                    <nav aria-label="Breadcrumb" data-breadcrumbs class="py-4 flex">
+                        <ol role="list" class="flex items-center gap-3 text-gray-500 dark:text-gray-400">
+                            <li>
+                                <a href="{{ route('home') }}"
+                                   wire:navigate
+                                   class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                         stroke-width="1.5" stroke="currentColor" class="size-4 shrink-0"
+                                         aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round"
+                                              d="m2.25 12 8.954-8.955c.44-.439 1.152-.439 1.591 0L21.75 12M4.5 9.75v10.125c0 .621.504 1.125 1.125 1.125H9.75v-4.875c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21h4.125c.621 0 1.125-.504 1.125-1.125V9.75M8.25 21h7.5"/>
+                                    </svg>
+                                    <span class="sr-only">Главная</span>
+                                </a>
+                            </li>
+                            @foreach (($breadcrumbs ?? []) as $breadcrumb)
+                                <li class="flex items-center gap-3 text-sm">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
+                                         stroke-width="1.5" stroke="currentColor"
+                                         class="size-4 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="m9 5.25 7.5 6.75-7.5 6.75"/>
+                                    </svg>
+                                    @if (($breadcrumb['current'] ?? false) || empty($breadcrumb['url']))
+                                        <span class="font-medium text-gray-700 dark:text-gray-200"
+                                              @if ($breadcrumb['current'] ?? false) aria-current="page" @endif>
+                                            {{ $breadcrumb['label'] }}
+                                        </span>
+                                    @else
+                                        <a href="{{ $breadcrumb['url'] }}"
+                                           wire:navigate
+                                           class="font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                            {{ $breadcrumb['label'] }}
+                                        </a>
+                                    @endif
+                                </li>
+                            @endforeach
+                        </ol>
+                    </nav>
+                @else
+                    <div class="h-6"></div>
+                @endif
             </div>
         </header>
         <main>
-            <div class="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
-                @yield('content')
+            <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
+                {{ $slot }}
             </div>
         </main>
     </div>
