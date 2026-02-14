@@ -423,6 +423,45 @@ class ProjectShowPage extends Component
         };
     }
 
+    public function lessonAudioDownloadStatus(?array $settings, ?string $sourceFilename): string
+    {
+        if (! blank($sourceFilename)) {
+            return 'loaded';
+        }
+
+        $downloadStatus = data_get($settings, 'download_status');
+        $downloadError = data_get($settings, 'download_error');
+        $downloading = (bool) data_get($settings, 'downloading', false);
+
+        if ($downloadStatus === 'failed' || ! blank($downloadError)) {
+            return 'failed';
+        }
+
+        if ($downloadStatus === 'completed') {
+            return 'loaded';
+        }
+
+        if ($downloadStatus === 'queued') {
+            return 'queued';
+        }
+
+        if ($downloadStatus === 'running' || $downloading) {
+            return 'running';
+        }
+
+        return 'queued';
+    }
+
+    public function lessonAudioDownloadIconClass(?array $settings, ?string $sourceFilename): string
+    {
+        return match ($this->lessonAudioDownloadStatus($settings, $sourceFilename)) {
+            'failed' => 'text-red-500 dark:text-red-400',
+            'running' => 'text-yellow-500 dark:text-yellow-400',
+            'loaded' => 'text-green-500 dark:text-green-400',
+            default => 'text-gray-500 dark:text-gray-400',
+        };
+    }
+
     public function openDeleteProjectAlert(): void
     {
         $this->showCreateLessonModal = false;

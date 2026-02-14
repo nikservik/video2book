@@ -17,8 +17,14 @@
                             <div class="flex items-start justify-between gap-3">
                                 <button type="button"
                                         wire:click="openRenameLessonModal({{ $lesson->id }})"
-                                        class="text-left font-semibold text-gray-900 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:text-white dark:hover:text-indigo-400 dark:focus-visible:outline-indigo-500">
+                                        class="inline-flex items-center gap-2 text-left font-semibold text-gray-900 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:text-white dark:hover:text-indigo-400 dark:focus-visible:outline-indigo-500">
                                     {{ $lesson->name }}
+                                    <span data-audio-download-status="{{ $this->lessonAudioDownloadStatus($lesson->settings, $lesson->source_filename) }}"
+                                          class="{{ $this->lessonAudioDownloadIconClass($lesson->settings, $lesson->source_filename) }}">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
+                                          <path fill-rule="evenodd" d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm5.25-9.25a.75.75 0 0 0-1.5 0v4.59l-1.95-2.1a.75.75 0 1 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V7.75Z" clip-rule="evenodd" />
+                                        </svg>
+                                    </span>
                                 </button>
                                 <div class="mt-px flex items-center gap-1">
                                     <button type="button"

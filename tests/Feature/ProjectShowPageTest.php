@@ -157,6 +157,76 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
+    public function test_project_page_shows_audio_download_icon_states_for_lessons(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект со статусами загрузки',
+            'tags' => null,
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Ошибка загрузки',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [
+                'download_status' => 'failed',
+                'download_error' => 'Network error',
+            ],
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'В очереди загрузки',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [
+                'download_status' => 'queued',
+                'downloading' => true,
+            ],
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Идет скачивание',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [
+                'download_status' => 'running',
+                'downloading' => true,
+            ],
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Уже загружен',
+            'tag' => 'default',
+            'source_filename' => 'lessons/999.mp3',
+            'settings' => [
+                'download_status' => 'failed',
+                'download_error' => 'Old error',
+            ],
+        ]);
+
+        $response = $this->get(route('projects.show', $project));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('data-audio-download-status="failed"', false)
+            ->assertSee('data-audio-download-status="queued"', false)
+            ->assertSee('data-audio-download-status="running"', false)
+            ->assertSee('data-audio-download-status="loaded"', false)
+            ->assertSee('text-red-500 dark:text-red-400', false)
+            ->assertSee('text-gray-500 dark:text-gray-400', false)
+            ->assertSee('text-yellow-500 dark:text-yellow-400', false)
+            ->assertSee('text-green-500 dark:text-green-400', false);
+    }
+
     public function test_delete_project_alert_can_be_opened_and_closed(): void
     {
         $project = Project::query()->create([

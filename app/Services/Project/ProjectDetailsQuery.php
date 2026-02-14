@@ -20,7 +20,7 @@ class ProjectDetailsQuery
                 ])
                 ->orderBy('created_at')
                 ->orderBy('id')
-                ->select(['id', 'project_id', 'name', 'created_at']),
+                ->select(['id', 'project_id', 'name', 'source_filename', 'settings', 'created_at']),
         ]);
     }
 }
