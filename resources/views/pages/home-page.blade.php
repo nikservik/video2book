@@ -3,9 +3,8 @@
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-800 lg:col-span-2">
-            <div class="mb-4 flex items-center justify-between">
+            <div class="mb-6">
                 <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Последние измененные проекты</h2>
-                <span class="text-xs text-gray-500 dark:text-gray-400">5 последних</span>
             </div>
 
             @if ($recentProjects->isEmpty())
@@ -16,13 +15,15 @@
                 <ul class="divide-y divide-gray-200 dark:divide-white/10">
                     @foreach ($recentProjects as $project)
                         <li class="py-3 first:pt-0 last:pb-0">
-                            <div class="flex items-center justify-between gap-4">
-                                <p class="truncate font-medium text-gray-900 dark:text-white">{{ $project->name }}</p>
+                            <a href="{{ route('projects.show', $project) }}"
+                               wire:navigate
+                               class="group flex items-center justify-between gap-4 rounded-md -mx-2 px-2 py-1 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:hover:bg-white/5 dark:focus-visible:outline-indigo-500">
+                                <p class="truncate font-medium text-gray-900 group-hover:text-indigo-600 dark:text-white dark:group-hover:text-indigo-400">{{ $project->name }}</p>
                                 <time datetime="{{ $project->updated_at?->toIso8601String() }}"
                                       class="shrink-0 text-xs text-gray-500 dark:text-gray-400">
                                     {{ $project->updated_at?->format('d.m.Y H:i') }}
                                 </time>
-                            </div>
+                            </a>
                         </li>
                     @endforeach
                 </ul>
@@ -30,7 +31,7 @@
         </section>
 
         <aside class="lg:col-span-1">
-            <livewire:widgets.development-queue-widget />
+            <livewire:widgets.queue-widget />
         </aside>
     </div>
 </div>

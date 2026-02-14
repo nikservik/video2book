@@ -19,7 +19,7 @@ class HomePageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Главная')
             ->assertSee('Последние измененные проекты')
-            ->assertSee('Очередь разработки')
+            ->assertSee('Очередь обработки')
             ->assertSee('data-theme-set="light"', false)
             ->assertSee('data-theme-set="dark"', false)
             ->assertSee('data-settings-trigger', false)
@@ -29,6 +29,8 @@ class HomePageTest extends TestCase
 
     public function test_home_page_shows_only_five_latest_updated_projects(): void
     {
+        $createdProjects = [];
+
         $projects = [
             ['name' => 'Архивный проект', 'updated_at' => Carbon::parse('2026-01-01 10:00:00')],
             ['name' => 'Проект Альфа', 'updated_at' => Carbon::parse('2026-01-05 10:00:00')],
@@ -49,6 +51,8 @@ class HomePageTest extends TestCase
                 'created_at' => $projectData['updated_at']->copy()->subDay(),
                 'updated_at' => $projectData['updated_at'],
             ])->saveQuietly();
+
+            $createdProjects[] = $project;
         }
 
         $response = $this->get(route('home'));
@@ -63,6 +67,10 @@ class HomePageTest extends TestCase
                 'Проект Альфа',
             ])
             ->assertDontSee('Архивный проект');
+
+        foreach (array_slice(array_reverse($createdProjects), 0, 5) as $project) {
+            $response->assertSee(route('projects.show', $project), false);
+        }
     }
 
     public function test_home_page_does_not_render_breadcrumbs(): void

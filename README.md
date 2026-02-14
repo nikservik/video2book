@@ -117,7 +117,7 @@ npm run dev
 - Базовый серверный layout (`resources/views/layouts/app.blade.php`) уже подключён для web-страниц и содержит верхнюю навигацию, mobile-меню и контентный контейнер.
 - В правой части layout используются кнопка настроек (`cog-8-tooth`, heroicons) и переключатель светлой/тёмной темы (адаптация Tailwind UI под Blade/Livewire), который применяет тему ко всей странице.
 - Главная страница реализована как full-page Livewire-компонент (`app/Livewire/HomePage.php`) c данными из сервисного query-слоя (`app/Services/Project/RecentProjectsQuery.php`): левая колонка `2/3` показывает 5 последних изменённых проектов.
-- Правая колонка `1/3` вынесена в отдельный Livewire-компонент (`app/Livewire/Widgets/DevelopmentQueueWidget.php`) и зарезервирована под виджет очереди разработки.
+- Правая колонка `1/3` вынесена в отдельный Livewire-компонент (`app/Livewire/Widgets/QueueWidget.php`) и показывает реальную очередь обработки из таблицы `jobs` (обработка пайплайна и скачивание аудио).
 - Layout работает в режиме Livewire-only (рендер через `$slot`), без `@yield`-секций для Blade-страниц.
 - Livewire views хранятся в `resources/views/pages/*` и `resources/views/widgets/*` (без каталога `resources/views/livewire`).
 - Верхнее меню содержит разделы `Главная`, `Проекты`, `Пайплайны`; активный пункт определяется по имени роута (`routeIs`: `home`, `projects.*`, `pipelines.*`) и корректно подсвечивается на вложенных страницах.
