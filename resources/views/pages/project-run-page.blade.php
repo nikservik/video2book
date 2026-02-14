@@ -1,8 +1,46 @@
 <div class="space-y-6">
-    <h1 class="mx-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-200">
-        {{ $pipelineRun->lesson?->name ?? 'Урок' }}
-        <span class="md:ml-3 inline-block tracking-normal text-lg font-normal text-gray-500 dark:text-gray-400">{{ $this->pipelineVersionLabel }}</span>
-    </h1>
+    <div class="mx-6 flex items-start justify-between gap-3">
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-200">
+            {{ $pipelineRun->lesson?->name ?? 'Урок' }}
+            <span class="md:ml-3 inline-block tracking-normal text-lg font-normal text-gray-500 dark:text-gray-400">{{ $this->pipelineVersionLabel }}</span>
+        </h1>
+
+        <div wire:poll.1s="refreshRunControls" class="flex shrink-0 items-center gap-2">
+            @if ($this->hasPausedSteps)
+                <button type="button"
+                        wire:click="startRun"
+                        data-run-control="start"
+                        class="inline-flex size-10 items-center justify-center rounded-lg bg-green-600 text-white shadow-xs hover:bg-green-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-green-600 dark:bg-green-500 dark:shadow-none dark:hover:bg-green-400 dark:focus-visible:outline-green-500"
+                        aria-label="Старт">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                      <path fill-rule="evenodd" d="M4.5 5.653c0-1.427 1.529-2.33 2.779-1.643l11.54 6.347c1.295.712 1.295 2.573 0 3.286L7.28 19.99c-1.25.687-2.779-.217-2.779-1.643V5.653Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            @endif
+
+            @if ($this->hasQueuedSteps)
+                <button type="button"
+                        wire:click="pauseRun"
+                        data-run-control="pause"
+                        class="inline-flex size-10 items-center justify-center rounded-lg bg-yellow-500 text-white shadow-xs hover:bg-yellow-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yellow-600 dark:bg-yellow-500 dark:shadow-none dark:hover:bg-yellow-400 dark:focus-visible:outline-yellow-500"
+                        aria-label="Пауза">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                      <path fill-rule="evenodd" d="M6.75 5.25a.75.75 0 0 1 .75-.75H9a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H7.5a.75.75 0 0 1-.75-.75V5.25Zm7.5 0A.75.75 0 0 1 15 4.5h1.5a.75.75 0 0 1 .75.75v13.5a.75.75 0 0 1-.75.75H15a.75.75 0 0 1-.75-.75V5.25Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+
+                <button type="button"
+                        wire:click="stopRun"
+                        data-run-control="stop"
+                        class="inline-flex size-10 items-center justify-center rounded-lg bg-red-600 text-white shadow-xs hover:bg-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:bg-red-500 dark:shadow-none dark:hover:bg-red-400 dark:focus-visible:outline-red-500"
+                        aria-label="Стоп">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" class="size-6">
+                      <path fill-rule="evenodd" d="M4.5 7.5a3 3 0 0 1 3-3h9a3 3 0 0 1 3 3v9a3 3 0 0 1-3 3h-9a3 3 0 0 1-3-3v-9Z" clip-rule="evenodd" />
+                    </svg>
+                </button>
+            @endif
+        </div>
+    </div>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section class="rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm lg:col-span-2 dark:border-white/10 dark:bg-gray-800">

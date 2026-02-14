@@ -2,6 +2,9 @@
 
 namespace App\Livewire;
 
+use App\Actions\Pipeline\PausePipelineRunAction;
+use App\Actions\Pipeline\StartPipelineRunAction;
+use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\Project;
@@ -44,6 +47,32 @@ class ProjectRunPage extends Component
         abort_unless($this->pipelineRun->steps->contains('id', $pipelineRunStepId), 404);
 
         $this->selectedStepId = $pipelineRunStepId;
+    }
+
+    public function startRun(StartPipelineRunAction $startPipelineRunAction): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
+            $startPipelineRunAction->handle($this->pipelineRun)
+        );
+    }
+
+    public function pauseRun(PausePipelineRunAction $pausePipelineRunAction): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
+            $pausePipelineRunAction->handle($this->pipelineRun)
+        );
+    }
+
+    public function stopRun(StopPipelineRunAction $stopPipelineRunAction): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
+            $stopPipelineRunAction->handle($this->pipelineRun)
+        );
+    }
+
+    public function refreshRunControls(): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
     }
 
     public function setResultViewMode(string $mode): void
@@ -125,6 +154,7 @@ class ProjectRunPage extends Component
             'done' => 'Готово',
             'pending' => 'В очереди',
             'running' => 'Обработка',
+            'paused' => 'На паузе',
             'failed' => 'Ошибка',
             default => 'Неизвестно',
         };
@@ -136,9 +166,24 @@ class ProjectRunPage extends Component
             'done' => 'inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium text-green-700 dark:bg-green-400/10 dark:text-green-400',
             'pending' => 'inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
             'running' => 'inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium text-amber-800 dark:bg-amber-400/10 dark:text-amber-300',
+            'paused' => 'inline-flex items-center rounded-full bg-sky-100 px-2 py-1 text-xs font-medium text-sky-700 dark:bg-sky-400/10 dark:text-sky-300',
             'failed' => 'inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium text-red-700 dark:bg-red-400/10 dark:text-red-400',
             default => 'inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
         };
+    }
+
+    public function getHasPausedStepsProperty(): bool
+    {
+        return $this->pipelineRun->steps->contains(
+            fn (PipelineRunStep $step): bool => $step->status === 'paused'
+        );
+    }
+
+    public function getHasQueuedStepsProperty(): bool
+    {
+        return $this->pipelineRun->steps->contains(
+            fn (PipelineRunStep $step): bool => $step->status === 'pending'
+        );
     }
 
     public function tokenMetricsBadgeClass(): string

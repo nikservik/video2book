@@ -108,6 +108,161 @@ final class PipelineRunService
         return $run;
     }
 
+    public function start(PipelineRun $run): PipelineRun
+    {
+        $shouldDispatch = false;
+
+        DB::transaction(function () use ($run, &$shouldDispatch): void {
+            /** @var PipelineRun $lockedRun */
+            $lockedRun = PipelineRun::query()
+                ->whereKey($run->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (in_array($lockedRun->status, ['failed', 'done'], true)) {
+                return;
+            }
+
+            $hasPausedSteps = $lockedRun->steps()
+                ->where('status', 'paused')
+                ->exists();
+
+            if (! $hasPausedSteps) {
+                return;
+            }
+
+            $lockedRun->steps()
+                ->where('status', 'paused')
+                ->update([
+                    'status' => 'pending',
+                    'start_time' => null,
+                    'end_time' => null,
+                    'error' => null,
+                    'result' => null,
+                    'input_tokens' => null,
+                    'output_tokens' => null,
+                    'cost' => null,
+                ]);
+
+            $state = $lockedRun->state ?? [];
+            unset($state['stop_requested']);
+
+            $hasRunningStep = $lockedRun->steps()
+                ->where('status', 'running')
+                ->exists();
+
+            $lockedRun->forceFill([
+                'status' => $hasRunningStep ? 'running' : 'queued',
+                'state' => $state,
+            ])->save();
+
+            $shouldDispatch = ! $hasRunningStep;
+        });
+
+        if ($shouldDispatch) {
+            $this->releasePendingRunLocks($run->id);
+            ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
+        }
+
+        $run = $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+
+        if (in_array($run->status, ['queued', 'running'], true)) {
+            $this->eventBroadcaster->queueRunUpdated($run);
+        } else {
+            $this->eventBroadcaster->queueRunRemoved($run->id);
+        }
+
+        $this->eventBroadcaster->runUpdated($run);
+
+        return $run;
+    }
+
+    public function pause(PipelineRun $run): PipelineRun
+    {
+        DB::transaction(function () use ($run): void {
+            /** @var PipelineRun $lockedRun */
+            $lockedRun = PipelineRun::query()
+                ->whereKey($run->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (in_array($lockedRun->status, ['failed', 'done'], true)) {
+                return;
+            }
+
+            $lockedRun->steps()
+                ->where('status', 'pending')
+                ->update(['status' => 'paused']);
+
+            $state = $lockedRun->state ?? [];
+            unset($state['stop_requested']);
+
+            $hasRunningStep = $lockedRun->steps()
+                ->where('status', 'running')
+                ->exists();
+
+            $lockedRun->forceFill([
+                'status' => $hasRunningStep ? 'running' : 'paused',
+                'state' => $state,
+            ])->save();
+        });
+
+        $run = $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+
+        if ($run->status === 'paused') {
+            $this->eventBroadcaster->queueRunRemoved($run->id);
+        } else {
+            $this->eventBroadcaster->queueRunUpdated($run);
+        }
+
+        $this->eventBroadcaster->runUpdated($run);
+
+        return $run;
+    }
+
+    public function stop(PipelineRun $run): PipelineRun
+    {
+        DB::transaction(function () use ($run): void {
+            /** @var PipelineRun $lockedRun */
+            $lockedRun = PipelineRun::query()
+                ->whereKey($run->id)
+                ->lockForUpdate()
+                ->firstOrFail();
+
+            if (in_array($lockedRun->status, ['failed', 'done'], true)) {
+                return;
+            }
+
+            $lockedRun->steps()
+                ->whereIn('status', ['pending', 'running'])
+                ->update([
+                    'status' => 'paused',
+                    'start_time' => null,
+                    'end_time' => null,
+                    'error' => null,
+                    'result' => null,
+                    'input_tokens' => null,
+                    'output_tokens' => null,
+                    'cost' => null,
+                ]);
+
+            $state = $lockedRun->state ?? [];
+            $state['stop_requested'] = true;
+
+            $lockedRun->forceFill([
+                'status' => 'paused',
+                'state' => $state,
+            ])->save();
+        });
+
+        $run = $run->refresh()->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
+
+        $this->eventBroadcaster->queueRunRemoved($run->id);
+        $this->eventBroadcaster->runUpdated($run);
+
+        return $run;
+    }
+
     private function releasePendingRunLocks(int $pipelineRunId): void
     {
         $cacheStore = Cache::store();

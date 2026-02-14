@@ -32,14 +32,18 @@ final class PipelineRunProcessingService
             ->with(['lesson', 'steps.stepVersion.step'])
             ->findOrFail($pipelineRunId);
 
-        if (in_array($run->status, ['failed', 'done'], true)) {
+        if (in_array($run->status, ['failed', 'done', 'paused'], true)) {
             return false;
         }
 
         $step = $this->claimNextStep($run);
 
         if ($step === null) {
-            $this->markRunAsCompleted($run);
+            if ($this->hasPausedSteps($run->id)) {
+                $this->markRunAsPaused($run);
+            } else {
+                $this->markRunAsCompleted($run);
+            }
 
             return false;
         }
@@ -47,13 +51,19 @@ final class PipelineRunProcessingService
         $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
         $step = $step->fresh(['stepVersion.step']);
 
+        if ($this->shouldInterruptStep($run->id, $step->id)) {
+            $this->markRunAsPaused($run);
+
+            return false;
+        }
+
         $this->eventBroadcaster->runUpdated($run);
         $this->eventBroadcaster->queueRunUpdated($run);
 
         try {
             $input = $this->resolveStepInput($run, $step);
             $result = $this->executor->execute($run, $step, $input);
-            $this->markStepCompleted($step, $result);
+            $this->markStepCompleted($run->id, $step->id, $result);
         } catch (HaikuRateLimitExceededException $e) {
             $this->deferStepAfterRateLimit($run, $step, $e->retryAfterSeconds());
 
@@ -77,7 +87,11 @@ final class PipelineRunProcessingService
         $hasPending = $this->hasPendingSteps($run->id);
 
         if (! $hasPending) {
-            $this->markRunAsCompleted($run->fresh());
+            if ($this->hasPausedSteps($run->id)) {
+                $this->markRunAsPaused($run->fresh());
+            } else {
+                $this->markRunAsCompleted($run->fresh());
+            }
         }
 
         return $hasPending;
@@ -143,19 +157,54 @@ final class PipelineRunProcessingService
         return $inputStep->result;
     }
 
-    private function markStepCompleted(PipelineRunStep $step, PipelineStepResult $result): void
+    private function markStepCompleted(int $runId, int $stepId, PipelineStepResult $result): void
     {
-        $step->forceFill([
-            'status' => 'done',
-            'end_time' => now(),
-            'result' => $result->output,
-            'error' => null,
-            'input_tokens' => $result->inputTokens,
-            'output_tokens' => $result->outputTokens,
-            'cost' => $result->cost,
-        ])->save();
+        $shouldPersistResult = DB::transaction(function () use ($runId, $stepId, $result): bool {
+            $run = PipelineRun::query()
+                ->whereKey($runId)
+                ->lockForUpdate()
+                ->first();
+            $step = PipelineRunStep::query()
+                ->whereKey($stepId)
+                ->lockForUpdate()
+                ->first();
 
-        $step = $step->fresh(['stepVersion.step', 'pipelineRun.lesson.project', 'pipelineRun.pipelineVersion', 'pipelineRun.steps.stepVersion.step']);
+            if ($run === null || $step === null) {
+                return false;
+            }
+
+            $stopRequested = (bool) data_get($run->state, 'stop_requested', false);
+
+            if ($step->status === 'paused' || $stopRequested) {
+                $run->forceFill(['status' => 'paused'])->save();
+
+                return false;
+            }
+
+            $step->forceFill([
+                'status' => 'done',
+                'end_time' => now(),
+                'result' => $result->output,
+                'error' => null,
+                'input_tokens' => $result->inputTokens,
+                'output_tokens' => $result->outputTokens,
+                'cost' => $result->cost,
+            ])->save();
+
+            return true;
+        });
+
+        if (! $shouldPersistResult) {
+            return;
+        }
+
+        $step = PipelineRunStep::query()
+            ->with(['stepVersion.step', 'pipelineRun.lesson.project', 'pipelineRun.pipelineVersion', 'pipelineRun.steps.stepVersion.step'])
+            ->find($stepId);
+
+        if ($step === null) {
+            return;
+        }
 
         $this->eventBroadcaster->stepCompleted($step);
 
@@ -186,6 +235,16 @@ final class PipelineRunProcessingService
         $this->eventBroadcaster->flushRunStream($run->id);
     }
 
+    private function markRunAsPaused(PipelineRun $run): void
+    {
+        $run->forceFill(['status' => 'paused'])->save();
+
+        $run = $run->fresh(['lesson.project', 'pipelineVersion', 'steps.stepVersion.step']);
+
+        $this->eventBroadcaster->runUpdated($run);
+        $this->eventBroadcaster->queueRunRemoved($run->id);
+    }
+
     private function markRunAsCompleted(PipelineRun $run): void
     {
         $run->forceFill(['status' => 'done'])->save();
@@ -203,6 +262,26 @@ final class PipelineRunProcessingService
             ->where('pipeline_run_id', $runId)
             ->where('status', 'pending')
             ->exists();
+    }
+
+    private function hasPausedSteps(int $runId): bool
+    {
+        return PipelineRunStep::query()
+            ->where('pipeline_run_id', $runId)
+            ->where('status', 'paused')
+            ->exists();
+    }
+
+    private function shouldInterruptStep(int $runId, int $stepId): bool
+    {
+        $run = PipelineRun::query()->find($runId);
+        $step = PipelineRunStep::query()->find($stepId);
+
+        if ($run === null || $step === null) {
+            return true;
+        }
+
+        return (bool) data_get($run->state, 'stop_requested', false) || $step->status === 'paused';
     }
 
     private function deferStepAfterRateLimit(PipelineRun $run, PipelineRunStep $step, int $retryAfterSeconds): void

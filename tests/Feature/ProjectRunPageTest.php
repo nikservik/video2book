@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Jobs\ProcessPipelineJob;
 use App\Livewire\ProjectRunPage;
 use App\Models\Lesson;
 use App\Models\Pipeline;
@@ -12,6 +13,7 @@ use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -147,6 +149,94 @@ class ProjectRunPageTest extends TestCase
         $component->call('selectStep', $firstRunStep->id);
 
         $this->assertTextOrder($component->html(), ['Саммаризация', 'Транскрибация']);
+    }
+
+    public function test_project_run_page_shows_control_buttons_based_on_steps_state(): void
+    {
+        [$project, $pipelineRun, , $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $secondRunStep->update(['status' => 'paused']);
+        $pipelineRun->update(['status' => 'paused']);
+
+        $this->get(route('projects.runs.show', [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]))
+            ->assertStatus(200)
+            ->assertSee('wire:poll.1s="refreshRunControls"', false)
+            ->assertSee('data-run-control="start"', false)
+            ->assertDontSee('data-run-control="pause"', false)
+            ->assertDontSee('data-run-control="stop"', false);
+
+        $secondRunStep->update(['status' => 'pending']);
+        $pipelineRun->update(['status' => 'queued']);
+
+        $this->get(route('projects.runs.show', [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]))
+            ->assertStatus(200)
+            ->assertDontSee('data-run-control="start"', false)
+            ->assertSee('data-run-control="pause"', false)
+            ->assertSee('data-run-control="stop"', false);
+    }
+
+    public function test_project_run_page_can_pause_stop_and_start_run(): void
+    {
+        Queue::fake();
+
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $thirdRunStep = PipelineRunStep::query()->create([
+            'pipeline_run_id' => $pipelineRun->id,
+            'step_version_id' => $secondRunStep->step_version_id,
+            'position' => 3,
+            'status' => 'pending',
+            'input_tokens' => null,
+            'output_tokens' => null,
+            'cost' => null,
+            'result' => null,
+            'error' => null,
+            'start_time' => null,
+            'end_time' => null,
+        ]);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->call('pauseRun');
+
+        $this->assertSame('running', $pipelineRun->fresh()->status);
+        $this->assertSame('running', $secondRunStep->fresh()->status);
+        $this->assertSame('paused', $thirdRunStep->fresh()->status);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->call('stopRun');
+
+        $this->assertSame('paused', $pipelineRun->fresh()->status);
+        $this->assertSame('paused', $secondRunStep->fresh()->status);
+        $this->assertSame('paused', $thirdRunStep->fresh()->status);
+        $this->assertTrue((bool) data_get($pipelineRun->fresh()->state, 'stop_requested'));
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->call('startRun');
+
+        $this->assertSame('queued', $pipelineRun->fresh()->status);
+        $this->assertSame('done', $firstRunStep->fresh()->status);
+        $this->assertSame('pending', $secondRunStep->fresh()->status);
+        $this->assertSame('pending', $thirdRunStep->fresh()->status);
+        $this->assertNull(data_get($pipelineRun->fresh()->state, 'stop_requested'));
+
+        Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $job) use ($pipelineRun): bool {
+            return $job->pipelineRunId === $pipelineRun->id;
+        });
     }
 
     /**

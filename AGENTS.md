@@ -63,8 +63,8 @@
 
 ### PipelineRun и PipelineRunStep
 
-- `PipelineRun`: `queued|running|failed|done`, привязан к `lesson` и `pipeline_version`.
-- `PipelineRunStep`: `pending|running|failed|done`, позиция, result/error, usage/cost.
+- `PipelineRun`: `queued|running|paused|failed|done`, привязан к `lesson` и `pipeline_version`.
+- `PipelineRunStep`: `pending|running|paused|failed|done`, позиция, result/error, usage/cost.
 - Перезапуск с шага: `POST /api/pipeline-runs/{run}/restart` с `step_id`.
 
 ### Формат API-ответов

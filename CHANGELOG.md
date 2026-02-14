@@ -63,6 +63,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - На странице проекта добавлено скачивание результатов проекта в `PDF`/`MD`: кнопки в сайдбаре, модал выбора pipeline/шага (аккордеон), фильтрация по `done` прогонам и только `text` шагам, сборка результатов всех уроков в ZIP через новые `Action`-классы.
 - На странице проекта добавлен polling списка уроков (`wire:poll.2s`) для актуализации статусов прогонов, которые меняются в фоне воркерами.
 - На странице проекта рядом с названием урока добавлена иконка статуса загрузки аудио: `failed` (red), `queued` (gray), `running` (yellow), `loaded` (green, при наличии `source_filename` независимо от прошлых ошибок).
+- Для страницы прогона добавлено управление `Start/Pause/Stop` через отдельные action-классы: `Pause` переводит будущие шаги в `paused`, `Stop` переводит `running+pending` в `paused`, `Start` возвращает `paused` в `pending` и возобновляет очередь; блок кнопок в заголовке обновляется polling-ом `1s`.
 
 ## [2026-02-11] refactor: migrate LLM layer to Laravel AI SDK
 

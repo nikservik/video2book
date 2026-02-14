@@ -2,6 +2,8 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Pipeline\PausePipelineRunAction;
+use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Jobs\ProcessPipelineJob;
 use App\Models\Lesson;
 use App\Models\Pipeline;
@@ -114,6 +116,88 @@ class PipelineRunProcessingTest extends TestCase
         $job->handle(app(PipelineRunProcessingService::class));
 
         Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class);
+    }
+
+    public function test_processing_finishes_current_step_and_pauses_run_when_next_steps_are_paused(): void
+    {
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Pause project', 'tags' => 'x']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Pause lesson',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+
+        $firstStep = $run->steps()->where('position', 1)->firstOrFail();
+        $firstStep->update(['status' => 'running', 'start_time' => now()]);
+        $run->steps()->where('position', 2)->update(['status' => 'pending']);
+        $run->update(['status' => 'running']);
+
+        app(PausePipelineRunAction::class)->handle($run->fresh());
+
+        $executor = new class implements PipelineStepExecutor
+        {
+            public function execute(\App\Models\PipelineRun $run, PipelineRunStep $step, ?string $input): PipelineStepResult
+            {
+                return new PipelineStepResult('done');
+            }
+        };
+
+        $this->app->instance(PipelineStepExecutor::class, $executor);
+
+        $hasMore = app(PipelineRunProcessingService::class)->handle($run->id);
+
+        $this->assertFalse($hasMore);
+        $this->assertSame('paused', $run->fresh()->status);
+        $this->assertSame('done', $firstStep->fresh()->status);
+        $this->assertSame('paused', $run->steps()->where('position', 2)->firstOrFail()->status);
+    }
+
+    public function test_processing_does_not_execute_steps_after_stop_action(): void
+    {
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Stop project', 'tags' => 'x']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Stop lesson',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+
+        $firstStep = $run->steps()->where('position', 1)->firstOrFail();
+        $firstStep->update(['status' => 'running', 'start_time' => now()]);
+        $run->update(['status' => 'running']);
+
+        app(StopPipelineRunAction::class)->handle($run->fresh());
+
+        $executor = new class implements PipelineStepExecutor
+        {
+            public int $calls = 0;
+
+            public function execute(\App\Models\PipelineRun $run, PipelineRunStep $step, ?string $input): PipelineStepResult
+            {
+                $this->calls++;
+
+                return new PipelineStepResult('should-not-run');
+            }
+        };
+
+        $this->app->instance(PipelineStepExecutor::class, $executor);
+
+        $hasMore = app(PipelineRunProcessingService::class)->handle($run->id);
+
+        $this->assertFalse($hasMore);
+        $this->assertSame(0, $executor->calls);
+        $this->assertSame('paused', $run->fresh()->status);
+        $this->assertSame('paused', $firstStep->fresh()->status);
+        $this->assertSame('paused', $run->steps()->where('position', 2)->firstOrFail()->status);
     }
 
     /**
