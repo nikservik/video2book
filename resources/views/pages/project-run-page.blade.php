@@ -67,7 +67,10 @@
                     Скачать MD
                 </button>
                 <button type="button"
-                        class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 dark:bg-amber-500 dark:shadow-none dark:hover:bg-amber-400 dark:focus-visible:outline-amber-500">
+                        wire:click="restartSelectedStep"
+                        @disabled(! $this->canRestartSelectedStep)
+                        class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500 dark:shadow-none dark:hover:bg-amber-400 dark:focus-visible:outline-amber-500"
+                        data-run-restart-step>
                     Перезапуск шага
                 </button>
                 <span class="ml-auto isolate inline-flex rounded-lg shadow-xs dark:shadow-none">

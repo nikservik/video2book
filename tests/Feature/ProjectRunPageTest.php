@@ -132,6 +132,36 @@ class ProjectRunPageTest extends TestCase
             ->assertFileDownloaded($markdownFilename, contentType: 'text/markdown; charset=UTF-8');
     }
 
+    public function test_project_run_page_can_restart_from_selected_step(): void
+    {
+        Queue::fake();
+
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->assertSet('selectedStepId', $firstRunStep->id)
+            ->call('selectStep', $secondRunStep->id)
+            ->assertSet('selectedStepId', $secondRunStep->id)
+            ->call('restartSelectedStep')
+            ->assertSet('selectedStepId', $secondRunStep->id);
+
+        $this->assertSame('queued', $pipelineRun->fresh()->status);
+        $this->assertSame('done', $firstRunStep->fresh()->status);
+        $this->assertSame("## Заголовок первого шага\n\n- Пункт 1\n- Пункт 2", $firstRunStep->fresh()->result);
+        $this->assertSame('pending', $secondRunStep->fresh()->status);
+        $this->assertNull($secondRunStep->fresh()->result);
+        $this->assertNull($secondRunStep->fresh()->error);
+        $this->assertNull($secondRunStep->fresh()->start_time);
+        $this->assertNull($secondRunStep->fresh()->end_time);
+
+        Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $job) use ($pipelineRun): bool {
+            return $job->pipelineRunId === $pipelineRun->id;
+        });
+    }
+
     public function test_project_run_page_keeps_steps_order_after_selecting_step(): void
     {
         [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();

@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Actions\Pipeline\PausePipelineRunAction;
+use App\Actions\Pipeline\RestartPipelineRunFromStepAction;
 use App\Actions\Pipeline\StartPipelineRunAction;
 use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Models\PipelineRun;
@@ -67,6 +68,15 @@ class ProjectRunPage extends Component
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
             $stopPipelineRunAction->handle($this->pipelineRun)
+        );
+    }
+
+    public function restartSelectedStep(RestartPipelineRunFromStepAction $restartPipelineRunFromStepAction): void
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для перезапуска не выбран.');
+
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
+            $restartPipelineRunFromStepAction->handle($this->pipelineRun, $this->selectedStep)
         );
     }
 
@@ -216,6 +226,11 @@ class ProjectRunPage extends Component
     public function getCanExportSelectedStepProperty(): bool
     {
         return $this->selectedStep !== null && ! blank($this->selectedStep->result);
+    }
+
+    public function getCanRestartSelectedStepProperty(): bool
+    {
+        return $this->selectedStep !== null;
     }
 
     private function selectedStepForExport(): PipelineRunStep
