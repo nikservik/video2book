@@ -95,7 +95,8 @@
                 </span>
             </div>
 
-            <div class="rounded-lg bg-indigo-50 px-6 py-4 dark:bg-gray-900/50">
+            <div class="rounded-lg bg-indigo-50 px-6 py-4 dark:bg-gray-900/50"
+                 @if ($this->shouldPollSelectedStepResult) wire:poll.1s="refreshSelectedStepResult" @endif>
                 @if ($resultViewMode === 'preview')
                     <div data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
                          data-selected-step-result
@@ -112,7 +113,7 @@
             </div>
         </section>
 
-        <aside class="lg:col-span-1">
+        <aside class="lg:col-span-1" @if ($this->hasUnfinishedSteps) wire:poll.2s="refreshRunSteps" @endif>
             <div class="space-y-3">
                 @forelse ($pipelineRun->steps as $step)
                     <button type="button"

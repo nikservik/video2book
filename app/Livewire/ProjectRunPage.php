@@ -85,6 +85,36 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
     }
 
+    public function refreshRunSteps(): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+
+        if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            return;
+        }
+
+        $lastDoneStep = $this->pipelineRun->steps->last(
+            fn (PipelineRunStep $step): bool => $step->status === 'done'
+        );
+
+        $this->selectedStepId = $lastDoneStep?->id ?? $this->pipelineRun->steps->first()?->id;
+    }
+
+    public function refreshSelectedStepResult(): void
+    {
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+
+        if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            return;
+        }
+
+        $lastDoneStep = $this->pipelineRun->steps->last(
+            fn (PipelineRunStep $step): bool => $step->status === 'done'
+        );
+
+        $this->selectedStepId = $lastDoneStep?->id ?? $this->pipelineRun->steps->first()?->id;
+    }
+
     public function setResultViewMode(string $mode): void
     {
         if (! in_array($mode, ['preview', 'source'], true)) {
@@ -201,6 +231,18 @@ class ProjectRunPage extends Component
         return $this->pipelineRun->steps->contains(
             fn (PipelineRunStep $step): bool => $step->status === 'running'
         );
+    }
+
+    public function getHasUnfinishedStepsProperty(): bool
+    {
+        return $this->pipelineRun->steps->contains(
+            fn (PipelineRunStep $step): bool => $step->status !== 'done'
+        );
+    }
+
+    public function getShouldPollSelectedStepResultProperty(): bool
+    {
+        return $this->selectedStep?->status === 'running';
     }
 
     public function tokenMetricsBadgeClass(): string

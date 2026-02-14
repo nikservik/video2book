@@ -35,6 +35,8 @@ class ProjectRunPageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Урок по Laravel')
             ->assertSee('Пайплайн обучения • v3')
+            ->assertSee('wire:poll.2s="refreshRunSteps"', false)
+            ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false)
             ->assertSee('Транскрибация')
             ->assertSee('Саммаризация')
             ->assertSee('<h2>Заголовок первого шага</h2>', false)
@@ -45,6 +47,36 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('o:56,789')
             ->assertSee('$1.235')
             ->assertSee('data-selected-step-id="'.$firstRunStep->id.'"', false);
+    }
+
+    public function test_project_run_page_polls_selected_step_result_only_for_running_step(): void
+    {
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->assertSet('selectedStepId', $firstRunStep->id)
+            ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false)
+            ->call('selectStep', $secondRunStep->id)
+            ->assertSet('selectedStepId', $secondRunStep->id)
+            ->assertSee('wire:poll.1s="refreshSelectedStepResult"', false);
+    }
+
+    public function test_project_run_page_hides_steps_polling_when_all_steps_done(): void
+    {
+        [$project, $pipelineRun, , $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $secondRunStep->update(['status' => 'done']);
+        $pipelineRun->update(['status' => 'done']);
+
+        $this->get(route('projects.runs.show', [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]))
+            ->assertStatus(200)
+            ->assertDontSee('wire:poll.2s="refreshRunSteps"', false);
     }
 
     public function test_project_run_page_can_switch_active_step(): void

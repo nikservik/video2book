@@ -66,6 +66,8 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - Для страницы прогона добавлено управление `Start/Pause/Stop` через отдельные action-классы: `Pause` переводит будущие шаги в `paused`, `Stop` переводит `running+pending` в `paused`, `Start` возвращает `paused` в `pending` и возобновляет очередь; блок кнопок в заголовке обновляется polling-ом `1s`.
 - На странице прогона реализован `Перезапуск шага`: кнопка перезапускает выбранный шаг и все последующие через отдельный `RestartPipelineRunFromStepAction` (переиспользование `PipelineRunService::restartFromStep`), сбрасывает их результаты и повторно ставит прогон в очередь.
 - Исправлена миграция `2026_02_14_120000_add_paused_statuses_to_pipeline_run_statuses` для PostgreSQL: вместо проблемного `enum()->change()` обновление выполняется через пересоздание `CHECK`-ограничений статусов.
+- На правый блок со списком шагов страницы прогона добавлен условный polling `2s` (`wire:poll.2s="refreshRunSteps"`): он включается только если есть незавершённые шаги (`status != done`).
+- На блок результата выбранного шага страницы прогона добавлен polling `1s` (`wire:poll.1s="refreshSelectedStepResult"`), но только когда выбранный шаг имеет статус `running`.
 
 ## [2026-02-11] refactor: migrate LLM layer to Laravel AI SDK
 
