@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Project extends Model
@@ -16,10 +17,17 @@ class Project extends Model
     protected $fillable = [
         'name',
         'tags',
+        'default_pipeline_version_id',
+        'referer',
     ];
 
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    public function defaultPipelineVersion(): BelongsTo
+    {
+        return $this->belongsTo(PipelineVersion::class, 'default_pipeline_version_id');
     }
 }

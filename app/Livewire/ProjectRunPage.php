@@ -163,13 +163,13 @@ class ProjectRunPage extends Component
 
     public function getCanExportSelectedStepProperty(): bool
     {
-        return $this->selectedStep !== null && $this->selectedStep->result !== null;
+        return $this->selectedStep !== null && ! blank($this->selectedStep->result);
     }
 
     private function selectedStepForExport(): PipelineRunStep
     {
         abort_if($this->selectedStep === null, 422, 'Шаг для экспорта не выбран.');
-        abort_if($this->selectedStep->result === null, 422, 'У шага нет результата для экспорта.');
+        abort_if(blank($this->selectedStep->result), 422, 'У шага нет результата для экспорта.');
         abort_if($this->selectedStep->pipeline_run_id !== $this->pipelineRun->id, 404, 'Шаг не принадлежит указанному прогону.');
 
         return $this->selectedStep;

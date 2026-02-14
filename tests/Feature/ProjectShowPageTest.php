@@ -48,9 +48,10 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('lg:col-span-1', false)
             ->assertSee('md:grid-cols-2', false)
             ->assertSee('Добавить урок')
-            ->assertSee('Изменить название')
+            ->assertSee('Редактировать проект')
             ->assertSee('Удалить проект')
             ->assertDontSee('data-create-lesson-modal', false)
+            ->assertDontSee('data-add-pipeline-to-lesson-modal', false)
             ->assertDontSee('data-rename-project-modal', false)
             ->assertDontSee('data-rename-lesson-modal', false)
             ->assertDontSee('data-delete-project-alert', false)
@@ -448,6 +449,102 @@ class ProjectShowPageTest extends TestCase
             ->assertHasErrors(['editableLessonName' => 'required']);
     }
 
+    public function test_add_pipeline_to_lesson_modal_uses_project_default_and_rejects_existing_versions(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        [, $alreadyAddedVersion] = $this->createPipelineWithSteps();
+        [, $defaultVersion] = $this->createPipelineWithSteps();
+
+        $project = Project::query()->create([
+            'name' => 'Проект с дефолтной версией',
+            'tags' => null,
+            'default_pipeline_version_id' => $defaultVersion->id,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок с прогоном',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $alreadyAddedVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSet('showAddPipelineToLessonModal', false)
+            ->call('openAddPipelineToLessonModal', $lesson->id)
+            ->assertSet('showAddPipelineToLessonModal', true)
+            ->assertSet('addingPipelineLessonId', $lesson->id)
+            ->assertSet('addingPipelineLessonName', 'Урок с прогоном')
+            ->assertSet('addingPipelineVersionId', $defaultVersion->id)
+            ->set('addingPipelineVersionId', $alreadyAddedVersion->id)
+            ->call('addPipelineToLesson')
+            ->assertHasErrors(['addingPipelineVersionId' => 'in']);
+    }
+
+    public function test_add_pipeline_to_lesson_creates_pipeline_run_and_dispatches_job(): void
+    {
+        Queue::fake();
+
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        [, $existingVersion] = $this->createPipelineWithSteps();
+        [, $newVersion] = $this->createPipelineWithSteps();
+
+        $project = Project::query()->create([
+            'name' => 'Проект с уроком',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок для добавления версии',
+            'tag' => 'default',
+            'source_filename' => 'lessons/123.mp3',
+            'settings' => [],
+        ]);
+
+        PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $existingVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->call('openAddPipelineToLessonModal', $lesson->id)
+            ->set('addingPipelineVersionId', $newVersion->id)
+            ->call('addPipelineToLesson')
+            ->assertSet('showAddPipelineToLessonModal', false);
+
+        $newRun = PipelineRun::query()
+            ->where('lesson_id', $lesson->id)
+            ->where('pipeline_version_id', $newVersion->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($newRun);
+
+        Queue::assertPushedOn(
+            ProcessPipelineJob::QUEUE,
+            ProcessPipelineJob::class,
+            fn (ProcessPipelineJob $job): bool => $job->pipelineRunId === $newRun->id
+        );
+    }
+
     public function test_delete_project_confirm_uses_action_and_removes_project(): void
     {
         ProjectTag::query()->create([
@@ -480,9 +577,13 @@ class ProjectShowPageTest extends TestCase
 
     public function test_rename_project_modal_can_be_opened_and_closed(): void
     {
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
         $project = Project::query()->create([
             'name' => 'Проект для переименования',
             'tags' => null,
+            'referer' => 'https://www.example.com/',
+            'default_pipeline_version_id' => $pipelineVersion->id,
         ]);
 
         Livewire::test(ProjectShowPage::class, ['project' => $project])
@@ -490,35 +591,49 @@ class ProjectShowPageTest extends TestCase
             ->call('openRenameProjectModal')
             ->assertSet('showRenameProjectModal', true)
             ->assertSet('editableProjectName', 'Проект для переименования')
-            ->assertSee('Изменить название проекта')
+            ->assertSet('editableProjectReferer', 'https://www.example.com/')
+            ->assertSet('editableProjectDefaultPipelineVersionId', $pipelineVersion->id)
+            ->assertSee('Редактировать проект')
+            ->assertSee('Referrer')
+            ->assertSee('Версия пайплайна по умолчанию')
             ->assertSee('Сохранить')
             ->assertSee('Отменить')
             ->call('closeRenameProjectModal')
             ->assertSet('showRenameProjectModal', false)
-            ->assertDontSee('Изменить название проекта');
+            ->assertDontSee('Версия пайплайна по умолчанию');
     }
 
-    public function test_save_project_name_updates_project_and_closes_modal(): void
+    public function test_save_project_updates_project_and_closes_modal(): void
     {
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
         $project = Project::query()->create([
             'name' => 'Старое название',
             'tags' => null,
+            'referer' => null,
+            'default_pipeline_version_id' => null,
         ]);
 
         Livewire::test(ProjectShowPage::class, ['project' => $project])
             ->call('openRenameProjectModal')
             ->set('editableProjectName', 'Новое название проекта')
-            ->call('saveProjectName')
+            ->set('editableProjectReferer', 'https://www.somesite.com/')
+            ->set('editableProjectDefaultPipelineVersionId', $pipelineVersion->id)
+            ->call('saveProject')
             ->assertSet('project.name', 'Новое название проекта')
+            ->assertSet('project.referer', 'https://www.somesite.com/')
+            ->assertSet('project.default_pipeline_version_id', $pipelineVersion->id)
             ->assertSet('showRenameProjectModal', false);
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
             'name' => 'Новое название проекта',
+            'referer' => 'https://www.somesite.com/',
+            'default_pipeline_version_id' => $pipelineVersion->id,
         ]);
     }
 
-    public function test_save_project_name_requires_non_empty_value(): void
+    public function test_save_project_requires_non_empty_name(): void
     {
         $project = Project::query()->create([
             'name' => 'Название',
@@ -528,7 +643,7 @@ class ProjectShowPageTest extends TestCase
         Livewire::test(ProjectShowPage::class, ['project' => $project])
             ->call('openRenameProjectModal')
             ->set('editableProjectName', '')
-            ->call('saveProjectName')
+            ->call('saveProject')
             ->assertHasErrors(['editableProjectName' => 'required']);
     }
 
@@ -552,6 +667,23 @@ class ProjectShowPageTest extends TestCase
             ->call('closeCreateLessonModal')
             ->assertSet('showCreateLessonModal', false)
             ->assertDontSee('Ссылка на YouTube');
+    }
+
+    public function test_create_lesson_modal_selects_project_default_pipeline_version_when_available(): void
+    {
+        [, $firstPipelineVersion] = $this->createPipelineWithSteps();
+        [, $defaultPipelineVersion] = $this->createPipelineWithSteps();
+
+        $project = Project::query()->create([
+            'name' => 'Проект с дефолтным пайплайном',
+            'tags' => null,
+            'default_pipeline_version_id' => $defaultPipelineVersion->id,
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->call('openCreateLessonModal')
+            ->assertSet('newLessonPipelineVersionId', $defaultPipelineVersion->id)
+            ->assertNotSet('newLessonPipelineVersionId', $firstPipelineVersion->id);
     }
 
     public function test_create_lesson_from_youtube_creates_lesson_and_queues_download_before_pipeline_processing(): void
