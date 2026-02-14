@@ -40,6 +40,8 @@ class PipelineRun extends Model
 
     public function steps(): HasMany
     {
-        return $this->hasMany(PipelineRunStep::class);
+        return $this->hasMany(PipelineRunStep::class)
+            ->orderBy('position')
+            ->orderBy('id');
     }
 }

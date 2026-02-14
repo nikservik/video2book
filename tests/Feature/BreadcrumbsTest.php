@@ -77,8 +77,14 @@ class BreadcrumbsTest extends TestCase
                 'aria-label="Breadcrumb"',
                 'Проекты',
                 'Проект Ран',
-                'Прогон #'.$pipelineRun->id,
+                'Урок',
+                'Пайплайн ран • v1',
             ], false);
+
+        $content = $response->getContent();
+
+        $this->assertDoesNotMatchRegularExpression('/<a[^>]*>\s*Урок\s*<\/a>/', $content);
+        $this->assertDoesNotMatchRegularExpression('/<a[^>]*>\s*Пайплайн ран • v1\s*<\/a>/', $content);
     }
 
     public function test_pipeline_pages_render_breadcrumbs_paths(): void
