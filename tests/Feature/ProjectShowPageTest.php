@@ -55,6 +55,7 @@ class ProjectShowPageTest extends TestCase
             ->assertDontSee('data-rename-lesson-modal', false)
             ->assertDontSee('data-delete-project-alert', false)
             ->assertDontSee('data-delete-lesson-alert', false)
+            ->assertDontSee('data-delete-run-alert', false)
             ->assertDontSee('Уроков:');
     }
 
@@ -230,6 +231,123 @@ class ProjectShowPageTest extends TestCase
 
         $this->assertDatabaseMissing('lessons', ['id' => $lessonToDelete->id]);
         $this->assertDatabaseHas('lessons', ['id' => $lessonToKeep->id]);
+    }
+
+    public function test_delete_run_alert_can_be_opened_and_closed(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с прогоном',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $pipeline = Pipeline::query()->create();
+        $version = $pipeline->versions()->create([
+            'version' => 7,
+            'title' => 'Пайплайн для удаления',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $version->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSet('showDeleteRunAlert', false)
+            ->call('openDeleteRunAlert', $run->id)
+            ->assertSet('showDeleteRunAlert', true)
+            ->assertSet('deletingRunId', $run->id)
+            ->assertSet('deletingRunLabel', 'Пайплайн для удаления • v7')
+            ->assertSee('Удалить прогон «Пайплайн для удаления • v7»')
+            ->assertSee('Вы уверены, что хотите удалить прогон вместе со всеми расшифровками? Это действие нельзя отменить.')
+            ->call('closeDeleteRunAlert')
+            ->assertSet('showDeleteRunAlert', false)
+            ->assertSet('deletingRunId', null)
+            ->assertSet('deletingRunLabel', '')
+            ->assertDontSee('Удалить прогон «Пайплайн для удаления • v7»');
+    }
+
+    public function test_delete_run_confirm_removes_run_and_refreshes_project_lessons(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с прогонами',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $pipelineA = Pipeline::query()->create();
+        $versionA = $pipelineA->versions()->create([
+            'version' => 1,
+            'title' => 'Пайплайн A',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        $pipelineB = Pipeline::query()->create();
+        $versionB = $pipelineB->versions()->create([
+            'version' => 2,
+            'title' => 'Пайплайн B',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        $runToDelete = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $versionA->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        $runToKeep = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $versionB->id,
+            'status' => 'queued',
+            'state' => [],
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSee('Пайплайн A • v1')
+            ->assertSee('Пайплайн B • v2')
+            ->call('openDeleteRunAlert', $runToDelete->id)
+            ->assertSet('showDeleteRunAlert', true)
+            ->call('deleteRun')
+            ->assertSet('showDeleteRunAlert', false)
+            ->assertDontSee('Пайплайн A • v1')
+            ->assertSee('Пайплайн B • v2');
+
+        $this->assertDatabaseMissing('pipeline_runs', ['id' => $runToDelete->id]);
+        $this->assertDatabaseHas('pipeline_runs', ['id' => $runToKeep->id]);
     }
 
     public function test_rename_lesson_modal_can_be_opened_and_closed(): void

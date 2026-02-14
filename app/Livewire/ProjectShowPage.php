@@ -6,6 +6,7 @@ use App\Actions\Pipeline\GetPipelineVersionOptionsAction;
 use App\Actions\Project\CreateProjectLessonFromYoutubeAction;
 use App\Actions\Project\DeleteProjectAction;
 use App\Actions\Project\DeleteProjectLessonAction;
+use App\Actions\Project\DeleteProjectPipelineRunAction;
 use App\Actions\Project\UpdateProjectLessonNameAction;
 use App\Actions\Project\UpdateProjectNameAction;
 use App\Models\Project;
@@ -20,6 +21,8 @@ class ProjectShowPage extends Component
     public bool $showDeleteProjectAlert = false;
 
     public bool $showDeleteLessonAlert = false;
+
+    public bool $showDeleteRunAlert = false;
 
     public bool $showRenameLessonModal = false;
 
@@ -38,6 +41,10 @@ class ProjectShowPage extends Component
     public ?int $deletingLessonId = null;
 
     public string $deletingLessonName = '';
+
+    public ?int $deletingRunId = null;
+
+    public string $deletingRunLabel = '';
 
     public ?int $editingLessonId = null;
 
@@ -58,6 +65,7 @@ class ProjectShowPage extends Component
     {
         $this->showDeleteProjectAlert = false;
         $this->showDeleteLessonAlert = false;
+        $this->showDeleteRunAlert = false;
         $this->showRenameLessonModal = false;
         $this->showRenameProjectModal = false;
         $this->resetErrorBag();
@@ -136,6 +144,7 @@ class ProjectShowPage extends Component
     {
         $this->showCreateLessonModal = false;
         $this->showDeleteLessonAlert = false;
+        $this->showDeleteRunAlert = false;
         $this->showRenameLessonModal = false;
         $this->showRenameProjectModal = false;
         $this->showDeleteProjectAlert = true;
@@ -150,6 +159,7 @@ class ProjectShowPage extends Component
     {
         $this->showCreateLessonModal = false;
         $this->showDeleteLessonAlert = false;
+        $this->showDeleteRunAlert = false;
         $this->showRenameLessonModal = false;
         $this->showDeleteProjectAlert = false;
         $this->editableProjectName = $this->project->name;
@@ -193,6 +203,7 @@ class ProjectShowPage extends Component
         $this->showCreateLessonModal = false;
         $this->showRenameProjectModal = false;
         $this->showRenameLessonModal = false;
+        $this->showDeleteRunAlert = false;
         $this->showDeleteProjectAlert = false;
 
         $this->deletingLessonId = $lesson->id;
@@ -226,6 +237,7 @@ class ProjectShowPage extends Component
         $this->showCreateLessonModal = false;
         $this->showDeleteProjectAlert = false;
         $this->showDeleteLessonAlert = false;
+        $this->showDeleteRunAlert = false;
         $this->showRenameProjectModal = false;
         $this->resetErrorBag();
 
@@ -261,6 +273,46 @@ class ProjectShowPage extends Component
 
         $this->project = app(ProjectDetailsQuery::class)->get($this->project->fresh());
         $this->closeRenameLessonModal();
+    }
+
+    public function openDeleteRunAlert(int $pipelineRunId): void
+    {
+        $pipelineRun = $this->project->lessons
+            ->flatMap(fn ($lesson) => $lesson->pipelineRuns)
+            ->firstWhere('id', $pipelineRunId);
+
+        abort_if($pipelineRun === null, 404);
+
+        $this->showCreateLessonModal = false;
+        $this->showDeleteProjectAlert = false;
+        $this->showDeleteLessonAlert = false;
+        $this->showRenameProjectModal = false;
+        $this->showRenameLessonModal = false;
+
+        $this->deletingRunId = $pipelineRun->id;
+        $this->deletingRunLabel = sprintf(
+            '%s • v%s',
+            $pipelineRun->pipelineVersion?->title ?? 'Без названия',
+            (string) ($pipelineRun->pipelineVersion?->version ?? '—')
+        );
+        $this->showDeleteRunAlert = true;
+    }
+
+    public function closeDeleteRunAlert(): void
+    {
+        $this->showDeleteRunAlert = false;
+        $this->deletingRunId = null;
+        $this->deletingRunLabel = '';
+    }
+
+    public function deleteRun(DeleteProjectPipelineRunAction $deleteProjectPipelineRunAction): void
+    {
+        abort_if($this->deletingRunId === null, 422, 'Прогон для удаления не выбран.');
+
+        $deleteProjectPipelineRunAction->handle($this->project, $this->deletingRunId);
+
+        $this->project = app(ProjectDetailsQuery::class)->get($this->project->fresh());
+        $this->closeDeleteRunAlert();
     }
 
     public function render(): View

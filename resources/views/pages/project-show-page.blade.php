@@ -35,18 +35,28 @@
                             @else
                                 <div class="mt-3 space-y-2">
                                     @foreach ($lesson->pipelineRuns as $pipelineRun)
-                                        <a href="{{ route('projects.runs.show', ['project' => $project, 'pipelineRun' => $pipelineRun]) }}"
-                                           wire:navigate
-                                           class="block rounded-lg border border-gray-200 px-3 py-1 bg-gray-100 hover:bg-gray-200 dark:border-white/10 dark:bg-gray-900/50 dark:hover:bg-white/5">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <span class="text-sm truncate text-gray-700 dark:text-gray-200">
-                                                    {{ ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }} • v{{ $pipelineRun->pipelineVersion?->version ?? '—' }}
-                                                </span>
-                                                <span class="{{ $this->pipelineRunStatusBadgeClass($pipelineRun->status) }}">
-                                                    {{ $this->pipelineRunStatusLabel($pipelineRun->status) }}
-                                                </span>
-                                            </div>
-                                        </a>
+                                        <div class="group relative">
+                                            <a href="{{ route('projects.runs.show', ['project' => $project, 'pipelineRun' => $pipelineRun]) }}"
+                                               wire:navigate
+                                               class="block rounded-lg border border-gray-200 bg-gray-100 px-3 py-1 hover:bg-gray-200 dark:border-white/10 dark:bg-gray-900/50 dark:hover:bg-white/5">
+                                                <div class="flex items-center justify-between gap-3">
+                                                    <span class="truncate text-sm text-gray-700 dark:text-gray-200">
+                                                        {{ ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }} • v{{ $pipelineRun->pipelineVersion?->version ?? '—' }}
+                                                    </span>
+                                                    <span class="{{ $this->pipelineRunStatusBadgeClass($pipelineRun->status) }}">
+                                                        {{ $this->pipelineRunStatusLabel($pipelineRun->status) }}
+                                                    </span>
+                                                </div>
+                                            </a>
+                                            <button type="button"
+                                                    wire:click="openDeleteRunAlert({{ $pipelineRun->id }})"
+                                                    class="absolute inset-y-0 right-0 px-2 z-10 rounded-lg flex items-center bg-gray-200/80 dark:bg-gray-800/80 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
+                                                    aria-label="Удалить прогон">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                                                </svg>
+                                            </button>
+                                        </div>
                                     @endforeach
                                 </div>
                             @endif
@@ -362,6 +372,45 @@
                             Удалить
                         </button>
                         <button type="button" wire:click="closeDeleteLessonAlert"
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            Отменить
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
+
+    @if ($showDeleteRunAlert)
+        <div class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" data-delete-run-alert>
+            <div class="fixed inset-0 bg-gray-500/75 transition-opacity dark:bg-gray-900/50" wire:click="closeDeleteRunAlert"></div>
+
+            <div tabindex="0" class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
+                <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                     wire:click.stop>
+                    <div class="sm:flex sm:items-start">
+                        <div class="mx-auto flex size-12 shrink-0 items-center justify-center rounded-full bg-red-100 sm:mx-0 sm:size-10 dark:bg-red-500/10">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5"
+                                 stroke="currentColor" aria-hidden="true" class="size-6 text-red-600 dark:text-red-400">
+                                <path stroke-linecap="round" stroke-linejoin="round"
+                                      d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126ZM12 15.75h.007v.008H12v-.008Z"/>
+                            </svg>
+                        </div>
+                        <div class="mt-3 text-center sm:mt-0 sm:ml-4 sm:text-left">
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Удалить прогон «{{ $deletingRunLabel }}»</h3>
+                            <div class="mt-2">
+                                <p class="text-sm text-gray-500 dark:text-gray-400">
+                                    Вы уверены, что хотите удалить прогон вместе со всеми расшифровками? Это действие нельзя отменить.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="mt-5 sm:mt-4 sm:flex sm:flex-row-reverse">
+                        <button type="button" wire:click="deleteRun"
+                                class="inline-flex w-full justify-center rounded-md bg-red-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-red-500 sm:ml-3 sm:w-auto dark:bg-red-500 dark:shadow-none dark:hover:bg-red-400">
+                            Удалить
+                        </button>
+                        <button type="button" wire:click="closeDeleteRunAlert"
                                 class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
                             Отменить
                         </button>
