@@ -76,6 +76,8 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - В виджете очереди обработки цвет иконки задачи теперь зависит от состояния job: `indigo` для выполняемой (`jobs.reserved_at != null`) и `gray` для ожидающей.
 - Убрано слово `Development` из имен файлов и классов рабочего виджета очереди: компонент переименован в `QueueWidget`, шаблон в `queue-widget.blade.php`, провайдер в `QueueWidgetDataProvider`.
 - В виджете очереди раскрытие/сворачивание задач переведено на явный `wire:click`: состояние аккордеона больше не сбрасывается polling-обновлением и меняется только по клику.
+- Страница `Пайплайны` реализована по паттерну списка проектов: grid из карточек с названием, номером текущей версии и `description`, плюс кнопка `Добавить пайплайн` в заголовке.
+- Добавлен отдельный full-page Livewire-компонент `CreatePipelinePage` и маршрут `pipelines.create` (без модала) для будущей реализации создания пайплайна.
 
 ## [2026-02-11] refactor: migrate LLM layer to Laravel AI SDK
 
