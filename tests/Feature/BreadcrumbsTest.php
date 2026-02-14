@@ -98,6 +98,26 @@ class BreadcrumbsTest extends TestCase
                 'Пайплайны',
             ], false);
 
+        $pipeline = Pipeline::query()->create();
+        $pipelineVersion = $pipeline->versions()->create([
+            'version' => 3,
+            'title' => 'Пайплайн страницы',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+        $pipeline->update(['current_version_id' => $pipelineVersion->id]);
+
+        $showResponse = $this->get(route('pipelines.show', $pipeline));
+
+        $showResponse
+            ->assertStatus(200)
+            ->assertSeeInOrder([
+                'aria-label="Breadcrumb"',
+                'Пайплайны',
+                'Пайплайн страницы',
+            ], false);
+
         $stepResponse = $this->get(route('pipelines.steps.show', [
             'pipeline' => 'demo-pipeline',
             'step' => 'demo-step',

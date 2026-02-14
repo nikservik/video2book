@@ -20,19 +20,21 @@
     @else
         <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
             @foreach ($pipelines as $pipeline)
-                <article class="rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm dark:border-white/10 dark:bg-gray-800">
-                    <div class="flex items-start justify-between gap-2">
-                        <h2 class="font-semibold text-gray-900 dark:text-white">
-                            {{ $pipeline->currentVersion?->title ?? 'Без названия' }}
-                        </h2>
-                        <span class="shrink-0 text-gray-500 dark:text-gray-400">
-                            v{{ $pipeline->currentVersion?->version ?? '-' }}
-                        </span>
-                    </div>
-                    <p class="mt-1 text-sm text-gray-600 dark:text-gray-300">
-                        {{ $pipeline->currentVersion?->description ?: 'Описание не задано.' }}
-                    </p>
-                </article>
+                <a href="{{ route('pipelines.show', $pipeline) }}" wire:navigate class="group block">
+                    <article class="rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm transition group-hover:border-indigo-400 dark:border-white/10 dark:bg-gray-800 dark:group-hover:border-indigo-500/60">
+                        <div class="flex items-start justify-between gap-2">
+                            <h2 class="font-semibold text-gray-900 dark:text-white">
+                                {{ $pipeline->currentVersion?->title ?? 'Без названия' }}
+                            </h2>
+                            <span class="shrink-0 text-gray-500 dark:text-gray-400">
+                                v{{ $pipeline->currentVersion?->version ?? '-' }}
+                            </span>
+                        </div>
+                        <p class="mt-1 truncate text-sm text-gray-600 dark:text-gray-300">
+                            {{ $pipeline->currentVersion?->description ?: 'Описание не задано.' }}
+                        </p>
+                    </article>
+                </a>
             @endforeach
         </div>
 

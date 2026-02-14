@@ -47,6 +47,8 @@ class PipelinesPageTest extends TestCase
             ->assertSee('grid grid-cols-1 gap-6 lg:grid-cols-3', false)
             ->assertSee('Пайплайн Альфа')
             ->assertSee('Пайплайн Бета')
+            ->assertSee(route('pipelines.show', $firstPipeline), false)
+            ->assertSee(route('pipelines.show', $secondPipeline), false)
             ->assertSee('v3')
             ->assertSee('v8')
             ->assertSee('Описание Альфы')
