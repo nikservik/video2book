@@ -29,6 +29,9 @@
                     </svg>
                 </button>
 
+            @endif
+
+            @if ($this->hasQueuedSteps || $this->hasRunningSteps)
                 <button type="button"
                         wire:click="stopRun"
                         data-run-control="stop"

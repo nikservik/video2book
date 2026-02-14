@@ -155,6 +155,15 @@ class ProjectRunPageTest extends TestCase
     {
         [$project, $pipelineRun, , $secondRunStep] = $this->createProjectRunWithSteps();
 
+        $this->get(route('projects.runs.show', [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]))
+            ->assertStatus(200)
+            ->assertDontSee('data-run-control="start"', false)
+            ->assertDontSee('data-run-control="pause"', false)
+            ->assertSee('data-run-control="stop"', false);
+
         $secondRunStep->update(['status' => 'paused']);
         $pipelineRun->update(['status' => 'paused']);
 

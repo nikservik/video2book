@@ -186,6 +186,13 @@ class ProjectRunPage extends Component
         );
     }
 
+    public function getHasRunningStepsProperty(): bool
+    {
+        return $this->pipelineRun->steps->contains(
+            fn (PipelineRunStep $step): bool => $step->status === 'running'
+        );
+    }
+
     public function tokenMetricsBadgeClass(): string
     {
         return 'inline-flex items-center rounded-full bg-gray-100 px-1.5 py-0.5 text-xs font-medium text-gray-600 dark:bg-gray-800 dark:text-gray-300';
