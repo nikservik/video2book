@@ -12,6 +12,7 @@ use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -109,6 +110,24 @@ class ProjectRunPageTest extends TestCase
             ->assertSet('resultViewMode', 'preview')
             ->assertSee('data-result-mode="preview"', false)
             ->assertSee('<h2>Заголовок первого шага</h2>', false);
+    }
+
+    public function test_project_run_page_can_download_selected_step_pdf_and_markdown(): void
+    {
+        [$project, $pipelineRun] = $this->createProjectRunWithSteps();
+
+        $pdfFilename = Str::slug('Урок по Laravel-Транскрибация', '_').'.pdf';
+        $markdownFilename = Str::slug('Урок по Laravel-Саммаризация', '_').'.md';
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->call('downloadSelectedStepPdf')
+            ->assertFileDownloaded($pdfFilename, contentType: 'application/pdf')
+            ->call('selectStep', $pipelineRun->steps()->where('position', 2)->firstOrFail()->id)
+            ->call('downloadSelectedStepMarkdown')
+            ->assertFileDownloaded($markdownFilename, contentType: 'text/markdown; charset=UTF-8');
     }
 
     public function test_project_run_page_keeps_steps_order_after_selecting_step(): void

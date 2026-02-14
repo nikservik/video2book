@@ -52,6 +52,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - В блок результата шага добавлен переключатель `Превью / Исходник`: превью рендерит markdown в HTML через `league/commonmark`, исходник показывает сырой markdown.
 - Для страницы прогона изменён выбор шага по умолчанию: при загрузке активируется последний завершённый (`done`) шаг, а при отсутствии завершённых — первый шаг списка.
 - Исправлен скачок порядка шагов после выбора шага на странице прогона: relation `PipelineRun::steps()` теперь всегда отдает шаги в `position -> id`, добавлен регрессионный feature-тест.
+- На странице прогона подключено скачивание результата выбранного шага в PDF/Markdown: для PDF используется существующий `PipelineStepPdfExporter`, для обоих форматов добавлены имена файлов по шаблону `lesson-step` и feature-тесты Livewire download-ответов.
 
 ## [2026-02-11] refactor: migrate LLM layer to Laravel AI SDK
 

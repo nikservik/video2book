@@ -5,10 +5,12 @@ namespace App\Livewire;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\Project;
+use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Services\Project\ProjectRunDetailsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Livewire\Component;
+use Symfony\Component\HttpFoundation\StreamedResponse;
 
 class ProjectRunPage extends Component
 {
@@ -51,6 +53,31 @@ class ProjectRunPage extends Component
         }
 
         $this->resultViewMode = $mode;
+    }
+
+    public function downloadSelectedStepPdf(PipelineStepPdfExporter $exporter): StreamedResponse
+    {
+        $step = $this->selectedStepForExport();
+        $filename = $this->selectedStepExportFilename($step, 'pdf');
+        $pdfContent = $exporter->export($this->pipelineRun, $step);
+
+        return response()->streamDownload(function () use ($pdfContent): void {
+            echo $pdfContent;
+        }, $filename, [
+            'Content-Type' => 'application/pdf',
+        ]);
+    }
+
+    public function downloadSelectedStepMarkdown(): StreamedResponse
+    {
+        $step = $this->selectedStepForExport();
+        $filename = $this->selectedStepExportFilename($step, 'md');
+
+        return response()->streamDownload(function () use ($step): void {
+            echo $step->result;
+        }, $filename, [
+            'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
     }
 
     public function getSelectedStepProperty(): ?PipelineRunStep
@@ -132,6 +159,28 @@ class ProjectRunPage extends Component
     public function formatCost(float|int|string|null $cost): string
     {
         return number_format((float) ($cost ?? 0), 3, '.', ',');
+    }
+
+    public function getCanExportSelectedStepProperty(): bool
+    {
+        return $this->selectedStep !== null && $this->selectedStep->result !== null;
+    }
+
+    private function selectedStepForExport(): PipelineRunStep
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для экспорта не выбран.');
+        abort_if($this->selectedStep->result === null, 422, 'У шага нет результата для экспорта.');
+        abort_if($this->selectedStep->pipeline_run_id !== $this->pipelineRun->id, 404, 'Шаг не принадлежит указанному прогону.');
+
+        return $this->selectedStep;
+    }
+
+    private function selectedStepExportFilename(PipelineRunStep $step, string $extension): string
+    {
+        $lessonName = $this->pipelineRun->lesson?->name ?? 'lesson';
+        $stepName = $step->stepVersion?->name ?? 'step';
+
+        return Str::slug($lessonName.'-'.$stepName, '_').'.'.$extension;
     }
 
     public function render(): View

@@ -8,7 +8,7 @@ use Livewire\Component;
 
 class ProjectsPage extends Component
 {
-    private const int PER_PAGE = 15;
+    private const PER_PAGE = 15;
 
     public function render(): View
     {
