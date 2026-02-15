@@ -56,6 +56,30 @@ class PipelinesPageTest extends TestCase
             ->assertSee('text-sm text-gray-600 dark:text-gray-300', false);
     }
 
+    public function test_pipelines_page_marks_pipeline_title_as_archived_when_current_version_is_archived(): void
+    {
+        $pipeline = Pipeline::query()->create();
+        $archivedVersion = PipelineVersion::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'version' => 12,
+            'title' => 'Пайплайн Архив',
+            'description' => 'Описание архива',
+            'changelog' => null,
+            'created_by' => null,
+            'status' => 'archived',
+        ]);
+        $pipeline->update(['current_version_id' => $archivedVersion->id]);
+
+        $response = $this->get(route('pipelines.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Пайплайн Архив')
+            ->assertSee('text-gray-500 dark:text-gray-400', false)
+            ->assertSee('data-archived-current-version-icon', false)
+            ->assertDontSee('v12');
+    }
+
     public function test_create_pipeline_page_renders_as_separate_component_page(): void
     {
         $response = $this->get(route('pipelines.create'));

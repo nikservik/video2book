@@ -11,7 +11,7 @@ class PaginatedPipelinesQuery
     {
         return Pipeline::query()
             ->with([
-                'currentVersion:id,pipeline_id,title,version,description',
+                'currentVersion:id,pipeline_id,title,version,description,status',
             ])
             ->orderByDesc('updated_at')
             ->paginate($perPage)

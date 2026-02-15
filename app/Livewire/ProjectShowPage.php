@@ -134,10 +134,12 @@ class ProjectShowPage extends Component
 
     public function createLessonFromYoutube(CreateProjectLessonFromYoutubeAction $action): void
     {
+        $availablePipelineVersionIds = $this->availablePipelineVersionIds();
+
         $validated = $this->validate([
             'newLessonName' => ['required', 'string', 'max:255'],
             'newLessonYoutubeUrl' => ['required', 'url', 'starts_with:https://'],
-            'newLessonPipelineVersionId' => ['required', 'integer', 'exists:pipeline_versions,id'],
+            'newLessonPipelineVersionId' => ['required', 'integer', Rule::in($availablePipelineVersionIds)],
         ], [], [
             'newLessonName' => 'название урока',
             'newLessonYoutubeUrl' => 'ссылка на YouTube',
@@ -493,7 +495,10 @@ class ProjectShowPage extends Component
         $this->resetErrorBag();
         $this->editableProjectName = $this->project->name;
         $this->editableProjectReferer = $this->project->referer ?? '';
-        $this->editableProjectDefaultPipelineVersionId = $this->project->default_pipeline_version_id;
+        $availablePipelineVersionIds = $this->availablePipelineVersionIds();
+        $this->editableProjectDefaultPipelineVersionId = in_array((int) $this->project->default_pipeline_version_id, $availablePipelineVersionIds, true)
+            ? (int) $this->project->default_pipeline_version_id
+            : null;
         $this->showRenameProjectModal = true;
     }
 
@@ -504,6 +509,8 @@ class ProjectShowPage extends Component
 
     public function saveProject(UpdateProjectNameAction $updateProjectNameAction): void
     {
+        $availablePipelineVersionIds = $this->availablePipelineVersionIds();
+
         $normalizedData = [
             'editableProjectName' => $this->editableProjectName,
             'editableProjectReferer' => blank($this->editableProjectReferer) ? null : trim($this->editableProjectReferer),
@@ -513,7 +520,7 @@ class ProjectShowPage extends Component
         $validated = validator($normalizedData, [
             'editableProjectName' => ['required', 'string', 'max:255'],
             'editableProjectReferer' => ['nullable', 'url', 'starts_with:https://'],
-            'editableProjectDefaultPipelineVersionId' => ['nullable', 'integer', 'exists:pipeline_versions,id'],
+            'editableProjectDefaultPipelineVersionId' => ['nullable', 'integer', Rule::in($availablePipelineVersionIds)],
         ], [], [
             'editableProjectName' => 'название проекта',
             'editableProjectReferer' => 'referrer',
@@ -553,6 +560,17 @@ class ProjectShowPage extends Component
             'label',
             'Не выбрано'
         );
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function availablePipelineVersionIds(): array
+    {
+        return collect($this->pipelineVersionOptions)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
     }
 
     public function deleteProject(DeleteProjectAction $deleteProjectAction): void
@@ -691,6 +709,18 @@ class ProjectShowPage extends Component
     public function refreshProjectLessons(): void
     {
         $this->project = app(ProjectDetailsQuery::class)->get($this->project->fresh());
+    }
+
+    public function getShouldPollProjectLessonsProperty(): bool
+    {
+        return ! $this->showCreateLessonModal
+            && ! $this->showAddPipelineToLessonModal
+            && ! $this->showRenameProjectModal
+            && ! $this->showRenameLessonModal
+            && ! $this->showDeleteProjectAlert
+            && ! $this->showDeleteLessonAlert
+            && ! $this->showDeleteRunAlert
+            && ! $this->showProjectExportModal;
     }
 
     public function render(): View

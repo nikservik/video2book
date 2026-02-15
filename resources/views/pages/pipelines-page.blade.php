@@ -23,12 +23,22 @@
                 <a href="{{ route('pipelines.show', $pipeline) }}" wire:navigate class="group block">
                     <article class="rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm transition group-hover:border-indigo-400 dark:border-white/10 dark:bg-gray-800 dark:group-hover:border-indigo-500/60">
                         <div class="flex items-start justify-between gap-2">
-                            <h2 class="font-semibold text-gray-900 dark:text-white">
+                            <h2 class="font-semibold {{ $pipeline->currentVersion?->status === 'archived'
+                                ? 'text-gray-500 dark:text-gray-400'
+                                : 'text-gray-900 dark:text-white' }}">
                                 {{ $pipeline->currentVersion?->title ?? 'Без названия' }}
                             </h2>
-                            <span class="shrink-0 text-gray-500 dark:text-gray-400">
-                                v{{ $pipeline->currentVersion?->version ?? '-' }}
-                            </span>
+                            @if ($pipeline->currentVersion?->status === 'archived')
+                                <span data-archived-current-version-icon class="shrink-0 text-gray-500 dark:text-gray-400">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                      <path stroke-linecap="round" stroke-linejoin="round" d="m20.25 7.5-.625 10.632a2.25 2.25 0 0 1-2.247 2.118H6.622a2.25 2.25 0 0 1-2.247-2.118L3.75 7.5M10 11.25h4M3.375 7.5h17.25c.621 0 1.125-.504 1.125-1.125v-1.5c0-.621-.504-1.125-1.125-1.125H3.375c-.621 0-1.125.504-1.125 1.125v1.5c0 .621.504 1.125 1.125 1.125Z" />
+                                    </svg>
+                                </span>
+                            @else
+                                <span class="shrink-0 text-gray-500 dark:text-gray-400">
+                                    v{{ $pipeline->currentVersion?->version ?? '-' }}
+                                </span>
+                            @endif
                         </div>
                         <p class="mt-1 truncate text-sm text-gray-600 dark:text-gray-300">
                             {{ $pipeline->currentVersion?->description ?: 'Описание не задано.' }}

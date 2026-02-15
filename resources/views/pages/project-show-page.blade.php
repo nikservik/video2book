@@ -2,7 +2,8 @@
     <h1 class="mx-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $project->name }}</h1>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section class="lg:col-span-2" wire:poll.2s="refreshProjectLessons">
+        <section class="lg:col-span-2"
+                 @if ($this->shouldPollProjectLessons) wire:poll.2s="refreshProjectLessons" @endif>
             @if ($project->lessons->isEmpty())
                 <div class="rounded-lg border border-gray-200 bg-white px-6 py-6 shadow-sm dark:border-white/10 dark:bg-gray-800">
                     <p class="text-gray-600 dark:text-gray-300">

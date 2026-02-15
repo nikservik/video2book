@@ -3,7 +3,6 @@
 namespace App\Actions\Pipeline;
 
 use App\Models\Pipeline;
-use App\Models\PipelineVersion;
 
 class GetPipelineVersionOptionsAction
 {
@@ -13,24 +12,32 @@ class GetPipelineVersionOptionsAction
     public function handle(): array
     {
         return Pipeline::query()
+            ->whereNotNull('current_version_id')
+            ->whereHas('currentVersion', fn ($query) => $query->where('status', 'active'))
             ->with([
-                'versions' => fn ($query) => $query
-                    ->orderBy('version'),
+                'currentVersion:id,title,version,status',
             ])
             ->orderBy('id')
             ->get()
-            ->flatMap(function (Pipeline $pipeline) {
-                return $pipeline->versions->map(function (PipelineVersion $version): array {
-                    return [
-                        'id' => $version->id,
-                        'label' => sprintf(
-                            '%s • v%d',
-                            $version->title ?? 'Без названия',
-                            $version->version,
-                        ),
-                    ];
-                });
+            ->map(function (Pipeline $pipeline): ?array {
+                $currentVersion = $pipeline->currentVersion;
+
+                if ($currentVersion === null) {
+                    return null;
+                }
+
+                $title = trim((string) $currentVersion->title);
+
+                return [
+                    'id' => $currentVersion->id,
+                    'label' => sprintf(
+                        '%s • v%d',
+                        $title !== '' ? $title : 'Без названия',
+                        $currentVersion->version,
+                    ),
+                ];
             })
+            ->filter()
             ->values()
             ->all();
     }

@@ -6,6 +6,7 @@ use App\Actions\Pipeline\GetPipelineVersionOptionsAction;
 use App\Actions\Project\CreateProjectFromLessonsListAction;
 use App\Services\Project\PaginatedProjectsQuery;
 use Illuminate\Contracts\View\View;
+use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class ProjectsPage extends Component
@@ -49,6 +50,8 @@ class ProjectsPage extends Component
 
     public function createProject(CreateProjectFromLessonsListAction $action): void
     {
+        $availablePipelineVersionIds = $this->availablePipelineVersionIds();
+
         $normalizedData = [
             'newProjectName' => $this->newProjectName,
             'newProjectReferer' => blank($this->newProjectReferer) ? null : trim($this->newProjectReferer),
@@ -59,7 +62,7 @@ class ProjectsPage extends Component
         $validated = validator($normalizedData, [
             'newProjectName' => ['required', 'string', 'max:255'],
             'newProjectReferer' => ['nullable', 'url', 'starts_with:https://'],
-            'newProjectDefaultPipelineVersionId' => ['nullable', 'integer', 'exists:pipeline_versions,id'],
+            'newProjectDefaultPipelineVersionId' => ['nullable', 'integer', Rule::in($availablePipelineVersionIds)],
             'newProjectLessonsList' => ['nullable', 'string'],
         ], [], [
             'newProjectName' => 'название проекта',
@@ -92,6 +95,17 @@ class ProjectsPage extends Component
             'label',
             'Не выбрано'
         );
+    }
+
+    /**
+     * @return array<int, int>
+     */
+    private function availablePipelineVersionIds(): array
+    {
+        return collect($this->pipelineVersionOptions)
+            ->pluck('id')
+            ->map(fn (mixed $id): int => (int) $id)
+            ->all();
     }
 
     public function render(): View

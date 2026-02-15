@@ -157,6 +157,19 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
+    public function test_project_page_disables_lessons_polling_while_modal_is_open(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с паузой поллинга',
+            'tags' => null,
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false)
+            ->call('openCreateLessonModal')
+            ->assertDontSee('wire:poll.2s="refreshProjectLessons"', false);
+    }
+
     public function test_project_page_shows_audio_download_icon_states_for_lessons(): void
     {
         ProjectTag::query()->create([
