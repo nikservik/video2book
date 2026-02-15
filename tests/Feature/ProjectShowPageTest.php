@@ -4,6 +4,14 @@ namespace Tests\Feature;
 
 use App\Jobs\DownloadLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
+use App\Livewire\ProjectShow\Modals\AddPipelineToLessonModal;
+use App\Livewire\ProjectShow\Modals\CreateLessonModal;
+use App\Livewire\ProjectShow\Modals\DeleteLessonAlert;
+use App\Livewire\ProjectShow\Modals\DeleteProjectAlert;
+use App\Livewire\ProjectShow\Modals\DeleteRunAlert;
+use App\Livewire\ProjectShow\Modals\ProjectExportModal;
+use App\Livewire\ProjectShow\Modals\RenameLessonModal;
+use App\Livewire\ProjectShow\Modals\RenameProjectModal;
 use App\Livewire\ProjectShowPage;
 use App\Models\Lesson;
 use App\Models\Pipeline;
@@ -166,8 +174,32 @@ class ProjectShowPageTest extends TestCase
 
         Livewire::test(ProjectShowPage::class, ['project' => $project])
             ->assertSee('wire:poll.2s="refreshProjectLessons"', false)
-            ->call('openCreateLessonModal')
+            ->call('markModalOpened')
             ->assertDontSee('wire:poll.2s="refreshProjectLessons"', false);
+    }
+
+    public function test_project_page_keeps_lessons_order_when_modal_state_changes(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект со стабильным порядком',
+            'tags' => null,
+        ]);
+
+        $this->createLesson($project->id, 'Урок 1', Carbon::parse('2026-02-01 10:00:00'));
+        $this->createLesson($project->id, 'Урок 3', Carbon::parse('2026-02-03 10:00:00'));
+        $this->createLesson($project->id, 'Урок 2', Carbon::parse('2026-02-02 10:00:00'));
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2'])
+            ->call('markModalOpened')
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2'])
+            ->call('markModalClosed')
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2']);
     }
 
     public function test_project_page_shows_audio_download_icon_states_for_lessons(): void
@@ -247,15 +279,15 @@ class ProjectShowPageTest extends TestCase
             'tags' => null,
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showDeleteProjectAlert', false)
-            ->call('openDeleteProjectAlert')
-            ->assertSet('showDeleteProjectAlert', true)
+        Livewire::test(DeleteProjectAlert::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
             ->assertSee('Вы уверены, что хотите удалить проект?')
             ->assertSee('Удалить')
             ->assertSee('Отменить')
-            ->call('closeDeleteProjectAlert')
-            ->assertSet('showDeleteProjectAlert', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertDontSee('Вы уверены, что хотите удалить проект?');
     }
 
@@ -279,16 +311,16 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showDeleteLessonAlert', false)
-            ->call('openDeleteLessonAlert', $lesson->id)
-            ->assertSet('showDeleteLessonAlert', true)
+        Livewire::test(DeleteLessonAlert::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open', $lesson->id)
+            ->assertSet('show', true)
             ->assertSet('deletingLessonId', $lesson->id)
             ->assertSet('deletingLessonName', 'Урок для удаления')
             ->assertSee('Удалить урок «Урок для удаления»')
             ->assertSee('Вы уверены, что хотите удалить урок вместе со всеми расшифровками? Это действие нельзя отменить.')
-            ->call('closeDeleteLessonAlert')
-            ->assertSet('showDeleteLessonAlert', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertSet('deletingLessonId', null)
             ->assertSet('deletingLessonName', '')
             ->assertDontSee('Удалить урок «Урок для удаления»');
@@ -322,15 +354,11 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSee('Удаляемый урок')
-            ->assertSee('Оставшийся урок')
-            ->call('openDeleteLessonAlert', $lessonToDelete->id)
-            ->assertSet('showDeleteLessonAlert', true)
+        Livewire::test(DeleteLessonAlert::class, ['projectId' => $project->id])
+            ->call('open', $lessonToDelete->id)
+            ->assertSet('show', true)
             ->call('deleteLesson')
-            ->assertSet('showDeleteLessonAlert', false)
-            ->assertDontSee('Удаляемый урок')
-            ->assertSee('Оставшийся урок');
+            ->assertSet('show', false);
 
         $this->assertDatabaseMissing('lessons', ['id' => $lessonToDelete->id]);
         $this->assertDatabaseHas('lessons', ['id' => $lessonToKeep->id]);
@@ -372,16 +400,16 @@ class ProjectShowPageTest extends TestCase
             'state' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showDeleteRunAlert', false)
-            ->call('openDeleteRunAlert', $run->id)
-            ->assertSet('showDeleteRunAlert', true)
+        Livewire::test(DeleteRunAlert::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open', $run->id)
+            ->assertSet('show', true)
             ->assertSet('deletingRunId', $run->id)
             ->assertSet('deletingRunLabel', 'Пайплайн для удаления • v7')
             ->assertSee('Удалить прогон «Пайплайн для удаления • v7»')
             ->assertSee('Вы уверены, что хотите удалить прогон вместе со всеми расшифровками? Это действие нельзя отменить.')
-            ->call('closeDeleteRunAlert')
-            ->assertSet('showDeleteRunAlert', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertSet('deletingRunId', null)
             ->assertSet('deletingRunLabel', '')
             ->assertDontSee('Удалить прогон «Пайплайн для удаления • v7»');
@@ -439,15 +467,11 @@ class ProjectShowPageTest extends TestCase
             'state' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSee('Пайплайн A • v1')
-            ->assertSee('Пайплайн B • v2')
-            ->call('openDeleteRunAlert', $runToDelete->id)
-            ->assertSet('showDeleteRunAlert', true)
+        Livewire::test(DeleteRunAlert::class, ['projectId' => $project->id])
+            ->call('open', $runToDelete->id)
+            ->assertSet('show', true)
             ->call('deleteRun')
-            ->assertSet('showDeleteRunAlert', false)
-            ->assertDontSee('Пайплайн A • v1')
-            ->assertSee('Пайплайн B • v2');
+            ->assertSet('show', false);
 
         $this->assertDatabaseMissing('pipeline_runs', ['id' => $runToDelete->id]);
         $this->assertDatabaseHas('pipeline_runs', ['id' => $runToKeep->id]);
@@ -473,17 +497,17 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showRenameLessonModal', false)
-            ->call('openRenameLessonModal', $lesson->id)
-            ->assertSet('showRenameLessonModal', true)
+        Livewire::test(RenameLessonModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open', $lesson->id)
+            ->assertSet('show', true)
             ->assertSet('editingLessonId', $lesson->id)
             ->assertSet('editableLessonName', 'Урок для переименования')
             ->assertSee('Изменить название урока')
             ->assertSee('Сохранить')
             ->assertSee('Отменить')
-            ->call('closeRenameLessonModal')
-            ->assertSet('showRenameLessonModal', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertSet('editingLessonId', null)
             ->assertSet('editableLessonName', '')
             ->assertDontSee('Изменить название урока');
@@ -509,14 +533,11 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSee('Старое имя урока')
-            ->call('openRenameLessonModal', $lesson->id)
+        Livewire::test(RenameLessonModal::class, ['projectId' => $project->id])
+            ->call('open', $lesson->id)
             ->set('editableLessonName', 'Новое имя урока')
             ->call('saveLessonName')
-            ->assertSet('showRenameLessonModal', false)
-            ->assertDontSee('Старое имя урока')
-            ->assertSee('Новое имя урока');
+            ->assertSet('show', false);
 
         $this->assertDatabaseHas('lessons', [
             'id' => $lesson->id,
@@ -544,8 +565,8 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openRenameLessonModal', $lesson->id)
+        Livewire::test(RenameLessonModal::class, ['projectId' => $project->id])
+            ->call('open', $lesson->id)
             ->set('editableLessonName', '')
             ->call('saveLessonName')
             ->assertHasErrors(['editableLessonName' => 'required']);
@@ -582,10 +603,10 @@ class ProjectShowPageTest extends TestCase
             'state' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showAddPipelineToLessonModal', false)
-            ->call('openAddPipelineToLessonModal', $lesson->id)
-            ->assertSet('showAddPipelineToLessonModal', true)
+        Livewire::test(AddPipelineToLessonModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open', $lesson->id)
+            ->assertSet('show', true)
             ->assertSet('addingPipelineLessonId', $lesson->id)
             ->assertSet('addingPipelineLessonName', 'Урок с прогоном')
             ->assertSet('addingPipelineVersionId', $defaultVersion->id)
@@ -626,11 +647,11 @@ class ProjectShowPageTest extends TestCase
             'state' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openAddPipelineToLessonModal', $lesson->id)
+        Livewire::test(AddPipelineToLessonModal::class, ['projectId' => $project->id])
+            ->call('open', $lesson->id)
             ->set('addingPipelineVersionId', $newVersion->id)
             ->call('addPipelineToLesson')
-            ->assertSet('showAddPipelineToLessonModal', false);
+            ->assertSet('show', false);
 
         $newRun = PipelineRun::query()
             ->where('lesson_id', $lesson->id)
@@ -761,10 +782,10 @@ class ProjectShowPageTest extends TestCase
             'result' => 'text B',
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project->fresh()])
-            ->assertSet('showProjectExportModal', false)
-            ->call('openProjectExportModal', 'pdf')
-            ->assertSet('showProjectExportModal', true)
+        Livewire::test(ProjectExportModal::class, ['projectId' => $project->fresh()->id])
+            ->assertSet('show', false)
+            ->call('open', 'pdf')
+            ->assertSet('show', true)
             ->assertSet('projectExportFormat', 'pdf')
             ->assertSet('projectExportSelection', $pipelineVersionB->id.':'.$stepVersionsB['text']->id)
             ->assertSee('Скачивание проекта в PDF')
@@ -836,11 +857,11 @@ class ProjectShowPageTest extends TestCase
 
         $expectedFilename = Str::slug($project->name.'-'.$stepVersions['text']->name.'-md', '_').'.zip';
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openProjectExportModal', 'md')
+        Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
+            ->call('open', 'md')
             ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
             ->call('downloadProjectResults')
-            ->assertSet('showProjectExportModal', false)
+            ->assertSet('show', false)
             ->assertFileDownloaded($expectedFilename, contentType: 'application/zip');
     }
 
@@ -864,9 +885,9 @@ class ProjectShowPageTest extends TestCase
             'settings' => [],
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openDeleteProjectAlert')
-            ->assertSet('showDeleteProjectAlert', true)
+        Livewire::test(DeleteProjectAlert::class, ['projectId' => $project->id])
+            ->call('open')
+            ->assertSet('show', true)
             ->call('deleteProject')
             ->assertRedirect(route('projects.index'));
 
@@ -885,10 +906,10 @@ class ProjectShowPageTest extends TestCase
             'default_pipeline_version_id' => $pipelineVersion->id,
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showRenameProjectModal', false)
-            ->call('openRenameProjectModal')
-            ->assertSet('showRenameProjectModal', true)
+        Livewire::test(RenameProjectModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
             ->assertSet('editableProjectName', 'Проект для переименования')
             ->assertSet('editableProjectReferer', 'https://www.example.com/')
             ->assertSet('editableProjectDefaultPipelineVersionId', $pipelineVersion->id)
@@ -897,8 +918,8 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Версия пайплайна по умолчанию')
             ->assertSee('Сохранить')
             ->assertSee('Отменить')
-            ->call('closeRenameProjectModal')
-            ->assertSet('showRenameProjectModal', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertDontSee('Версия пайплайна по умолчанию');
     }
 
@@ -913,16 +934,13 @@ class ProjectShowPageTest extends TestCase
             'default_pipeline_version_id' => null,
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openRenameProjectModal')
+        Livewire::test(RenameProjectModal::class, ['projectId' => $project->id])
+            ->call('open')
             ->set('editableProjectName', 'Новое название проекта')
             ->set('editableProjectReferer', 'https://www.somesite.com/')
             ->set('editableProjectDefaultPipelineVersionId', $pipelineVersion->id)
             ->call('saveProject')
-            ->assertSet('project.name', 'Новое название проекта')
-            ->assertSet('project.referer', 'https://www.somesite.com/')
-            ->assertSet('project.default_pipeline_version_id', $pipelineVersion->id)
-            ->assertSet('showRenameProjectModal', false);
+            ->assertSet('show', false);
 
         $this->assertDatabaseHas('projects', [
             'id' => $project->id,
@@ -939,8 +957,8 @@ class ProjectShowPageTest extends TestCase
             'tags' => null,
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openRenameProjectModal')
+        Livewire::test(RenameProjectModal::class, ['projectId' => $project->id])
+            ->call('open')
             ->set('editableProjectName', '')
             ->call('saveProject')
             ->assertHasErrors(['editableProjectName' => 'required']);
@@ -955,16 +973,16 @@ class ProjectShowPageTest extends TestCase
 
         [, $pipelineVersion] = $this->createPipelineWithSteps();
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSet('showCreateLessonModal', false)
-            ->call('openCreateLessonModal')
-            ->assertSet('showCreateLessonModal', true)
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
             ->assertSet('newLessonPipelineVersionId', $pipelineVersion->id)
             ->assertSee('Добавить урок')
             ->assertSee('Ссылка на YouTube')
             ->assertSee('Версия пайплайна')
-            ->call('closeCreateLessonModal')
-            ->assertSet('showCreateLessonModal', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertDontSee('Ссылка на YouTube');
     }
 
@@ -979,8 +997,8 @@ class ProjectShowPageTest extends TestCase
             'default_pipeline_version_id' => $defaultPipelineVersion->id,
         ]);
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openCreateLessonModal')
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->call('open')
             ->assertSet('newLessonPipelineVersionId', $defaultPipelineVersion->id)
             ->assertNotSet('newLessonPipelineVersionId', $firstPipelineVersion->id);
     }
@@ -995,14 +1013,13 @@ class ProjectShowPageTest extends TestCase
         ]);
         [, $pipelineVersion] = $this->createPipelineWithSteps();
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openCreateLessonModal')
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->call('open')
             ->set('newLessonName', 'Новый урок с YouTube')
             ->set('newLessonYoutubeUrl', 'https://www.youtube.com/watch?v=abc123')
             ->set('newLessonPipelineVersionId', $pipelineVersion->id)
             ->call('createLessonFromYoutube')
-            ->assertSet('showCreateLessonModal', false)
-            ->assertSee('Новый урок с YouTube');
+            ->assertSet('show', false);
 
         $lesson = Lesson::query()
             ->where('project_id', $project->id)
@@ -1035,8 +1052,8 @@ class ProjectShowPageTest extends TestCase
         ]);
         [, $pipelineVersion] = $this->createPipelineWithSteps();
 
-        Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->call('openCreateLessonModal')
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->call('open')
             ->set('newLessonName', '')
             ->set('newLessonYoutubeUrl', 'invalid-url')
             ->set('newLessonPipelineVersionId', $pipelineVersion->id)
