@@ -14,7 +14,7 @@ class PipelineDetailsQuery
             ->with([
                 'currentVersion:id,pipeline_id,title,version,description,status',
                 'versions' => fn ($query) => $query
-                    ->select(['id', 'pipeline_id', 'version', 'title', 'description', 'status'])
+                    ->select(['id', 'pipeline_id', 'version', 'title', 'description', 'changelog', 'status'])
                     ->orderByDesc('version'),
                 'versions.versionSteps' => fn ($query) => $query
                     ->select(['id', 'pipeline_version_id', 'step_version_id', 'position'])

@@ -31,6 +31,7 @@ class PipelineShowPageTest extends TestCase
             ->assertSee('Транскрибация v2')
             ->assertSee('gpt-5-mini')
             ->assertSee('Редактировать версию')
+            ->assertSee('Посмотреть changelog')
             ->assertSee('Сделать текущей версией')
             ->assertSee('Архивировать версию')
             ->assertDontSee('Вернуть из архива')
@@ -98,6 +99,26 @@ class PipelineShowPageTest extends TestCase
             ->call('closeEditVersionModal')
             ->assertSet('showEditVersionModal', false)
             ->assertDontSee('data-edit-version-modal', false);
+    }
+
+    public function test_pipeline_show_page_version_changelog_modal_can_be_opened_and_closed(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        $versionTwo->update([
+            'changelog' => "- Обновлен шаг «Сводка v2»\n- Исправлены настройки модели",
+        ]);
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
+            ->assertSet('showChangelogModal', false)
+            ->call('openChangelogModal')
+            ->assertSet('showChangelogModal', true)
+            ->assertSee('data-version-changelog-modal', false)
+            ->assertSee('Обновлен шаг')
+            ->assertSee('Исправлены настройки модели')
+            ->call('closeChangelogModal')
+            ->assertSet('showChangelogModal', false)
+            ->assertDontSee('data-version-changelog-modal', false);
     }
 
     public function test_pipeline_show_page_can_save_selected_pipeline_version_title_and_description(): void

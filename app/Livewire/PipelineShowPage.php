@@ -50,6 +50,8 @@ class PipelineShowPage extends Component
 
     public string $editableVersionDescription = '';
 
+    public bool $showChangelogModal = false;
+
     public bool $showDeleteStepAlert = false;
 
     public ?int $deletingStepVersionId = null;
@@ -73,6 +75,7 @@ class PipelineShowPage extends Component
 
         $this->closeStepEditModal();
         $this->closeEditVersionModal();
+        $this->closeChangelogModal();
         $this->closeDeleteStepAlert();
         $this->selectedVersionId = $versionId;
     }
@@ -86,6 +89,7 @@ class PipelineShowPage extends Component
         }
 
         $this->closeStepEditModal();
+        $this->closeChangelogModal();
         $this->closeDeleteStepAlert();
         $this->resetErrorBag();
         $this->editableVersionTitle = (string) $selectedVersion->title;
@@ -96,6 +100,23 @@ class PipelineShowPage extends Component
     public function closeEditVersionModal(): void
     {
         $this->showEditVersionModal = false;
+    }
+
+    public function openChangelogModal(): void
+    {
+        if ($this->selectedVersion === null) {
+            return;
+        }
+
+        $this->closeStepEditModal();
+        $this->closeEditVersionModal();
+        $this->closeDeleteStepAlert();
+        $this->showChangelogModal = true;
+    }
+
+    public function closeChangelogModal(): void
+    {
+        $this->showChangelogModal = false;
     }
 
     public function saveVersion(UpdatePipelineVersionAction $updatePipelineVersionAction): void
@@ -139,6 +160,7 @@ class PipelineShowPage extends Component
             return;
         }
 
+        $this->closeChangelogModal();
         $this->closeDeleteStepAlert();
 
         $stepVersion = $stepData['step_version'];
@@ -289,6 +311,7 @@ class PipelineShowPage extends Component
 
         $this->closeStepEditModal();
         $this->closeEditVersionModal();
+        $this->closeChangelogModal();
 
         $this->deletingStepVersionId = (int) $stepData['step_version']->id;
         $this->deletingStepName = (string) ($stepData['step_version']->name ?? 'Без названия шага');
@@ -428,6 +451,17 @@ class PipelineShowPage extends Component
     public function getSelectedVersionNumberProperty(): string
     {
         return (string) ($this->selectedVersion?->version ?? '—');
+    }
+
+    public function getSelectedVersionChangelogProperty(): string
+    {
+        $changelog = trim((string) ($this->selectedVersion?->changelog ?? ''));
+
+        if ($changelog === '') {
+            return 'Для этой версии changelog пока пуст.';
+        }
+
+        return $changelog;
     }
 
     /**
