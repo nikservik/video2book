@@ -8,14 +8,6 @@ return [
     'providers' => [
         'openai' => [
             'models' => [
-                'gpt-5-nano' => [
-                    'input' => 0.00000005,
-                    'output' => 0.0000004,
-                ],
-                'gpt-5-mini' => [
-                    'input' => 0.00000025,
-                    'output' => 0.000002,
-                ],
                 'gpt-5.1' => [
                     'input' => 0.00000125,
                     'output' => 0.00001,
@@ -45,22 +37,13 @@ return [
                 'gemini-3-flash-preview' => [
                     'input' => [
                         'text' => 0.0000005,
-                        'audio' => 0.0000010,
+                        'audio' => 0.000001,
                     ],
-                    'output' => 0.0000030,
+                    'output' => 0.000003,
                 ],
-                'gemini-2.5-flash' => [
-                    'input' => [
-                        'text' => 0.0000003,
-                        'audio' => 0.0000010,
-                    ],
-                    'output' => 0.0000025,
-                ],
-                'gemini-2.5-pro' => [
-                    'input' => [
-                        'text' => 0.00000125,
-                    ],
-                    'output' => 0.00001,
+                'gemini-3-pro-preview' => [
+                    'input' => 0.000002,
+                    'output' => 0.000012,
                 ],
             ],
         ],

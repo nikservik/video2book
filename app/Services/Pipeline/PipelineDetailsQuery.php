@@ -20,7 +20,7 @@ class PipelineDetailsQuery
                     ->select(['id', 'pipeline_version_id', 'step_version_id', 'position'])
                     ->orderBy('position'),
                 'versions.versionSteps.stepVersion' => fn ($query) => $query
-                    ->select(['id', 'step_id', 'input_step_id', 'name', 'type', 'version', 'description', 'prompt', 'settings']),
+                    ->select(['id', 'step_id', 'input_step_id', 'name', 'type', 'version', 'description', 'prompt', 'settings', 'status']),
                 'versions.versionSteps.stepVersion.inputStep.currentVersion' => fn ($query) => $query
                     ->select(['id', 'step_id', 'name']),
             ])

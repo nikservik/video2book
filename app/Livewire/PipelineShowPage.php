@@ -386,9 +386,20 @@ class PipelineShowPage extends Component
         $validated = $this->validateStepEditForm(requireChangelog: false);
         $payload = $this->buildStepPayload($editingStepData['step_version'], $validated);
 
-        $updatePipelineStepVersionAction->handle($editingStepData['step_version'], $payload);
+        $updatePipelineStepVersionAction->handle(
+            $editingStepData['step_version'],
+            $payload,
+            $this->editingStepIsDraft,
+        );
 
         $this->pipeline = app(PipelineDetailsQuery::class)->get($this->pipeline->fresh());
+        unset(
+            $this->selectedVersion,
+            $this->selectedVersionSteps,
+            $this->pipelineVersions,
+            $this->selectedVersionHasDraftSteps,
+            $this->selectedVersionIsArchived
+        );
         $this->closeStepEditModal();
     }
 
@@ -397,7 +408,7 @@ class PipelineShowPage extends Component
         $editingStepData = $this->editingStepData;
         $selectedVersion = $this->selectedVersion;
 
-        if ($editingStepData === null || $selectedVersion === null) {
+        if ($editingStepData === null || $selectedVersion === null || $this->editingStepIsDraft) {
             return;
         }
 
@@ -503,9 +514,20 @@ class PipelineShowPage extends Component
             return;
         }
 
+        if ($this->selectedVersionIsArchived && $this->selectedVersionHasDraftSteps) {
+            return;
+        }
+
         $action->handle($selectedVersion);
 
         $this->pipeline = app(PipelineDetailsQuery::class)->get($this->pipeline);
+        unset(
+            $this->selectedVersion,
+            $this->selectedVersionSteps,
+            $this->pipelineVersions,
+            $this->selectedVersionIsArchived,
+            $this->selectedVersionHasDraftSteps
+        );
     }
 
     public function makeSelectedVersionCurrent(SetCurrentPipelineVersionAction $action): void
@@ -878,6 +900,25 @@ class PipelineShowPage extends Component
         $currentVersionId = (int) ($this->pipeline->current_version_id ?? 0);
 
         return $selectedVersionId !== 0 && $selectedVersionId === $currentVersionId;
+    }
+
+    public function getSelectedVersionHasDraftStepsProperty(): bool
+    {
+        return collect($this->selectedVersionSteps)
+            ->contains(
+                fn (array $stepData): bool => (string) ($stepData['step_version']->status ?? '') === 'draft'
+            );
+    }
+
+    public function getEditingStepIsDraftProperty(): bool
+    {
+        $editingStepData = $this->editingStepData;
+
+        if ($editingStepData === null) {
+            return false;
+        }
+
+        return (string) ($editingStepData['step_version']->status ?? '') === 'draft';
     }
 
     /**

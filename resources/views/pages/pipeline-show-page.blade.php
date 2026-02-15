@@ -118,9 +118,12 @@
                 </button>
                 <button type="button"
                         wire:click="toggleSelectedVersionArchiveStatus"
+                        data-archive-version-button
+                        data-archive-version-disabled="{{ $this->selectedVersionIsArchived && $this->selectedVersionHasDraftSteps ? 'true' : 'false' }}"
+                        @disabled($this->selectedVersionIsArchived && $this->selectedVersionHasDraftSteps)
                         class="w-full rounded-lg px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 dark:shadow-none {{ $this->selectedVersionIsArchived
-                            ? 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500'
-                            : 'bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600 dark:bg-red-500 dark:hover:bg-red-400 dark:focus-visible:outline-red-500' }}">
+                            ? 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500'
+                            : 'bg-red-600 text-white hover:bg-red-500 focus-visible:outline-red-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-red-500 dark:hover:bg-red-400 dark:focus-visible:outline-red-500' }}">
                     {{ $this->selectedVersionIsArchived ? 'Вернуть из архива' : 'Архивировать версию' }}
                 </button>
             </div>
@@ -351,7 +354,9 @@
                                            wire:model.live="createStepInputStepId"
                                            class="block">
                                     <button type="button"
-                                            class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pr-2 pl-3 text-left text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
+                                            data-create-source-disabled="{{ $createStepType === 'transcribe' ? 'true' : 'false' }}"
+                                            @disabled($createStepType === 'transcribe')
+                                            class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pr-2 pl-3 text-left text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
                                         <el-selectedcontent class="col-start-1 row-start-1 truncate pr-6">{{ $this->selectedCreateStepInputStepLabel }}</el-selectedcontent>
                                         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
                                              class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4 dark:text-gray-400">
@@ -526,7 +531,9 @@
                                            wire:model.live="editStepInputStepId"
                                            class="block">
                                     <button type="button"
-                                            class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pr-2 pl-3 text-left text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
+                                            data-edit-source-disabled="{{ $editStepType === 'transcribe' ? 'true' : 'false' }}"
+                                            @disabled($editStepType === 'transcribe')
+                                            class="grid w-full cursor-default grid-cols-1 rounded-md bg-white py-1.5 pr-2 pl-3 text-left text-gray-900 outline-1 -outline-offset-1 outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
                                         <el-selectedcontent class="col-start-1 row-start-1 truncate pr-6">{{ $this->selectedEditStepInputStepLabel }}</el-selectedcontent>
                                         <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
                                              class="col-start-1 row-start-1 size-5 self-center justify-self-end text-gray-500 sm:size-4 dark:text-gray-400">
@@ -608,11 +615,13 @@
                                       class="mt-2 block w-full rounded-md bg-white px-3 py-1.5 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"></textarea>
                         </div>
 
-                        <div>
-                            <label for="edit-step-changelog" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Описание изменения (Обязательно для новой версии)</label>
-                            <textarea id="edit-step-changelog" rows="2" wire:model="editStepChangelogEntry"
-                                      class="mt-2 block w-full rounded-md bg-white px-3 py-1.5 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"></textarea>
-                        </div>
+                        @unless ($this->editingStepIsDraft)
+                            <div>
+                                <label for="edit-step-changelog" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Описание изменения (Обязательно для новой версии)</label>
+                                <textarea id="edit-step-changelog" rows="2" wire:model="editStepChangelogEntry"
+                                          class="mt-2 block w-full rounded-md bg-white px-3 py-1.5 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"></textarea>
+                            </div>
+                        @endunless
 
                         <div class="mt-8 flex items-stretch justify-between gap-3">
                             <button type="button"
@@ -626,12 +635,14 @@
                                         class="inline-flex h-11 items-center justify-center rounded-lg bg-white px-4 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500">
                                     Сохранить
                                 </button>
-                                <button type="button"
-                                        wire:click="saveStepAsNewVersion"
-                                        class="inline-flex h-11 flex-col items-center justify-center rounded-lg bg-indigo-600 px-4 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
-                                    <span>Сохранить</span>
-                                    <span class="text-xs font-medium">новая версия</span>
-                                </button>
+                                @unless ($this->editingStepIsDraft)
+                                    <button type="button"
+                                            wire:click="saveStepAsNewVersion"
+                                            class="inline-flex h-11 flex-col items-center justify-center rounded-lg bg-indigo-600 px-4 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                                        <span>Сохранить</span>
+                                        <span class="text-xs font-medium">новая версия</span>
+                                    </button>
+                                @endunless
                             </div>
                         </div>
                     </div>

@@ -1,6 +1,5 @@
 <?php
 
-use App\Livewire\CreatePipelinePage;
 use App\Livewire\HomePage;
 use App\Livewire\PipelineShowPage;
 use App\Livewire\PipelinesPage;
@@ -22,7 +21,6 @@ Route::prefix('projects')->name('projects.')->group(function (): void {
 
 Route::prefix('pipelines')->name('pipelines.')->group(function (): void {
     Route::get('/', PipelinesPage::class)->name('index');
-    Route::get('/create', CreatePipelinePage::class)->name('create');
     Route::get('/{pipeline}', PipelineShowPage::class)->name('show');
     Route::get('/{pipeline}/steps/{step}', PipelineStepPage::class)->name('steps.show');
 });

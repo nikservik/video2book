@@ -78,11 +78,54 @@ class PipelineShowPageTest extends TestCase
             ->assertSet('showStepEditModal', true)
             ->assertSet('editingStepVersionId', $stepVersion->id)
             ->assertSee('data-step-edit-modal', false)
+            ->assertSee('data-edit-source-disabled="false"', false)
             ->assertSee('Сохранить')
             ->assertSee('новая версия')
             ->call('closeStepEditModal')
             ->assertSet('showStepEditModal', false)
             ->assertDontSee('data-step-edit-modal', false);
+    }
+
+    public function test_pipeline_show_page_disables_source_select_for_transcribe_step(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $transcribeStepVersion = StepVersion::query()
+            ->where('name', 'Транскрибация v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->call('openStepEditModal', $transcribeStepVersion->id)
+            ->assertSet('editStepType', 'transcribe')
+            ->assertSee('data-edit-source-disabled="true"', false);
+    }
+
+    public function test_pipeline_show_page_draft_step_edit_hides_new_version_controls_and_activates_step_on_save(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $draftStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        $draftStepVersion->update(['status' => 'draft']);
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
+            ->call('openStepEditModal', $draftStepVersion->id)
+            ->assertSee('data-step-edit-modal', false)
+            ->assertDontSee('Описание изменения (Обязательно для новой версии)')
+            ->assertDontSee('новая версия')
+            ->set('editStepName', 'Сводка v2 после драфта')
+            ->call('saveStep')
+            ->assertSet('showStepEditModal', false);
+
+        $this->assertDatabaseHas('step_versions', [
+            'id' => $draftStepVersion->id,
+            'name' => 'Сводка v2 после драфта',
+            'status' => 'active',
+        ]);
     }
 
     public function test_pipeline_show_page_step_create_modal_can_be_opened_and_closed_with_default_source(): void
@@ -257,7 +300,9 @@ class PipelineShowPageTest extends TestCase
             ->set('editStepPrompt', 'Новый промт')
             ->call('saveStep')
             ->assertSet('showStepEditModal', false)
-            ->assertSet('selectedVersionId', $versionTwo->id);
+            ->assertSet('selectedVersionId', $versionTwo->id)
+            ->assertSee('claude-sonnet-4-5')
+            ->assertDontSee('gpt-5-mini');
 
         $updatedStepVersion = StepVersion::query()->findOrFail($textStepVersion->id);
 
@@ -438,6 +483,30 @@ class PipelineShowPageTest extends TestCase
         $this->assertDatabaseHas('pipeline_versions', [
             'id' => $versionTwo->id,
             'status' => 'active',
+        ]);
+    }
+
+    public function test_pipeline_show_page_cannot_restore_archived_version_with_draft_steps(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        $versionTwo->update(['status' => 'archived']);
+
+        $draftStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        $draftStepVersion->update(['status' => 'draft']);
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
+            ->assertSee('Вернуть из архива')
+            ->assertSee('data-archive-version-disabled="true"', false)
+            ->call('toggleSelectedVersionArchiveStatus');
+
+        $this->assertDatabaseHas('pipeline_versions', [
+            'id' => $versionTwo->id,
+            'status' => 'archived',
         ]);
     }
 
