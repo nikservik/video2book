@@ -68,7 +68,11 @@ class LessonDownloadTest extends TestCase
         Queue::fake();
 
         [$pipeline, $version] = $this->createPipelineWithSteps();
-        $project = Project::query()->create(['name' => 'Course', 'tags' => 'demo']);
+        $project = Project::query()->create([
+            'name' => 'Course',
+            'tags' => 'demo',
+            'referer' => 'https://www.somesite.com/',
+        ]);
         $tag = ProjectTag::query()->create(['slug' => 'default', 'description' => null]);
         $lesson = Lesson::query()->create([
             'project_id' => $project->id,
@@ -82,9 +86,10 @@ class LessonDownloadTest extends TestCase
         $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
         $service->shouldReceive('downloadAndNormalize')
             ->once()
-            ->andReturnUsing(function (Lesson $invokedLesson, string $url, callable $callback) use ($lesson) {
+            ->andReturnUsing(function (Lesson $invokedLesson, string $url, callable $callback, ?string $referer) use ($lesson) {
                 $this->assertSame($lesson->id, $invokedLesson->id);
                 $this->assertSame('https://youtube.com/watch?v=ready', $url);
+                $this->assertSame('https://www.somesite.com/', $referer);
                 $callback(12.3);
                 $callback(100.0);
 
@@ -130,6 +135,13 @@ class LessonDownloadTest extends TestCase
         $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
         $service->shouldReceive('downloadAndNormalize')
             ->once()
+            ->withArgs(function (Lesson $invokedLesson, string $url, callable $callback, ?string $referer) use ($lesson): bool {
+                $this->assertSame($lesson->id, $invokedLesson->id);
+                $this->assertSame('https://youtube.com/watch?v=broken', $url);
+                $this->assertNull($referer);
+
+                return true;
+            })
             ->andThrow(new RuntimeException('network error'));
 
         $job = new DownloadLessonAudioJob($lesson->id, 'https://youtube.com/watch?v=broken');

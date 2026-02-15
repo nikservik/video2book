@@ -19,15 +19,24 @@ class LessonDownloadService
      *
      * @param  callable(float):void|null  $onProgress
      */
-    public function downloadAndNormalize(Lesson $lesson, string $url, ?callable $onProgress = null): string
-    {
+    public function downloadAndNormalize(
+        Lesson $lesson,
+        string $url,
+        ?callable $onProgress = null,
+        ?string $referer = null,
+    ): string {
         $disk = Storage::disk('local');
         $tempDirectory = 'downloader/'.$lesson->id.'/'.Str::uuid()->toString();
         $disk->makeDirectory($tempDirectory);
         $absoluteTempDirectory = $disk->path($tempDirectory);
 
         try {
-            $downloadedFile = $this->downloadAudio($absoluteTempDirectory, $url, $onProgress);
+            $downloadedFile = $this->downloadAudio(
+                $absoluteTempDirectory,
+                $url,
+                $onProgress,
+                $referer,
+            );
             $relativeInput = $this->relativeLocalPath($downloadedFile);
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
@@ -50,8 +59,12 @@ class LessonDownloadService
     /**
      * @param  callable(float):void|null  $onProgress
      */
-    private function downloadAudio(string $targetDirectory, string $url, ?callable $onProgress = null): string
-    {
+    private function downloadAudio(
+        string $targetDirectory,
+        string $url,
+        ?callable $onProgress = null,
+        ?string $referer = null,
+    ): string {
         $downloader = new YoutubeDl;
         $downloader->setBinPath(config('downloader.binary', 'yt-dlp'));
 
@@ -68,6 +81,7 @@ class LessonDownloadService
             ->noPlaylist(true)
             ->restrictFilenames(true)
             ->output('%(id)s.%(ext)s')
+            ->referer($referer)
             ->url($url);
 
         $collection = $downloader->download($options);

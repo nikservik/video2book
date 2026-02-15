@@ -49,21 +49,26 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         $lastProgressBroadcastAt = null;
 
         try {
-            $downloadedPath = $downloadService->downloadAndNormalize($lesson, $this->sourceUrl, function (float $progress) use (&$lesson, $eventBroadcaster, &$lastProgressBroadcastAt): void {
-                $progress = max(0, min(100, $progress));
+            $downloadedPath = $downloadService->downloadAndNormalize(
+                lesson: $lesson,
+                url: $this->sourceUrl,
+                onProgress: function (float $progress) use (&$lesson, $eventBroadcaster, &$lastProgressBroadcastAt): void {
+                    $progress = max(0, min(100, $progress));
 
-                if (
-                    $progress < 100
-                    && $lastProgressBroadcastAt !== null
-                    && $lastProgressBroadcastAt->diffInSeconds(now()) < self::PROGRESS_INTERVAL_SECONDS
-                ) {
-                    return;
-                }
+                    if (
+                        $progress < 100
+                        && $lastProgressBroadcastAt !== null
+                        && $lastProgressBroadcastAt->diffInSeconds(now()) < self::PROGRESS_INTERVAL_SECONDS
+                    ) {
+                        return;
+                    }
 
-                $lesson = $this->updateProgress($lesson, $progress);
-                $eventBroadcaster->downloadProgress($lesson);
-                $lastProgressBroadcastAt = now();
-            });
+                    $lesson = $this->updateProgress($lesson, $progress);
+                    $eventBroadcaster->downloadProgress($lesson);
+                    $lastProgressBroadcastAt = now();
+                },
+                referer: $this->projectReferer($lesson),
+            );
 
             $lesson = $this->markAsCompleted($lesson, $downloadedPath);
             $eventBroadcaster->downloadCompleted($lesson);
@@ -130,5 +135,12 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         $lesson->forceFill(['settings' => $settings])->save();
 
         return $lesson->fresh('project');
+    }
+
+    private function projectReferer(Lesson $lesson): ?string
+    {
+        $referer = trim((string) ($lesson->project?->referer ?? ''));
+
+        return $referer !== '' ? $referer : null;
     }
 }
