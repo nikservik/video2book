@@ -85,6 +85,26 @@ class PipelineShowPageTest extends TestCase
             ->assertDontSee('data-step-edit-modal', false);
     }
 
+    public function test_pipeline_show_page_step_create_modal_can_be_opened_and_closed_with_default_source(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $textStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->firstOrFail();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->assertSet('showStepCreateModal', false)
+            ->call('openStepCreateModal', $textStepVersion->id)
+            ->assertSet('showStepCreateModal', true)
+            ->assertSet('createStepInsertPosition', 3)
+            ->assertSet('createStepInputStepId', $textStepVersion->step_id)
+            ->assertSee('data-step-create-modal', false)
+            ->call('closeStepCreateModal')
+            ->assertSet('showStepCreateModal', false)
+            ->assertDontSee('data-step-create-modal', false);
+    }
+
     public function test_pipeline_show_page_version_edit_modal_can_be_opened_and_closed(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
@@ -137,6 +157,85 @@ class PipelineShowPageTest extends TestCase
             'id' => $versionTwo->id,
             'title' => 'Пайплайн Текущий Обновленный',
             'description' => 'Обновленное описание версии',
+        ]);
+    }
+
+    public function test_pipeline_show_page_can_add_step_creating_new_pipeline_version_and_switch_to_it(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        $transcribeV2 = StepVersion::query()
+            ->where('name', 'Транскрибация v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        $textV2 = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->call('openStepCreateModal', $transcribeV2->id)
+            ->set('createStepName', 'Новый шаг')
+            ->set('createStepDescription', 'Короткое описание нового шага')
+            ->set('createStepModel', 'gpt-5-mini')
+            ->set('createStepTemperature', 1.0)
+            ->set('createStepPrompt', 'Промт нового шага')
+            ->call('saveCreatedStep')
+            ->assertSet('showStepCreateModal', false);
+
+        $newPipelineVersion = PipelineVersion::query()
+            ->where('pipeline_id', $pipeline->id)
+            ->where('version', 3)
+            ->firstOrFail();
+
+        $newStepVersion = StepVersion::query()
+            ->where('name', 'Новый шаг')
+            ->where('version', 1)
+            ->firstOrFail();
+
+        $component
+            ->assertSet('selectedVersionId', $newPipelineVersion->id)
+            ->assertSee('Новый шаг')
+            ->assertSee('Сводка v2');
+
+        $this->assertDatabaseHas('pipelines', [
+            'id' => $pipeline->id,
+            'current_version_id' => $newPipelineVersion->id,
+        ]);
+
+        $this->assertStringContainsString(
+            '- Добавлен шаг «Новый шаг»: Короткое описание нового шага',
+            (string) $newPipelineVersion->changelog
+        );
+
+        $this->assertDatabaseHas('steps', [
+            'id' => $newStepVersion->step_id,
+            'current_version_id' => $newStepVersion->id,
+        ]);
+
+        $this->assertSame($transcribeV2->step_id, $newStepVersion->input_step_id);
+
+        $this->assertDatabaseHas('pipeline_version_steps', [
+            'pipeline_version_id' => $newPipelineVersion->id,
+            'position' => 1,
+            'step_version_id' => $transcribeV2->id,
+        ]);
+        $this->assertDatabaseHas('pipeline_version_steps', [
+            'pipeline_version_id' => $newPipelineVersion->id,
+            'position' => 2,
+            'step_version_id' => $newStepVersion->id,
+        ]);
+        $this->assertDatabaseHas('pipeline_version_steps', [
+            'pipeline_version_id' => $newPipelineVersion->id,
+            'position' => 3,
+            'step_version_id' => $textV2->id,
+        ]);
+
+        $this->assertDatabaseHas('pipeline_versions', [
+            'id' => $newPipelineVersion->id,
+            'title' => $versionTwo->title,
+            'description' => $versionTwo->description,
         ]);
     }
 
