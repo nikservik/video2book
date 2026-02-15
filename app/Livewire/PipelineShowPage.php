@@ -6,6 +6,7 @@ use App\Actions\Pipeline\CreatePipelineStepNewVersionAction;
 use App\Actions\Pipeline\SetCurrentPipelineVersionAction;
 use App\Actions\Pipeline\TogglePipelineVersionArchiveStatusAction;
 use App\Actions\Pipeline\UpdatePipelineStepVersionAction;
+use App\Actions\Pipeline\UpdatePipelineVersionAction;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
 use App\Models\StepVersion;
@@ -41,6 +42,12 @@ class PipelineShowPage extends Component
 
     public string $editStepChangelogEntry = '';
 
+    public bool $showEditVersionModal = false;
+
+    public string $editableVersionTitle = '';
+
+    public string $editableVersionDescription = '';
+
     public function mount(Pipeline $pipeline): void
     {
         $this->pipeline = app(PipelineDetailsQuery::class)->get($pipeline);
@@ -57,7 +64,59 @@ class PipelineShowPage extends Component
         }
 
         $this->closeStepEditModal();
+        $this->closeEditVersionModal();
         $this->selectedVersionId = $versionId;
+    }
+
+    public function openEditVersionModal(): void
+    {
+        $selectedVersion = $this->selectedVersion;
+
+        if ($selectedVersion === null) {
+            return;
+        }
+
+        $this->closeStepEditModal();
+        $this->resetErrorBag();
+        $this->editableVersionTitle = (string) $selectedVersion->title;
+        $this->editableVersionDescription = (string) ($selectedVersion->description ?? '');
+        $this->showEditVersionModal = true;
+    }
+
+    public function closeEditVersionModal(): void
+    {
+        $this->showEditVersionModal = false;
+    }
+
+    public function saveVersion(UpdatePipelineVersionAction $updatePipelineVersionAction): void
+    {
+        $selectedVersion = $this->selectedVersion;
+
+        if ($selectedVersion === null) {
+            return;
+        }
+
+        $validated = validator([
+            'editableVersionTitle' => $this->editableVersionTitle,
+            'editableVersionDescription' => blank($this->editableVersionDescription) ? null : trim($this->editableVersionDescription),
+        ], [
+            'editableVersionTitle' => ['required', 'string', 'max:255'],
+            'editableVersionDescription' => ['nullable', 'string'],
+        ], [], [
+            'editableVersionTitle' => 'название версии',
+            'editableVersionDescription' => 'описание версии',
+        ])->validate();
+
+        $updatedVersion = $updatePipelineVersionAction->handle(
+            pipelineVersion: $selectedVersion,
+            title: $validated['editableVersionTitle'],
+            description: $validated['editableVersionDescription'],
+        );
+
+        $this->pipeline = app(PipelineDetailsQuery::class)->get($this->pipeline->fresh());
+        $this->editableVersionTitle = $updatedVersion->title;
+        $this->editableVersionDescription = (string) ($updatedVersion->description ?? '');
+        $this->showEditVersionModal = false;
     }
 
     public function openStepEditModal(int $stepVersionId): void

@@ -84,6 +84,41 @@ class PipelineShowPageTest extends TestCase
             ->assertDontSee('data-step-edit-modal', false);
     }
 
+    public function test_pipeline_show_page_version_edit_modal_can_be_opened_and_closed(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->assertSet('showEditVersionModal', false)
+            ->call('openEditVersionModal')
+            ->assertSet('showEditVersionModal', true)
+            ->assertSet('editableVersionTitle', $versionTwo->title)
+            ->assertSet('editableVersionDescription', $versionTwo->description)
+            ->assertSee('data-edit-version-modal', false)
+            ->call('closeEditVersionModal')
+            ->assertSet('showEditVersionModal', false)
+            ->assertDontSee('data-edit-version-modal', false);
+    }
+
+    public function test_pipeline_show_page_can_save_selected_pipeline_version_title_and_description(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->call('openEditVersionModal')
+            ->set('editableVersionTitle', 'Пайплайн Текущий Обновленный')
+            ->set('editableVersionDescription', 'Обновленное описание версии')
+            ->call('saveVersion')
+            ->assertSet('showEditVersionModal', false)
+            ->assertSee('Пайплайн Текущий Обновленный');
+
+        $this->assertDatabaseHas('pipeline_versions', [
+            'id' => $versionTwo->id,
+            'title' => 'Пайплайн Текущий Обновленный',
+            'description' => 'Обновленное описание версии',
+        ]);
+    }
+
     public function test_pipeline_show_page_can_save_step_changes_in_current_step_version(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
