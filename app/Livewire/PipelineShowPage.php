@@ -3,12 +3,14 @@
 namespace App\Livewire;
 
 use App\Actions\Pipeline\CreatePipelineStepNewVersionAction;
+use App\Actions\Pipeline\DeletePipelineStepFromVersionAction;
 use App\Actions\Pipeline\SetCurrentPipelineVersionAction;
 use App\Actions\Pipeline\TogglePipelineVersionArchiveStatusAction;
 use App\Actions\Pipeline\UpdatePipelineStepVersionAction;
 use App\Actions\Pipeline\UpdatePipelineVersionAction;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
+use App\Models\PipelineVersionStep;
 use App\Models\StepVersion;
 use App\Services\Pipeline\PipelineDetailsQuery;
 use Illuminate\Contracts\View\View;
@@ -48,6 +50,12 @@ class PipelineShowPage extends Component
 
     public string $editableVersionDescription = '';
 
+    public bool $showDeleteStepAlert = false;
+
+    public ?int $deletingStepVersionId = null;
+
+    public string $deletingStepName = '';
+
     public function mount(Pipeline $pipeline): void
     {
         $this->pipeline = app(PipelineDetailsQuery::class)->get($pipeline);
@@ -65,6 +73,7 @@ class PipelineShowPage extends Component
 
         $this->closeStepEditModal();
         $this->closeEditVersionModal();
+        $this->closeDeleteStepAlert();
         $this->selectedVersionId = $versionId;
     }
 
@@ -77,6 +86,7 @@ class PipelineShowPage extends Component
         }
 
         $this->closeStepEditModal();
+        $this->closeDeleteStepAlert();
         $this->resetErrorBag();
         $this->editableVersionTitle = (string) $selectedVersion->title;
         $this->editableVersionDescription = (string) ($selectedVersion->description ?? '');
@@ -128,6 +138,8 @@ class PipelineShowPage extends Component
         if ($stepData === null) {
             return;
         }
+
+        $this->closeDeleteStepAlert();
 
         $stepVersion = $stepData['step_version'];
 
@@ -252,6 +264,80 @@ class PipelineShowPage extends Component
         $this->pipeline = app(PipelineDetailsQuery::class)->get($this->pipeline->fresh());
         $this->selectedVersionId = $newPipelineVersion->id;
         $this->closeStepEditModal();
+    }
+
+    public function removeStep(int $stepVersionId): void
+    {
+        $this->openDeleteStepAlert($stepVersionId);
+    }
+
+    public function openDeleteStepAlert(int $stepVersionId): void
+    {
+        $selectedVersion = $this->selectedVersion;
+
+        if ($selectedVersion === null) {
+            return;
+        }
+
+        /** @var array{position:int,step_version:StepVersion,input_step_name:string|null,model_label:string}|null $stepData */
+        $stepData = collect($this->selectedVersionSteps)
+            ->first(fn (array $item): bool => (int) $item['step_version']->id === $stepVersionId);
+
+        if ($stepData === null || (int) $stepData['position'] === 1) {
+            return;
+        }
+
+        $this->closeStepEditModal();
+        $this->closeEditVersionModal();
+
+        $this->deletingStepVersionId = (int) $stepData['step_version']->id;
+        $this->deletingStepName = (string) ($stepData['step_version']->name ?? 'Без названия шага');
+        $this->showDeleteStepAlert = true;
+    }
+
+    public function closeDeleteStepAlert(): void
+    {
+        $this->showDeleteStepAlert = false;
+        $this->deletingStepVersionId = null;
+        $this->deletingStepName = '';
+    }
+
+    public function confirmDeleteStep(DeletePipelineStepFromVersionAction $deletePipelineStepFromVersionAction): void
+    {
+        $selectedVersion = $this->pipeline->versions
+            ->first(fn (PipelineVersion $version): bool => (int) $version->id === (int) $this->selectedVersionId);
+
+        if ($selectedVersion === null || $this->deletingStepVersionId === null) {
+            return;
+        }
+
+        $selectedVersion->loadMissing('versionSteps.stepVersion');
+
+        /** @var PipelineVersionStep|null $versionStep */
+        $versionStep = $selectedVersion->versionSteps
+            ->sortBy('position')
+            ->first(fn (PipelineVersionStep $item): bool => (int) $item->step_version_id === (int) $this->deletingStepVersionId);
+
+        $stepVersion = $versionStep?->stepVersion;
+
+        if ($versionStep === null || (int) $versionStep->position === 1 || $stepVersion === null) {
+            $this->closeDeleteStepAlert();
+
+            return;
+        }
+
+        $selectedVersionWasCurrent = (int) $selectedVersion->id === (int) $this->pipeline->current_version_id;
+
+        $newPipelineVersion = $deletePipelineStepFromVersionAction->handle(
+            pipeline: $this->pipeline,
+            sourceVersion: $selectedVersion,
+            removedStepVersion: $stepVersion,
+            setAsCurrent: $selectedVersionWasCurrent,
+        );
+
+        $this->pipeline = app(PipelineDetailsQuery::class)->get($this->pipeline->fresh());
+        $this->selectedVersionId = $newPipelineVersion->id;
+        $this->closeDeleteStepAlert();
     }
 
     public function toggleSelectedVersionArchiveStatus(TogglePipelineVersionArchiveStatusAction $action): void

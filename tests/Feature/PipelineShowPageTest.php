@@ -321,6 +321,125 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
+    public function test_pipeline_show_page_hides_delete_icon_for_first_step(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $firstStepVersion = StepVersion::query()
+            ->where('name', 'Транскрибация v2')
+            ->firstOrFail();
+
+        $secondStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->firstOrFail();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->assertDontSee('data-step-delete="'.$firstStepVersion->id.'"', false)
+            ->assertSee('data-step-delete="'.$secondStepVersion->id.'"', false);
+    }
+
+    public function test_pipeline_show_page_does_not_open_delete_alert_for_first_step(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $firstStepVersion = StepVersion::query()
+            ->where('name', 'Транскрибация v2')
+            ->firstOrFail();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->call('openDeleteStepAlert', $firstStepVersion->id)
+            ->assertSet('showDeleteStepAlert', false)
+            ->assertSet('deletingStepVersionId', null)
+            ->assertDontSee('data-delete-step-alert', false);
+    }
+
+    public function test_pipeline_show_page_remove_step_creates_new_pipeline_version_with_max_increment_for_selected_version(): void
+    {
+        [$pipeline, $versionOne, $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        $stepToRemove = StepVersion::query()
+            ->where('name', 'Сводка v1')
+            ->firstOrFail();
+
+        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->call('selectVersion', $versionOne->id)
+            ->call('openDeleteStepAlert', $stepToRemove->id)
+            ->assertSet('showDeleteStepAlert', true)
+            ->assertSet('deletingStepVersionId', $stepToRemove->id)
+            ->assertSee('data-delete-step-alert', false);
+
+        $this->assertDatabaseCount('pipeline_versions', 2);
+
+        $component->call('confirmDeleteStep')
+            ->assertSet('showDeleteStepAlert', false)
+            ->assertSee('Транскрибация v1')
+            ->assertDontSee('Сводка v1');
+
+        $newVersion = PipelineVersion::query()
+            ->where('pipeline_id', $pipeline->id)
+            ->where('version', 3)
+            ->firstOrFail();
+
+        $component->assertSet('selectedVersionId', $newVersion->id);
+
+        $this->assertDatabaseHas('pipelines', [
+            'id' => $pipeline->id,
+            'current_version_id' => $versionTwo->id,
+        ]);
+
+        $this->assertDatabaseMissing('pipeline_version_steps', [
+            'pipeline_version_id' => $newVersion->id,
+            'step_version_id' => $stepToRemove->id,
+        ]);
+
+        $this->assertStringContainsString(
+            '- Удален шаг «Сводка v1»',
+            (string) $newVersion->changelog
+        );
+    }
+
+    public function test_pipeline_show_page_remove_step_relinks_dependent_source_to_removed_step_source_and_writes_changelog(): void
+    {
+        [$pipeline, $version, $firstStepVersion, $removedStepVersion, $dependentStepVersion] = $this->createPipelineForStepRemovalWithDependentSource();
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->assertSet('selectedVersionId', $version->id)
+            ->call('openDeleteStepAlert', $removedStepVersion->id)
+            ->assertSet('showDeleteStepAlert', true)
+            ->call('confirmDeleteStep')
+            ->assertSet('showDeleteStepAlert', false);
+
+        $newVersion = PipelineVersion::query()
+            ->where('pipeline_id', $pipeline->id)
+            ->where('version', 2)
+            ->firstOrFail();
+
+        $newVersion->load('versionSteps.stepVersion');
+
+        $dependentNewVersion = $newVersion->versionSteps
+            ->map(fn (PipelineVersionStep $item): ?StepVersion => $item->stepVersion)
+            ->filter()
+            ->first(fn (StepVersion $stepVersion): bool => (int) $stepVersion->step_id === (int) $dependentStepVersion->step_id);
+
+        $this->assertNotNull($dependentNewVersion);
+        $this->assertSame($firstStepVersion->step_id, $dependentNewVersion->input_step_id);
+        $this->assertGreaterThan($dependentStepVersion->version, $dependentNewVersion->version);
+
+        $this->assertDatabaseHas('steps', [
+            'id' => $dependentStepVersion->step_id,
+            'current_version_id' => $dependentNewVersion->id,
+        ]);
+
+        $this->assertStringContainsString(
+            '- Удален шаг «'.$removedStepVersion->name.'»',
+            (string) $newVersion->changelog
+        );
+        $this->assertStringContainsString(
+            '- Обновлен источник для шага «'.$dependentStepVersion->name.'» из-за удаления шага «'.$removedStepVersion->name.'»',
+            (string) $newVersion->changelog
+        );
+    }
+
     /**
      * @return array{0: Pipeline, 1: PipelineVersion, 2: PipelineVersion}
      */
@@ -434,5 +553,118 @@ class PipelineShowPageTest extends TestCase
         $pipeline->update(['current_version_id' => $versionTwo->id]);
 
         return [$pipeline, $versionOne, $versionTwo];
+    }
+
+    /**
+     * @return array{0: Pipeline, 1: PipelineVersion, 2: StepVersion, 3: StepVersion, 4: StepVersion}
+     */
+    private function createPipelineForStepRemovalWithDependentSource(): array
+    {
+        $pipeline = Pipeline::query()->create();
+
+        $version = PipelineVersion::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'version' => 1,
+            'title' => 'Удаление шага',
+            'description' => 'Проверка удаления шага с перенастройкой источников',
+            'changelog' => null,
+            'created_by' => null,
+            'status' => 'active',
+        ]);
+
+        $firstStep = Step::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'current_version_id' => null,
+        ]);
+        $removedStep = Step::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'current_version_id' => null,
+        ]);
+        $middleStep = Step::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'current_version_id' => null,
+        ]);
+        $dependentStep = Step::query()->create([
+            'pipeline_id' => $pipeline->id,
+            'current_version_id' => null,
+        ]);
+
+        $firstStepVersion = StepVersion::query()->create([
+            'step_id' => $firstStep->id,
+            'input_step_id' => null,
+            'name' => 'Первый шаг',
+            'type' => 'transcribe',
+            'version' => 1,
+            'description' => 'Шаг транскрибации',
+            'prompt' => null,
+            'settings' => ['model' => 'whisper-1'],
+            'status' => 'active',
+        ]);
+
+        $removedStepVersion = StepVersion::query()->create([
+            'step_id' => $removedStep->id,
+            'input_step_id' => $firstStep->id,
+            'name' => 'Удаляемый шаг',
+            'type' => 'text',
+            'version' => 1,
+            'description' => 'Шаг, который удаляем',
+            'prompt' => null,
+            'settings' => ['model' => 'gpt-5-mini'],
+            'status' => 'active',
+        ]);
+
+        $middleStepVersion = StepVersion::query()->create([
+            'step_id' => $middleStep->id,
+            'input_step_id' => $firstStep->id,
+            'name' => 'Промежуточный шаг',
+            'type' => 'glossary',
+            'version' => 1,
+            'description' => 'Шаг между удаляемым и зависимым',
+            'prompt' => null,
+            'settings' => ['model' => 'gpt-5-mini'],
+            'status' => 'active',
+        ]);
+
+        $dependentStepVersion = StepVersion::query()->create([
+            'step_id' => $dependentStep->id,
+            'input_step_id' => $removedStep->id,
+            'name' => 'Зависимый шаг',
+            'type' => 'text',
+            'version' => 1,
+            'description' => 'Шаг, зависящий от удаляемого',
+            'prompt' => null,
+            'settings' => ['model' => 'gpt-5-mini'],
+            'status' => 'active',
+        ]);
+
+        $firstStep->update(['current_version_id' => $firstStepVersion->id]);
+        $removedStep->update(['current_version_id' => $removedStepVersion->id]);
+        $middleStep->update(['current_version_id' => $middleStepVersion->id]);
+        $dependentStep->update(['current_version_id' => $dependentStepVersion->id]);
+
+        PipelineVersionStep::query()->create([
+            'pipeline_version_id' => $version->id,
+            'step_version_id' => $firstStepVersion->id,
+            'position' => 1,
+        ]);
+        PipelineVersionStep::query()->create([
+            'pipeline_version_id' => $version->id,
+            'step_version_id' => $removedStepVersion->id,
+            'position' => 2,
+        ]);
+        PipelineVersionStep::query()->create([
+            'pipeline_version_id' => $version->id,
+            'step_version_id' => $middleStepVersion->id,
+            'position' => 3,
+        ]);
+        PipelineVersionStep::query()->create([
+            'pipeline_version_id' => $version->id,
+            'step_version_id' => $dependentStepVersion->id,
+            'position' => 4,
+        ]);
+
+        $pipeline->update(['current_version_id' => $version->id]);
+
+        return [$pipeline, $version, $firstStepVersion, $removedStepVersion, $dependentStepVersion];
     }
 }
