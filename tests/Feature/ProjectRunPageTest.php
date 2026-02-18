@@ -250,6 +250,19 @@ class ProjectRunPageTest extends TestCase
             ->assertDontSee('data-run-control="start"', false)
             ->assertSee('data-run-control="pause"', false)
             ->assertSee('data-run-control="stop"', false);
+
+        $secondRunStep->update(['status' => 'failed']);
+        $pipelineRun->steps()->where('position', '>', $secondRunStep->position)->update(['status' => 'pending']);
+        $pipelineRun->update(['status' => 'failed']);
+
+        $this->get(route('projects.runs.show', [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]))
+            ->assertStatus(200)
+            ->assertSee('data-run-control="start"', false)
+            ->assertDontSee('data-run-control="pause"', false)
+            ->assertDontSee('data-run-control="stop"', false);
     }
 
     public function test_project_run_page_can_pause_stop_and_start_run(): void

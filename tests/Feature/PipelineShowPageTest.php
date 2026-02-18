@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Livewire\PipelineShow\Modals\ChangelogModal;
 use App\Livewire\PipelineShow\Modals\DeleteStepAlert;
+use App\Livewire\PipelineShow\Modals\DuplicatePipelineModal;
 use App\Livewire\PipelineShow\Modals\EditVersionModal;
 use App\Livewire\PipelineShow\Modals\StepCreateModal;
 use App\Livewire\PipelineShow\Modals\StepEditModal;
@@ -38,6 +39,7 @@ class PipelineShowPageTest extends TestCase
             ->assertSee('Редактировать версию')
             ->assertSee('Посмотреть changelog')
             ->assertSee('Сделать текущей версией')
+            ->assertSee('Создать копию')
             ->assertSee('Архивировать версию')
             ->assertDontSee('Вернуть из архива')
             ->assertDontSee('Редактировать пайплайн')
@@ -49,6 +51,7 @@ class PipelineShowPageTest extends TestCase
             ->assertSee('data-pipeline-version="'.$versionOne->id.'"', false)
             ->assertSee('data-version-status="active"', false)
             ->assertSee('data-set-current-version-button', false)
+            ->assertSee('data-open-duplicate-pipeline-modal', false)
             ->assertSee('data-disabled="true"', false)
             ->assertSee('data-current-version-icon', false)
             ->assertSee('data-step-delete', false);
@@ -207,6 +210,99 @@ class PipelineShowPageTest extends TestCase
             ->call('close')
             ->assertSet('show', false)
             ->assertDontSee('data-version-changelog-modal', false);
+    }
+
+    public function test_duplicate_pipeline_modal_can_be_opened_and_closed(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        Livewire::test(DuplicatePipelineModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
+            ->assertSet('copyPipelineTitle', '')
+            ->assertSee('data-duplicate-pipeline-modal', false)
+            ->call('close')
+            ->assertSet('show', false)
+            ->assertSet('copyPipelineTitle', '')
+            ->assertDontSee('data-duplicate-pipeline-modal', false);
+    }
+
+    public function test_duplicate_pipeline_modal_creates_new_pipeline_from_selected_version_and_redirects(): void
+    {
+        [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
+
+        $sourceVersion = PipelineVersion::query()
+            ->whereKey($versionTwo->id)
+            ->with(['versionSteps' => fn ($query) => $query->orderBy('position')])
+            ->firstOrFail();
+
+        $component = Livewire::test(DuplicatePipelineModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $versionTwo->id,
+        ])
+            ->call('open')
+            ->set('copyPipelineTitle', 'Копия текущей версии')
+            ->call('create');
+
+        $newPipeline = Pipeline::query()
+            ->whereKeyNot($pipeline->id)
+            ->latest('id')
+            ->firstOrFail();
+
+        $newVersion = PipelineVersion::query()
+            ->where('pipeline_id', $newPipeline->id)
+            ->firstOrFail();
+
+        $component->assertRedirect(route('pipelines.show', $newPipeline));
+
+        $this->assertDatabaseHas('pipelines', [
+            'id' => $newPipeline->id,
+            'current_version_id' => $newVersion->id,
+        ]);
+
+        $this->assertDatabaseHas('pipeline_versions', [
+            'id' => $newVersion->id,
+            'version' => 1,
+            'title' => 'Копия текущей версии',
+            'description' => $sourceVersion->description,
+            'status' => $sourceVersion->status,
+        ]);
+
+        $sourceVersionSteps = PipelineVersionStep::query()
+            ->where('pipeline_version_id', $sourceVersion->id)
+            ->orderBy('position')
+            ->get();
+
+        $newVersionSteps = PipelineVersionStep::query()
+            ->where('pipeline_version_id', $newVersion->id)
+            ->orderBy('position')
+            ->get();
+
+        $this->assertCount($sourceVersionSteps->count(), $newVersionSteps);
+
+        $newFirstStepVersion = StepVersion::query()->findOrFail($newVersionSteps[0]->step_version_id);
+        $newSecondStepVersion = StepVersion::query()->findOrFail($newVersionSteps[1]->step_version_id);
+
+        $sourceFirstStepVersion = StepVersion::query()->findOrFail($sourceVersionSteps[0]->step_version_id);
+        $sourceSecondStepVersion = StepVersion::query()->findOrFail($sourceVersionSteps[1]->step_version_id);
+
+        $this->assertSame($sourceFirstStepVersion->name, $newFirstStepVersion->name);
+        $this->assertSame($sourceFirstStepVersion->type, $newFirstStepVersion->type);
+        $this->assertSame($sourceFirstStepVersion->status, $newFirstStepVersion->status);
+        $this->assertSame($sourceFirstStepVersion->settings, $newFirstStepVersion->settings);
+        $this->assertSame(1, $newFirstStepVersion->version);
+        $this->assertNull($newFirstStepVersion->input_step_id);
+
+        $this->assertSame($sourceSecondStepVersion->name, $newSecondStepVersion->name);
+        $this->assertSame($sourceSecondStepVersion->type, $newSecondStepVersion->type);
+        $this->assertSame($sourceSecondStepVersion->status, $newSecondStepVersion->status);
+        $this->assertSame($sourceSecondStepVersion->settings, $newSecondStepVersion->settings);
+        $this->assertSame(1, $newSecondStepVersion->version);
+        $this->assertSame($newFirstStepVersion->step_id, $newSecondStepVersion->input_step_id);
     }
 
     public function test_edit_version_modal_can_save_selected_pipeline_version_title_and_description(): void

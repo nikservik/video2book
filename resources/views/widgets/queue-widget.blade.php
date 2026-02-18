@@ -5,7 +5,7 @@
         <p class="mt-3 text-gray-600 dark:text-gray-300">Очередь сейчас пуста.</p>
     @else
         <ul class="mt-4 space-y-3">
-            @foreach ($widget['items'] as $task)
+            @foreach ($visibleItems as $task)
                 <li wire:key="queue-task-{{ $task['task_key'] }}" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-900/40">
                     <div class="flex items-start gap-3" data-queue-task>
                         <div class="shrink-0 {{ $task['icon_color_class'] }}">
@@ -63,5 +63,11 @@
                 </li>
             @endforeach
         </ul>
+
+        @if ($hiddenItemsCount > 0)
+            <p class="mt-3 text-center text-sm text-gray-500 dark:text-gray-400">
+                Ещё {{ $hiddenItemsCount }} задач
+            </p>
+        @endif
     @endif
 </div>

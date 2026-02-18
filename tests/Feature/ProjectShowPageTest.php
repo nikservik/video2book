@@ -4,6 +4,7 @@ namespace Tests\Feature;
 
 use App\Jobs\DownloadLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
+use App\Livewire\ProjectShow\Modals\AddLessonsListModal;
 use App\Livewire\ProjectShow\Modals\AddPipelineToLessonModal;
 use App\Livewire\ProjectShow\Modals\CreateLessonModal;
 use App\Livewire\ProjectShow\Modals\DeleteLessonAlert;
@@ -65,6 +66,9 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Скачать проект в MD')
             ->assertSee('Удалить проект')
             ->assertDontSee('data-create-lesson-modal', false)
+            ->assertSee('data-add-lessons-list-button', false)
+            ->assertSee('data-disabled="true"', false)
+            ->assertDontSee('data-add-lessons-list-modal', false)
             ->assertDontSee('data-add-pipeline-to-lesson-modal', false)
             ->assertDontSee('data-project-export-modal', false)
             ->assertDontSee('data-rename-project-modal', false)
@@ -263,6 +267,8 @@ class ProjectShowPageTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('data-audio-download-status="failed"', false)
+            ->assertSee('data-audio-download-error="Network error"', false)
+            ->assertDontSee('data-audio-download-error="Old error"', false)
             ->assertSee('data-audio-download-status="queued"', false)
             ->assertSee('data-audio-download-status="running"', false)
             ->assertSee('data-audio-download-status="loaded"', false)
@@ -984,6 +990,71 @@ class ProjectShowPageTest extends TestCase
             ->call('close')
             ->assertSet('show', false)
             ->assertDontSee('Ссылка на YouTube');
+    }
+
+    public function test_add_lessons_list_modal_can_be_opened_and_closed(): void
+    {
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        $project = Project::query()->create([
+            'name' => 'Проект для списка уроков',
+            'tags' => null,
+            'default_pipeline_version_id' => $pipelineVersion->id,
+        ]);
+
+        Livewire::test(AddLessonsListModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
+            ->assertSee('Добавить список уроков')
+            ->assertSee('Список уроков')
+            ->call('close')
+            ->assertSet('show', false)
+            ->assertDontSee('Список уроков');
+    }
+
+    public function test_add_lessons_list_modal_creates_lessons_and_queues_download_jobs(): void
+    {
+        Queue::fake();
+
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        $project = Project::query()->create([
+            'name' => 'Проект для массового добавления',
+            'tags' => null,
+            'default_pipeline_version_id' => $pipelineVersion->id,
+        ]);
+
+        Livewire::test(AddLessonsListModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonsList', "Урок 1\nhttps://www.youtube.com/watch?v=video1\n\nУрок 2\nhttps://www.youtube.com/watch?v=video2")
+            ->call('addLessons')
+            ->assertSet('show', false)
+            ->assertHasNoErrors();
+
+        $lessons = $project->lessons()->orderBy('id')->pluck('name')->all();
+
+        $this->assertSame(['Урок 1', 'Урок 2'], $lessons);
+
+        Queue::assertPushedOn(DownloadLessonAudioJob::QUEUE, DownloadLessonAudioJob::class);
+        Queue::assertPushed(DownloadLessonAudioJob::class, 2);
+    }
+
+    public function test_add_lessons_list_modal_requires_default_pipeline_on_project(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект без пайплайна по умолчанию',
+            'tags' => null,
+            'default_pipeline_version_id' => null,
+        ]);
+
+        Livewire::test(AddLessonsListModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonsList', "Урок\nhttps://www.youtube.com/watch?v=video")
+            ->call('addLessons')
+            ->assertHasErrors(['newLessonsList']);
+
+        $this->assertSame(0, $project->lessons()->count());
     }
 
     public function test_create_lesson_modal_selects_project_default_pipeline_version_when_available(): void

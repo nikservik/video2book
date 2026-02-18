@@ -6,7 +6,7 @@
         </h1>
 
         <div wire:poll.1s="refreshRunControls" class="flex shrink-0 items-center gap-2">
-            @if ($this->hasPausedSteps)
+            @if ($this->hasPausedSteps || $this->hasFailedSteps)
                 <button type="button"
                         wire:click="startRun"
                         data-run-control="start"
@@ -18,7 +18,7 @@
                 </button>
             @endif
 
-            @if ($this->hasQueuedSteps)
+            @if (! $this->hasFailedSteps && $this->hasQueuedSteps)
                 <button type="button"
                         wire:click="pauseRun"
                         data-run-control="pause"
@@ -31,7 +31,7 @@
 
             @endif
 
-            @if ($this->hasQueuedSteps || $this->hasRunningSteps)
+            @if (! $this->hasFailedSteps && ($this->hasQueuedSteps || $this->hasRunningSteps))
                 <button type="button"
                         wire:click="stopRun"
                         data-run-control="stop"

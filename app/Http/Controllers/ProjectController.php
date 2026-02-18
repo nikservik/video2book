@@ -81,7 +81,7 @@ class ProjectController extends Controller
                     'project_id' => $project->id,
                     'name' => $lessonData['name'],
                     'tag' => LessonTagResolver::resolve(null),
-                    'settings' => ['quality' => 'high'],
+                    'settings' => ['quality' => 'low'],
                 ]);
 
                 $this->pipelineRunService->createRun($lesson, $pipelineVersion, dispatchJob: false);

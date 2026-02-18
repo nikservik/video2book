@@ -8,6 +8,8 @@ use Livewire\Component;
 
 class QueueWidget extends Component
 {
+    private const MAX_VISIBLE_ITEMS = 5;
+
     /**
      * @var array<int, string>
      */
@@ -31,8 +33,13 @@ class QueueWidget extends Component
 
     public function render(): View
     {
+        $widget = app(QueueWidgetDataProvider::class)->get();
+        $visibleItems = array_slice($widget['items'], 0, self::MAX_VISIBLE_ITEMS);
+
         return view('widgets.queue-widget', [
-            'widget' => app(QueueWidgetDataProvider::class)->get(),
+            'widget' => $widget,
+            'visibleItems' => $visibleItems,
+            'hiddenItemsCount' => max(0, count($widget['items']) - count($visibleItems)),
         ]);
     }
 }

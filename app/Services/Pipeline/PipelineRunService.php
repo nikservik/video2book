@@ -119,7 +119,43 @@ final class PipelineRunService
                 ->lockForUpdate()
                 ->firstOrFail();
 
-            if (in_array($lockedRun->status, ['failed', 'done'], true)) {
+            if ($lockedRun->status === 'done') {
+                return;
+            }
+
+            if ($lockedRun->status === 'failed') {
+                $failedStep = $lockedRun->steps()
+                    ->where('status', 'failed')
+                    ->orderBy('position')
+                    ->first();
+
+                if ($failedStep === null) {
+                    return;
+                }
+
+                $lockedRun->steps()
+                    ->where('position', '>=', $failedStep->position)
+                    ->update([
+                        'status' => 'pending',
+                        'start_time' => null,
+                        'end_time' => null,
+                        'error' => null,
+                        'result' => null,
+                        'input_tokens' => null,
+                        'output_tokens' => null,
+                        'cost' => null,
+                    ]);
+
+                $state = $lockedRun->state ?? [];
+                unset($state['stop_requested']);
+
+                $lockedRun->forceFill([
+                    'status' => 'queued',
+                    'state' => $state,
+                ])->save();
+
+                $shouldDispatch = true;
+
                 return;
             }
 

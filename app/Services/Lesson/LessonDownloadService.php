@@ -14,6 +14,8 @@ use YoutubeDl\YoutubeDl;
 
 class LessonDownloadService
 {
+    public function __construct(private readonly YtDlpProgressParser $progressParser) {}
+
     /**
      * Скачивает аудио с YouTube и нормализует его в MP3 с нужными параметрами.
      *
@@ -69,9 +71,28 @@ class LessonDownloadService
         $downloader->setBinPath(config('downloader.binary', 'yt-dlp'));
 
         if ($onProgress !== null) {
-            $downloader->onProgress(static function (?string $progressTarget, string $percentage) use ($onProgress): void {
+            $lastReportedProgress = null;
+
+            $emitProgress = static function (float $value) use ($onProgress, &$lastReportedProgress): void {
+                $progress = max(0, min(100, $value));
+
+                if ($lastReportedProgress !== null && abs($lastReportedProgress - $progress) < 0.1) {
+                    return;
+                }
+
+                $lastReportedProgress = $progress;
+                $onProgress($progress);
+            };
+
+            $downloader->onProgress(static function (?string $progressTarget, string $percentage) use ($emitProgress): void {
                 $value = (float) str_replace('%', '', $percentage);
-                $onProgress(max(0, min(100, $value)));
+                $emitProgress($value);
+            });
+
+            $downloader->debug(function (string $type, string $buffer) use ($emitProgress): void {
+                foreach ($this->progressParser->extractPercentages($buffer) as $percentage) {
+                    $emitProgress($percentage);
+                }
             });
         }
 
@@ -134,7 +155,7 @@ class LessonDownloadService
      */
     private function resolveQualitySettings(Lesson $lesson): array
     {
-        $quality = data_get($lesson->settings, 'quality', 'high');
+        $quality = data_get($lesson->settings, 'quality', 'low');
 
         return match ($quality) {
             'low' => ['sample_rate' => 12000, 'bitrate' => 16],

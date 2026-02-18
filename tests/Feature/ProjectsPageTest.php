@@ -134,7 +134,7 @@ class ProjectsPageTest extends TestCase
             ->set('newProjectName', 'Курс с уроками')
             ->set('newProjectReferer', 'https://www.somesite.com/')
             ->set('newProjectDefaultPipelineVersionId', $pipelineVersion->id)
-            ->set('newProjectLessonsList', "# Урок 1\nhttps://www.youtube.com/watch?v=video1\n\n# Урок 2\nhttps://www.youtube.com/watch?v=video2")
+            ->set('newProjectLessonsList', "Урок 1\nhttps://www.youtube.com/watch?v=video1\n\nУрок 2\nhttps://www.youtube.com/watch?v=video2")
             ->call('createProject')
             ->assertSet('showCreateProjectModal', false)
             ->assertHasNoErrors();
@@ -158,7 +158,7 @@ class ProjectsPageTest extends TestCase
             ->call('openCreateProjectModal')
             ->set('newProjectName', 'Проект с ошибкой')
             ->set('newProjectDefaultPipelineVersionId', null)
-            ->set('newProjectLessonsList', "# Урок\nhttps://www.youtube.com/watch?v=video")
+            ->set('newProjectLessonsList', "Урок\nhttps://www.youtube.com/watch?v=video")
             ->call('createProject')
             ->assertHasErrors(['newProjectDefaultPipelineVersionId']);
 

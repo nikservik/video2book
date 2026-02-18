@@ -30,7 +30,7 @@ class CreateProjectLessonFromYoutubeAction
                 'project_id' => $project->id,
                 'name' => trim($lessonName),
                 'tag' => LessonTagResolver::resolve(null),
-                'settings' => ['quality' => 'high'],
+                'settings' => ['quality' => 'low'],
             ]);
 
             $this->pipelineRunService->createRun($lesson, $pipelineVersion, dispatchJob: false);

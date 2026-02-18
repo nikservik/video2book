@@ -21,6 +21,10 @@
                                         class="inline-flex items-center gap-2 text-left font-semibold text-gray-900 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:text-white dark:hover:text-indigo-400 dark:focus-visible:outline-indigo-500">
                                     {{ $lesson->name }}
                                     <span data-audio-download-status="{{ $this->lessonAudioDownloadStatus($lesson->settings, $lesson->source_filename) }}"
+                                          @if ($this->lessonAudioDownloadStatus($lesson->settings, $lesson->source_filename) === 'failed')
+                                              title="{{ $this->lessonAudioDownloadErrorTooltip($lesson->settings, $lesson->source_filename) }}"
+                                              data-audio-download-error="{{ $this->lessonAudioDownloadErrorTooltip($lesson->settings, $lesson->source_filename) }}"
+                                          @endif
                                           class="{{ $this->lessonAudioDownloadIconClass($lesson->settings, $lesson->source_filename) }}">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-5">
                                           <path fill-rule="evenodd" d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm5.25-9.25a.75.75 0 0 0-1.5 0v4.59l-1.95-2.1a.75.75 0 1 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V7.75Z" clip-rule="evenodd" />
@@ -91,6 +95,17 @@
                     Добавить урок
                 </button>
                 <button type="button"
+                        wire:click="$dispatch('project-show:add-lessons-list-modal-open')"
+                        @disabled($project->default_pipeline_version_id === null)
+                        data-add-lessons-list-button
+                        data-disabled="{{ $project->default_pipeline_version_id === null ? 'true' : 'false' }}"
+                        class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                    </svg>
+                    Добавить список уроков
+                </button>
+                <button type="button"
                         wire:click="$dispatch('project-show:rename-project-modal-open')"
                         class="w-full text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
                     Редактировать проект
@@ -121,6 +136,7 @@
     </div>
 
     <livewire:project-show.modals.create-lesson-modal :project-id="$project->id" :key="'project-show-create-lesson-modal-'.$project->id" />
+    <livewire:project-show.modals.add-lessons-list-modal :project-id="$project->id" :key="'project-show-add-lessons-list-modal-'.$project->id" />
     <livewire:project-show.modals.add-pipeline-to-lesson-modal :project-id="$project->id" :key="'project-show-add-pipeline-modal-'.$project->id" />
     <livewire:project-show.modals.project-export-modal :project-id="$project->id" :key="'project-show-export-modal-'.$project->id" />
     <livewire:project-show.modals.rename-project-modal :project-id="$project->id" :key="'project-show-rename-project-modal-'.$project->id" />

@@ -65,6 +65,35 @@ class PipelineRunControlActionsTest extends TestCase
         });
     }
 
+    public function test_start_action_restarts_from_failed_step_and_dispatches_processing(): void
+    {
+        Queue::fake();
+
+        [$run, $runningStep, $pendingStep] = $this->createRunForControls();
+
+        $runningStep->update([
+            'status' => 'failed',
+            'error' => 'LLM error',
+            'result' => null,
+            'end_time' => now(),
+        ]);
+        $run->update(['status' => 'failed']);
+
+        app(StartPipelineRunAction::class)->handle($run->fresh());
+
+        $this->assertSame('queued', $run->fresh()->status);
+        $this->assertSame('pending', $runningStep->fresh()->status);
+        $this->assertNull($runningStep->fresh()->error);
+        $this->assertNull($runningStep->fresh()->start_time);
+        $this->assertNull($runningStep->fresh()->end_time);
+        $this->assertSame('pending', $pendingStep->fresh()->status);
+        $this->assertNull(data_get($run->fresh()->state, 'stop_requested'));
+
+        Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $job) use ($run): bool {
+            return $job->pipelineRunId === $run->id;
+        });
+    }
+
     /**
      * @return array{0: PipelineRun, 1: PipelineRunStep, 2: PipelineRunStep}
      */

@@ -170,6 +170,94 @@ class QueueWidgetTest extends TestCase
             ->assertSet('expandedTaskKeys', []);
     }
 
+    public function test_widget_shows_only_first_five_tasks_and_more_counter(): void
+    {
+        $tag = ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект лимита',
+            'tags' => null,
+        ]);
+
+        [$pipeline, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        $stepVersionIds = $pipeline->steps()
+            ->with('currentVersion')
+            ->orderBy('id')
+            ->get()
+            ->pluck('currentVersion.id')
+            ->values()
+            ->all();
+
+        $now = now();
+        $jobs = [];
+
+        for ($index = 1; $index <= 6; $index++) {
+            $lesson = Lesson::query()->create([
+                'project_id' => $project->id,
+                'name' => 'Лимит урок '.$index,
+                'tag' => $tag->slug,
+                'settings' => [],
+                'source_filename' => null,
+            ]);
+
+            $run = PipelineRun::query()->create([
+                'lesson_id' => $lesson->id,
+                'pipeline_version_id' => $pipelineVersion->id,
+                'status' => 'queued',
+                'state' => [],
+            ]);
+
+            PipelineRunStep::query()->create([
+                'pipeline_run_id' => $run->id,
+                'step_version_id' => $stepVersionIds[0],
+                'position' => 1,
+                'status' => 'pending',
+            ]);
+
+            PipelineRunStep::query()->create([
+                'pipeline_run_id' => $run->id,
+                'step_version_id' => $stepVersionIds[1],
+                'position' => 2,
+                'status' => 'pending',
+            ]);
+
+            $jobs[] = [
+                'queue' => ProcessPipelineJob::QUEUE,
+                'payload' => json_encode([
+                    'displayName' => ProcessPipelineJob::class,
+                    'data' => [
+                        'commandName' => ProcessPipelineJob::class,
+                        'command' => 's:13:"pipelineRunId";i:'.$run->id.';',
+                    ],
+                ], JSON_UNESCAPED_UNICODE),
+                'attempts' => 0,
+                'reserved_at' => null,
+                'available_at' => $now->copy()->addSeconds($index)->timestamp,
+                'created_at' => $now->copy()->addSeconds($index)->timestamp,
+            ];
+        }
+
+        DB::table('jobs')->insert($jobs);
+
+        $response = $this->get(route('home'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSeeInOrder([
+                'Лимит урок 1',
+                'Лимит урок 2',
+                'Лимит урок 3',
+                'Лимит урок 4',
+                'Лимит урок 5',
+            ])
+            ->assertDontSee('Лимит урок 6')
+            ->assertSee('Ещё 1 задач');
+    }
+
     /**
      * @return array{0: Pipeline, 1: PipelineVersion}
      */

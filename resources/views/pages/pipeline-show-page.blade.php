@@ -117,6 +117,15 @@
                     Сделать текущей версией
                 </button>
                 <button type="button"
+                        wire:click="$dispatch('pipeline-show:duplicate-pipeline-modal-open')"
+                        data-open-duplicate-pipeline-modal
+                        class="inline-flex w-full items-center justify-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 17.25v3.375c0 .621-.504 1.125-1.125 1.125h-9.75a1.125 1.125 0 0 1-1.125-1.125V7.875c0-.621.504-1.125 1.125-1.125H6.75a9.06 9.06 0 0 1 1.5.124m7.5 10.376h3.375c.621 0 1.125-.504 1.125-1.125V11.25c0-4.46-3.243-8.161-7.5-8.876a9.06 9.06 0 0 0-1.5-.124H9.375c-.621 0-1.125.504-1.125 1.125v3.5m7.5 10.375H9.375a1.125 1.125 0 0 1-1.125-1.125v-9.25m12 6.625v-1.875a3.375 3.375 0 0 0-3.375-3.375h-1.5a1.125 1.125 0 0 1-1.125-1.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H9.75" />
+                    </svg>
+                    Создать копию
+                </button>
+                <button type="button"
                         wire:click="toggleSelectedVersionArchiveStatus"
                         data-archive-version-button
                         data-archive-version-disabled="{{ $this->selectedVersionIsArchived && $this->selectedVersionHasDraftSteps ? 'true' : 'false' }}"
@@ -165,6 +174,7 @@
 
     <livewire:pipeline-show.modals.edit-version-modal :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-edit-version-modal-'.$pipeline->id.'-'.$selectedVersionId" />
     <livewire:pipeline-show.modals.changelog-modal :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-changelog-modal-'.$pipeline->id.'-'.$selectedVersionId" />
+    <livewire:pipeline-show.modals.duplicate-pipeline-modal :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-duplicate-pipeline-modal-'.$pipeline->id.'-'.$selectedVersionId" />
     <livewire:pipeline-show.modals.step-create-modal :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-step-create-modal-'.$pipeline->id.'-'.$selectedVersionId" />
     <livewire:pipeline-show.modals.step-edit-modal :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-step-edit-modal-'.$pipeline->id.'-'.$selectedVersionId" />
     <livewire:pipeline-show.modals.delete-step-alert :pipeline-id="$pipeline->id" :selected-version-id="$selectedVersionId" :key="'pipeline-show-delete-step-alert-'.$pipeline->id.'-'.$selectedVersionId" />

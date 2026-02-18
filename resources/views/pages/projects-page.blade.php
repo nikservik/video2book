@@ -152,10 +152,10 @@
                                           name="project_lessons_list"
                                           wire:model="newProjectLessonsList"
                                           rows="8"
-                                          placeholder="# Урок 1
+                                          placeholder="Урок 1
 https://www.youtube.com/watch?v=...
 
-# Урок 2
+Урок 2
 https://www.youtube.com/watch?v=..."
                                           class="col-start-1 row-start-1 block w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"></textarea>
                             </div>

@@ -226,6 +226,13 @@ class ProjectRunPage extends Component
         );
     }
 
+    public function getHasFailedStepsProperty(): bool
+    {
+        return $this->pipelineRun->steps->contains(
+            fn (PipelineRunStep $step): bool => $step->status === 'failed'
+        );
+    }
+
     public function getHasRunningStepsProperty(): bool
     {
         return $this->pipelineRun->steps->contains(

@@ -13,9 +13,9 @@ use App\Services\Llm\LlmMessage;
 use App\Services\Llm\LlmRequest;
 use App\Services\Llm\LlmUsage;
 use App\Services\Pipeline\Contracts\PipelineStepExecutor;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\Storage;
-use Laravel\Ai\Files\Audio;
 use Laravel\Ai\Responses\TranscriptionResponse;
 use Laravel\Ai\Transcription;
 use RuntimeException;
@@ -240,9 +240,16 @@ final class DefaultPipelineStepExecutor implements PipelineStepExecutor
             ? $prompt
             : 'Transcribe this audio accurately in the source language. Preserve punctuation and paragraph breaks.';
 
+        $uploadedAudio = new UploadedFile(
+            path: $filePath,
+            originalName: basename($filePath),
+            mimeType: $this->detectAudioMime($filePath),
+            test: true,
+        );
+
         $response = agent()->prompt(
             prompt: $instruction,
-            attachments: [Audio::fromPath($filePath, $this->detectAudioMime($filePath))],
+            attachments: [$uploadedAudio],
             provider: 'gemini',
             model: $model,
             timeout: (int) config('llm.request_timeout', 1800),

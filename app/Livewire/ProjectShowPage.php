@@ -107,6 +107,17 @@ class ProjectShowPage extends Component
         };
     }
 
+    public function lessonAudioDownloadErrorTooltip(?array $settings, ?string $sourceFilename): ?string
+    {
+        if ($this->lessonAudioDownloadStatus($settings, $sourceFilename) !== 'failed') {
+            return null;
+        }
+
+        $error = trim((string) data_get($settings, 'download_error', ''));
+
+        return $error !== '' ? $error : 'Ошибка загрузки аудио';
+    }
+
     public function render(): View
     {
         return view('pages.project-show-page', [
