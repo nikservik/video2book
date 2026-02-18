@@ -16,10 +16,12 @@ class NavigationMenuTest extends TestCase
 
     public function test_projects_menu_item_is_active_on_nested_project_page(): void
     {
-        $response = $this->get(route('projects.lessons.show', [
-            'project' => 'demo-project',
-            'lesson' => 'demo-lesson',
-        ]));
+        $project = Project::query()->create([
+            'name' => 'Проект вложенной страницы',
+            'tags' => null,
+        ]);
+
+        $response = $this->get(route('projects.show', $project));
 
         $response->assertStatus(200);
 
@@ -46,10 +48,17 @@ class NavigationMenuTest extends TestCase
 
     public function test_pipelines_menu_item_is_active_on_nested_pipeline_page(): void
     {
-        $response = $this->get(route('pipelines.steps.show', [
-            'pipeline' => 'demo-pipeline',
-            'step' => 'demo-step',
-        ]));
+        $pipeline = Pipeline::query()->create();
+        $version = $pipeline->versions()->create([
+            'version' => 1,
+            'title' => 'Вложенная страница пайплайна',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+        $pipeline->update(['current_version_id' => $version->id]);
+
+        $response = $this->get(route('pipelines.show', $pipeline));
 
         $response->assertStatus(200);
 

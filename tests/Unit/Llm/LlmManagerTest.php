@@ -53,7 +53,7 @@ class LlmManagerTest extends TestCase
                 ?int $timeout
             ) use ($textProvider): bool {
                 return $provider === $textProvider
-                    && $model === 'gpt-5-mini'
+                    && $model === 'gpt-5.2'
                     && $instructions === 'Stay on topic'
                     && count($messages) === 1
                     && $messages[0]->role->value === 'user'
@@ -65,7 +65,7 @@ class LlmManagerTest extends TestCase
             ->andReturn(new TextResponse(
                 text: 'Hi there',
                 usage: new Usage(promptTokens: 10, completionTokens: 5),
-                meta: new Meta(provider: 'openai', model: 'gpt-5-mini'),
+                meta: new Meta(provider: 'openai', model: 'gpt-5.2'),
             ));
 
         $manager = new LlmManager(
@@ -75,7 +75,7 @@ class LlmManagerTest extends TestCase
         );
 
         $result = $manager->send('openai', new LlmRequest(
-            model: 'gpt-5-mini',
+            model: 'gpt-5.2',
             messages: [
                 LlmMessage::system('Stay on topic'),
                 LlmMessage::user('Hello?'),
@@ -88,7 +88,7 @@ class LlmManagerTest extends TestCase
         $this->assertSame(10, $result->usage()?->inputTokens);
         $this->assertSame(5, $result->usage()?->outputTokens);
         $this->assertEqualsWithDelta(
-            expected: 0.00000025 * 10 + 0.000002 * 5,
+            expected: 0.00000175 * 10 + 0.000014 * 5,
             actual: $result->usage()?->cost,
             delta: 1e-9,
         );
@@ -124,7 +124,7 @@ class LlmManagerTest extends TestCase
         );
 
         $result = $manager->send('openai', new LlmRequest(
-            model: 'gpt-5-mini',
+            model: 'gpt-5.2',
             messages: [LlmMessage::user('Hi')],
             stream: true,
         ));

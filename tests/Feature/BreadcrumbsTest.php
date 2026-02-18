@@ -45,23 +45,6 @@ class BreadcrumbsTest extends TestCase
             ], false);
     }
 
-    public function test_project_lesson_page_renders_breadcrumbs_path(): void
-    {
-        $response = $this->get(route('projects.lessons.show', [
-            'project' => 'demo-project',
-            'lesson' => 'demo-lesson',
-        ]));
-
-        $response
-            ->assertStatus(200)
-            ->assertSeeInOrder([
-                'aria-label="Breadcrumb"',
-                'Проекты',
-                'demo-project',
-                'demo-lesson',
-            ], false);
-    }
-
     public function test_project_run_page_renders_breadcrumbs_path(): void
     {
         [$project, $pipelineRun] = $this->createProjectRun();
@@ -118,19 +101,6 @@ class BreadcrumbsTest extends TestCase
                 'Пайплайн страницы',
             ], false);
 
-        $stepResponse = $this->get(route('pipelines.steps.show', [
-            'pipeline' => 'demo-pipeline',
-            'step' => 'demo-step',
-        ]));
-
-        $stepResponse
-            ->assertStatus(200)
-            ->assertSeeInOrder([
-                'aria-label="Breadcrumb"',
-                'Пайплайны',
-                'demo-pipeline',
-                'demo-step',
-            ], false);
     }
 
     /**

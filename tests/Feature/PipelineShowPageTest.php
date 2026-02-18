@@ -2,6 +2,11 @@
 
 namespace Tests\Feature;
 
+use App\Livewire\PipelineShow\Modals\ChangelogModal;
+use App\Livewire\PipelineShow\Modals\DeleteStepAlert;
+use App\Livewire\PipelineShow\Modals\EditVersionModal;
+use App\Livewire\PipelineShow\Modals\StepCreateModal;
+use App\Livewire\PipelineShow\Modals\StepEditModal;
 use App\Livewire\PipelineShowPage;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
@@ -64,7 +69,7 @@ class PipelineShowPageTest extends TestCase
             ->assertDontSee('Сводка v2');
     }
 
-    public function test_pipeline_show_page_step_edit_modal_can_be_opened_and_closed(): void
+    public function test_step_edit_modal_can_be_opened_and_closed(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
 
@@ -72,21 +77,25 @@ class PipelineShowPageTest extends TestCase
             ->where('name', 'Сводка v2')
             ->firstOrFail();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->assertSet('showStepEditModal', false)
-            ->call('openStepEditModal', $stepVersion->id)
-            ->assertSet('showStepEditModal', true)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->assertSet('show', false)
+            ->call('open', $stepVersion->id)
+            ->assertSet('show', true)
             ->assertSet('editingStepVersionId', $stepVersion->id)
             ->assertSee('data-step-edit-modal', false)
             ->assertSee('data-edit-source-disabled="false"', false)
             ->assertSee('Сохранить')
             ->assertSee('новая версия')
-            ->call('closeStepEditModal')
-            ->assertSet('showStepEditModal', false)
+            ->call('close')
+            ->assertSet('show', false)
+            ->assertSet('editingStepVersionId', null)
             ->assertDontSee('data-step-edit-modal', false);
     }
 
-    public function test_pipeline_show_page_disables_source_select_for_transcribe_step(): void
+    public function test_step_edit_modal_disables_source_select_for_transcribe_step(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
 
@@ -95,13 +104,16 @@ class PipelineShowPageTest extends TestCase
             ->where('version', 2)
             ->firstOrFail();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openStepEditModal', $transcribeStepVersion->id)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $transcribeStepVersion->id)
             ->assertSet('editStepType', 'transcribe')
             ->assertSee('data-edit-source-disabled="true"', false);
     }
 
-    public function test_pipeline_show_page_draft_step_edit_hides_new_version_controls_and_activates_step_on_save(): void
+    public function test_step_edit_modal_draft_step_hides_new_version_controls_and_activates_step_on_save(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
 
@@ -112,14 +124,17 @@ class PipelineShowPageTest extends TestCase
 
         $draftStepVersion->update(['status' => 'draft']);
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
-            ->call('openStepEditModal', $draftStepVersion->id)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->fresh()->current_version_id,
+        ])
+            ->call('open', $draftStepVersion->id)
             ->assertSee('data-step-edit-modal', false)
             ->assertDontSee('Описание изменения (Обязательно для новой версии)')
             ->assertDontSee('новая версия')
             ->set('editStepName', 'Сводка v2 после драфта')
             ->call('saveStep')
-            ->assertSet('showStepEditModal', false);
+            ->assertSet('show', false);
 
         $this->assertDatabaseHas('step_versions', [
             'id' => $draftStepVersion->id,
@@ -128,7 +143,7 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
-    public function test_pipeline_show_page_step_create_modal_can_be_opened_and_closed_with_default_source(): void
+    public function test_step_create_modal_can_be_opened_and_closed_with_default_source(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
 
@@ -136,35 +151,42 @@ class PipelineShowPageTest extends TestCase
             ->where('name', 'Сводка v2')
             ->firstOrFail();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->assertSet('showStepCreateModal', false)
-            ->call('openStepCreateModal', $textStepVersion->id)
-            ->assertSet('showStepCreateModal', true)
+        Livewire::test(StepCreateModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->assertSet('show', false)
+            ->call('open', $textStepVersion->id)
+            ->assertSet('show', true)
             ->assertSet('createStepInsertPosition', 3)
             ->assertSet('createStepInputStepId', $textStepVersion->step_id)
             ->assertSee('data-step-create-modal', false)
-            ->call('closeStepCreateModal')
-            ->assertSet('showStepCreateModal', false)
+            ->call('close')
+            ->assertSet('show', false)
+            ->assertSet('createStepInsertPosition', null)
             ->assertDontSee('data-step-create-modal', false);
     }
 
-    public function test_pipeline_show_page_version_edit_modal_can_be_opened_and_closed(): void
+    public function test_edit_version_modal_can_be_opened_and_closed(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->assertSet('showEditVersionModal', false)
-            ->call('openEditVersionModal')
-            ->assertSet('showEditVersionModal', true)
+        Livewire::test(EditVersionModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
             ->assertSet('editableVersionTitle', $versionTwo->title)
             ->assertSet('editableVersionDescription', $versionTwo->description)
             ->assertSee('data-edit-version-modal', false)
-            ->call('closeEditVersionModal')
-            ->assertSet('showEditVersionModal', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertDontSee('data-edit-version-modal', false);
     }
 
-    public function test_pipeline_show_page_version_changelog_modal_can_be_opened_and_closed(): void
+    public function test_changelog_modal_can_be_opened_and_closed(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -172,29 +194,34 @@ class PipelineShowPageTest extends TestCase
             'changelog' => "- Обновлен шаг «Сводка v2»\n- Исправлены настройки модели",
         ]);
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
-            ->assertSet('showChangelogModal', false)
-            ->call('openChangelogModal')
-            ->assertSet('showChangelogModal', true)
+        Livewire::test(ChangelogModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->fresh()->current_version_id,
+        ])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
             ->assertSee('data-version-changelog-modal', false)
             ->assertSee('Обновлен шаг')
             ->assertSee('Исправлены настройки модели')
-            ->call('closeChangelogModal')
-            ->assertSet('showChangelogModal', false)
+            ->call('close')
+            ->assertSet('show', false)
             ->assertDontSee('data-version-changelog-modal', false);
     }
 
-    public function test_pipeline_show_page_can_save_selected_pipeline_version_title_and_description(): void
+    public function test_edit_version_modal_can_save_selected_pipeline_version_title_and_description(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openEditVersionModal')
+        Livewire::test(EditVersionModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open')
             ->set('editableVersionTitle', 'Пайплайн Текущий Обновленный')
             ->set('editableVersionDescription', 'Обновленное описание версии')
             ->call('saveVersion')
-            ->assertSet('showEditVersionModal', false)
-            ->assertSee('Пайплайн Текущий Обновленный');
+            ->assertSet('show', false);
 
         $this->assertDatabaseHas('pipeline_versions', [
             'id' => $versionTwo->id,
@@ -203,7 +230,7 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
-    public function test_pipeline_show_page_can_add_step_creating_new_pipeline_version_and_switch_to_it(): void
+    public function test_step_create_modal_can_add_step_creating_new_pipeline_version(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -217,15 +244,18 @@ class PipelineShowPageTest extends TestCase
             ->where('version', 2)
             ->firstOrFail();
 
-        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openStepCreateModal', $transcribeV2->id)
+        Livewire::test(StepCreateModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $transcribeV2->id)
             ->set('createStepName', 'Новый шаг')
             ->set('createStepDescription', 'Короткое описание нового шага')
             ->set('createStepModel', 'gpt-5-mini')
             ->set('createStepTemperature', 1.0)
             ->set('createStepPrompt', 'Промт нового шага')
             ->call('saveCreatedStep')
-            ->assertSet('showStepCreateModal', false);
+            ->assertSet('show', false);
 
         $newPipelineVersion = PipelineVersion::query()
             ->where('pipeline_id', $pipeline->id)
@@ -236,11 +266,6 @@ class PipelineShowPageTest extends TestCase
             ->where('name', 'Новый шаг')
             ->where('version', 1)
             ->firstOrFail();
-
-        $component
-            ->assertSet('selectedVersionId', $newPipelineVersion->id)
-            ->assertSee('Новый шаг')
-            ->assertSee('Сводка v2');
 
         $this->assertDatabaseHas('pipelines', [
             'id' => $pipeline->id,
@@ -282,7 +307,7 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
-    public function test_pipeline_show_page_can_save_step_changes_in_current_step_version(): void
+    public function test_step_edit_modal_can_save_step_changes_in_current_step_version(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -291,18 +316,19 @@ class PipelineShowPageTest extends TestCase
             ->where('version', 2)
             ->firstOrFail();
 
-        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openStepEditModal', $textStepVersion->id)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $textStepVersion->id)
             ->set('editStepName', 'Сводка v2 обновленная')
             ->set('editStepDescription', 'Обновленное описание')
             ->set('editStepModel', 'claude-sonnet-4-5')
             ->set('editStepTemperature', 0.6)
             ->set('editStepPrompt', 'Новый промт')
             ->call('saveStep')
-            ->assertSet('showStepEditModal', false)
-            ->assertSet('selectedVersionId', $versionTwo->id)
-            ->assertSee('claude-sonnet-4-5')
-            ->assertDontSee('gpt-5-mini');
+            ->assertSet('show', false)
+            ->assertSet('editingStepVersionId', null);
 
         $updatedStepVersion = StepVersion::query()->findOrFail($textStepVersion->id);
 
@@ -318,11 +344,9 @@ class PipelineShowPageTest extends TestCase
             'id' => $pipeline->id,
             'current_version_id' => $versionTwo->id,
         ]);
-
-        $component->assertSet('editingStepVersionId', null);
     }
 
-    public function test_pipeline_show_page_can_save_step_as_new_version_and_new_pipeline_version_for_current_selection(): void
+    public function test_step_edit_modal_can_save_step_as_new_version_and_new_pipeline_version_for_current_selection(): void
     {
         [$pipeline, , $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -336,15 +360,19 @@ class PipelineShowPageTest extends TestCase
             ->where('version', 2)
             ->firstOrFail();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openStepEditModal', $textV2->id)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $textV2->id)
             ->set('editStepName', 'Сводка v3')
             ->set('editStepDescription', 'Описание v3')
             ->set('editStepPrompt', 'Промт v3')
             ->set('editStepModel', 'gpt-5.1')
             ->set('editStepChangelogEntry', 'Создана новая версия шага')
             ->call('saveStepAsNewVersion')
-            ->assertSet('showStepEditModal', false);
+            ->assertSet('show', false)
+            ->assertSet('editingStepVersionId', null);
 
         $newPipelineVersion = PipelineVersion::query()
             ->where('pipeline_id', $pipeline->id)
@@ -390,7 +418,7 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
-    public function test_pipeline_show_page_keeps_current_pipeline_version_when_new_version_saved_from_non_current_selection(): void
+    public function test_step_edit_modal_keeps_current_pipeline_version_when_new_version_saved_from_non_current_selection(): void
     {
         [$pipeline, $versionOne, $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -399,13 +427,15 @@ class PipelineShowPageTest extends TestCase
             ->where('version', 1)
             ->firstOrFail();
 
-        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('selectVersion', $versionOne->id)
-            ->call('openStepEditModal', $textV1->id)
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $versionOne->id,
+        ])
+            ->call('open', $textV1->id)
             ->set('editStepName', 'Сводка из v1 в новую версию')
             ->set('editStepChangelogEntry', 'Новая версия из не-текущей')
             ->call('saveStepAsNewVersion')
-            ->assertSet('showStepEditModal', false);
+            ->assertSet('show', false);
 
         $newPipelineVersion = PipelineVersion::query()
             ->where('pipeline_id', $pipeline->id)
@@ -415,8 +445,6 @@ class PipelineShowPageTest extends TestCase
         $pipeline->refresh();
         $this->assertSame($versionTwo->id, $pipeline->current_version_id);
         $this->assertNotSame($newPipelineVersion->id, $pipeline->current_version_id);
-
-        $component->assertSet('selectedVersionId', $newPipelineVersion->id);
     }
 
     public function test_pipeline_show_page_can_set_selected_version_as_current(): void
@@ -466,19 +494,18 @@ class PipelineShowPageTest extends TestCase
 
         Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
             ->assertSet('selectedVersionId', $versionTwo->id)
-            ->assertSee('Архивировать версию')
-            ->assertDontSee('Вернуть из архива')
-            ->call('toggleSelectedVersionArchiveStatus')
-            ->assertSee('Вернуть из архива')
-            ->assertSee('data-version-status="archived"', false)
-            ->assertSee('data-archived-version-icon', false);
+            ->call('toggleSelectedVersionArchiveStatus');
 
         $this->assertDatabaseHas('pipeline_versions', [
             'id' => $versionTwo->id,
             'status' => 'archived',
         ]);
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])->call('toggleSelectedVersionArchiveStatus');
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline->fresh()])
+            ->assertSee('Вернуть из архива')
+            ->assertSee('data-version-status="archived"', false)
+            ->assertSee('data-archived-version-icon', false)
+            ->call('toggleSelectedVersionArchiveStatus');
 
         $this->assertDatabaseHas('pipeline_versions', [
             'id' => $versionTwo->id,
@@ -527,7 +554,7 @@ class PipelineShowPageTest extends TestCase
             ->assertSee('data-step-delete="'.$secondStepVersion->id.'"', false);
     }
 
-    public function test_pipeline_show_page_does_not_open_delete_alert_for_first_step(): void
+    public function test_delete_step_alert_does_not_open_for_first_step(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
 
@@ -535,14 +562,17 @@ class PipelineShowPageTest extends TestCase
             ->where('name', 'Транскрибация v2')
             ->firstOrFail();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('openDeleteStepAlert', $firstStepVersion->id)
-            ->assertSet('showDeleteStepAlert', false)
+        Livewire::test(DeleteStepAlert::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $firstStepVersion->id)
+            ->assertSet('show', false)
             ->assertSet('deletingStepVersionId', null)
             ->assertDontSee('data-delete-step-alert', false);
     }
 
-    public function test_pipeline_show_page_remove_step_creates_new_pipeline_version_with_max_increment_for_selected_version(): void
+    public function test_delete_step_alert_removes_step_creating_new_pipeline_version_with_max_increment_for_selected_version(): void
     {
         [$pipeline, $versionOne, $versionTwo] = $this->createPipelineWithTwoVersions();
 
@@ -550,26 +580,23 @@ class PipelineShowPageTest extends TestCase
             ->where('name', 'Сводка v1')
             ->firstOrFail();
 
-        $component = Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->call('selectVersion', $versionOne->id)
-            ->call('openDeleteStepAlert', $stepToRemove->id)
-            ->assertSet('showDeleteStepAlert', true)
+        Livewire::test(DeleteStepAlert::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $versionOne->id,
+        ])
+            ->call('open', $stepToRemove->id)
+            ->assertSet('show', true)
             ->assertSet('deletingStepVersionId', $stepToRemove->id)
-            ->assertSee('data-delete-step-alert', false);
+            ->assertSee('data-delete-step-alert', false)
+            ->call('confirmDeleteStep')
+            ->assertSet('show', false);
 
-        $this->assertDatabaseCount('pipeline_versions', 2);
-
-        $component->call('confirmDeleteStep')
-            ->assertSet('showDeleteStepAlert', false)
-            ->assertSee('Транскрибация v1')
-            ->assertDontSee('Сводка v1');
+        $this->assertDatabaseCount('pipeline_versions', 3);
 
         $newVersion = PipelineVersion::query()
             ->where('pipeline_id', $pipeline->id)
             ->where('version', 3)
             ->firstOrFail();
-
-        $component->assertSet('selectedVersionId', $newVersion->id);
 
         $this->assertDatabaseHas('pipelines', [
             'id' => $pipeline->id,
@@ -587,16 +614,18 @@ class PipelineShowPageTest extends TestCase
         );
     }
 
-    public function test_pipeline_show_page_remove_step_relinks_dependent_source_to_removed_step_source_and_writes_changelog(): void
+    public function test_delete_step_alert_relinks_dependent_source_to_removed_step_source_and_writes_changelog(): void
     {
         [$pipeline, $version, $firstStepVersion, $removedStepVersion, $dependentStepVersion] = $this->createPipelineForStepRemovalWithDependentSource();
 
-        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
-            ->assertSet('selectedVersionId', $version->id)
-            ->call('openDeleteStepAlert', $removedStepVersion->id)
-            ->assertSet('showDeleteStepAlert', true)
+        Livewire::test(DeleteStepAlert::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $version->id,
+        ])
+            ->call('open', $removedStepVersion->id)
+            ->assertSet('show', true)
             ->call('confirmDeleteStep')
-            ->assertSet('showDeleteStepAlert', false);
+            ->assertSet('show', false);
 
         $newVersion = PipelineVersion::query()
             ->where('pipeline_id', $pipeline->id)
