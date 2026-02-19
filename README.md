@@ -49,6 +49,7 @@ npm install
 - `LLM_REQUEST_TIMEOUT=1800`
 - `LLM_ANTHROPIC_MAX_TOKENS=64000`
 - `YTDLP_BINARY=yt-dlp`
+- `YT_PROXY=` (опционально, например `socks5://127.0.0.1:1080`)
 - `QUEUE_CONNECTION=database`
 - `SIMPLE_AUTH_EMAIL=team@local`
 - `SIMPLE_AUTH_COOKIE_NAME=video2book_access_token`

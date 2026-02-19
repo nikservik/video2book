@@ -96,14 +96,11 @@ class LessonDownloadService
             });
         }
 
-        $options = Options::create()
-            ->downloadPath($targetDirectory)
-            ->format('ba')
-            ->noPlaylist(true)
-            ->restrictFilenames(true)
-            ->output('%(id)s.%(ext)s')
-            ->referer($referer)
-            ->url($url);
+        $options = $this->buildDownloadOptions(
+            targetDirectory: $targetDirectory,
+            url: $url,
+            referer: $referer,
+        );
 
         $collection = $downloader->download($options);
 
@@ -119,6 +116,32 @@ class LessonDownloadService
         }
 
         throw new RuntimeException('Youtube-dl не вернул файл для скачанного видео.');
+    }
+
+    protected function buildDownloadOptions(
+        string $targetDirectory,
+        string $url,
+        ?string $referer = null,
+    ): Options {
+        $options = Options::create()
+            ->downloadPath($targetDirectory)
+            ->format('ba')
+            ->noPlaylist(true)
+            ->restrictFilenames(true)
+            ->output('%(id)s.%(ext)s')
+            ->url($url);
+
+        if ($referer !== null) {
+            $options = $options->referer($referer);
+        }
+
+        $proxy = $this->configuredProxy();
+
+        if ($proxy !== null) {
+            $options = $options->proxy($proxy);
+        }
+
+        return $options;
     }
 
     private function normalizeAudio(string $inputPath, string $outputPath, Lesson $lesson): void
@@ -162,5 +185,12 @@ class LessonDownloadService
             'medium' => ['sample_rate' => 16000, 'bitrate' => 32],
             default => ['sample_rate' => 22050, 'bitrate' => 64],
         };
+    }
+
+    private function configuredProxy(): ?string
+    {
+        $proxy = trim((string) config('downloader.proxy', ''));
+
+        return $proxy !== '' ? $proxy : null;
     }
 }
