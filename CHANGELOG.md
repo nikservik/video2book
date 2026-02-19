@@ -131,6 +131,12 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - Добавлены тесты: feature-тест скачивания DOCX на странице прогона, feature-тест API DOCX-экспорта и unit-тест форматирования DOCX-структуры.
 - Убрано добавление служебного заголовка `Урок — Шаг` в начале DOCX: экспорт теперь содержит только контент исходного Markdown шага.
 
+## [2026-02-19] docs: уточнён статус legacy API в AGENTS
+
+- В `AGENTS.md` зафиксировано, что `app/Http/Controllers` и `routes/api.php` — legacy-слой из периода Electron/Vue + API.
+- Добавлено правило Livewire-first: новые задачи реализуем в `routes/web.php` + `app/Livewire` + `app/Services/*`.
+- Отдельно прописано, что legacy API редактируется только по явному запросу, а в остальных задачах используется как референс.
+
 ## [2026-02-11] refactor: migrate LLM layer to Laravel AI SDK
 
 - `app/Services/Llm` переписан на единый Laravel AI SDK: убраны кастомные провайдерные клиенты OpenAI/Anthropic/Gemini и их wiring в контейнере.
