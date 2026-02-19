@@ -124,6 +124,65 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         File::deleteDirectory($archive['cleanup_dir']);
     }
 
+    public function test_it_builds_docx_zip(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект DOCX',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $run->id,
+            'step_version_id' => $textStepVersion->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => "# Урок 1\n\n- Пункт",
+        ]);
+
+        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
+            project: $project,
+            pipelineVersionId: $pipelineVersion->id,
+            stepVersionId: $textStepVersion->id,
+            format: 'docx',
+        );
+
+        $this->assertFileExists($archive['archive_path']);
+
+        $zip = new ZipArchive;
+        $zip->open($archive['archive_path']);
+
+        $expectedFile = $lesson->name.'-'.$textStepVersion->name.'.docx';
+
+        $this->assertSame(1, $zip->numFiles);
+        $this->assertNotFalse($zip->locateName($expectedFile));
+        $this->assertStringStartsWith('PK', (string) $zip->getFromName($expectedFile));
+
+        $zip->close();
+        File::deleteDirectory($archive['cleanup_dir']);
+    }
+
     public function test_it_throws_validation_exception_when_no_processed_results_found(): void
     {
         $this->expectException(ValidationException::class);

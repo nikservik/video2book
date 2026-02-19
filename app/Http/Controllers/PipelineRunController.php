@@ -9,6 +9,7 @@ use App\Models\PipelineRunStep;
 use App\Models\PipelineVersion;
 use App\Services\Pipeline\PipelineEventBroadcaster;
 use App\Services\Pipeline\PipelineRunService;
+use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Support\LessonDownloadTransformer;
 use App\Support\PipelineRunTransformer;
@@ -257,6 +258,27 @@ class PipelineRunController extends Controller
 
         return response($step->result, 200, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
+            'Content-Disposition' => 'attachment; filename="'.$filename.'"',
+        ]);
+    }
+
+    public function exportStepDocx(PipelineRun $pipelineRun, PipelineRunStep $step, PipelineStepDocxExporter $exporter): Response
+    {
+        abort_if($step->pipeline_run_id !== $pipelineRun->id, 404, 'Шаг не принадлежит указанному прогону.');
+
+        $pipelineRun->load('lesson');
+        $step->load('stepVersion');
+
+        abort_if($step->result === null, 422, 'У шага нет результата для экспорта.');
+
+        $docxContent = $exporter->export($pipelineRun, $step);
+
+        $lessonName = $pipelineRun->lesson?->name ?? 'lesson';
+        $stepName = $step->stepVersion?->name ?? 'step';
+        $filename = Str::slug($lessonName.'-'.$stepName, '_').'.docx';
+
+        return response($docxContent, 200, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
             'Content-Disposition' => 'attachment; filename="'.$filename.'"',
         ]);
     }

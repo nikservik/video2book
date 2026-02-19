@@ -36,7 +36,7 @@ class ProjectExportModal extends Component
     #[On('project-show:project-export-modal-open')]
     public function open(string $format): void
     {
-        if (! in_array($format, ['pdf', 'md'], true)) {
+        if (! in_array($format, ['pdf', 'md', 'docx'], true)) {
             return;
         }
 

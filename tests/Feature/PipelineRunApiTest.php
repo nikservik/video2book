@@ -11,6 +11,7 @@ use App\Models\Project;
 use App\Models\ProjectTag;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class PipelineRunApiTest extends TestCase
@@ -113,6 +114,41 @@ class PipelineRunApiTest extends TestCase
             ->assertJsonPath('data.pipeline_version.id', $version->id)
             ->assertJsonPath('data.steps.0.result', 'TRANSCRIPT')
             ->assertJsonPath('data.steps.0.status', 'done');
+    }
+
+    public function test_it_exports_step_result_as_docx(): void
+    {
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $tag = ProjectTag::query()->create(['slug' => 'demo', 'description' => null]);
+        $project = Project::query()->create(['name' => 'Docx project', 'tags' => 'demo']);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson export',
+            'tag' => $tag->slug,
+            'settings' => ['quality' => 'high'],
+        ]);
+
+        $run = app(\App\Services\Pipeline\PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        $step = $run->steps()->orderBy('position')->firstOrFail();
+
+        $step->update([
+            'status' => 'done',
+            'result' => "# Заголовок\n\n- **Пункт**\n  - *Вложенный*",
+        ]);
+
+        $response = $this->get("/api/pipeline-runs/{$run->id}/steps/{$step->id}/export/docx");
+
+        $expectedFilename = Str::slug($lesson->name.'-Step 1', '_').'.docx';
+
+        $response
+            ->assertOk()
+            ->assertHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document');
+
+        $this->assertStringContainsString(
+            $expectedFilename,
+            (string) $response->headers->get('Content-Disposition')
+        );
+        $this->assertStringStartsWith('PK', (string) $response->getContent());
     }
 
     public function test_it_streams_pipeline_run_snapshot_with_results(): void

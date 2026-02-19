@@ -43,6 +43,7 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('<li>Пункт 1</li>', false)
             ->assertSee('Готово')
             ->assertSee('Обработка')
+            ->assertSee('DOCX')
             ->assertSee('i:1,234')
             ->assertSee('o:56,789')
             ->assertSee('$1.235')
@@ -146,12 +147,13 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('<h2>Заголовок первого шага</h2>', false);
     }
 
-    public function test_project_run_page_can_download_selected_step_pdf_and_markdown(): void
+    public function test_project_run_page_can_download_selected_step_pdf_markdown_and_docx(): void
     {
         [$project, $pipelineRun] = $this->createProjectRunWithSteps();
 
         $pdfFilename = Str::slug('Урок по Laravel-Транскрибация', '_').'.pdf';
         $markdownFilename = Str::slug('Урок по Laravel-Саммаризация', '_').'.md';
+        $docxFilename = Str::slug('Урок по Laravel-Транскрибация', '_').'.docx';
 
         Livewire::test(ProjectRunPage::class, [
             'project' => $project,
@@ -159,6 +161,8 @@ class ProjectRunPageTest extends TestCase
         ])
             ->call('downloadSelectedStepPdf')
             ->assertFileDownloaded($pdfFilename, contentType: 'application/pdf')
+            ->call('downloadSelectedStepDocx')
+            ->assertFileDownloaded($docxFilename, contentType: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document')
             ->call('selectStep', $pipelineRun->steps()->where('position', 2)->firstOrFail()->id)
             ->call('downloadSelectedStepMarkdown')
             ->assertFileDownloaded($markdownFilename, contentType: 'text/markdown; charset=UTF-8');

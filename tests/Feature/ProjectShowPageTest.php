@@ -64,6 +64,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Редактировать проект')
             ->assertSee('Скачать проект в PDF')
             ->assertSee('Скачать проект в MD')
+            ->assertSee('Скачать проект в DOCX')
             ->assertSee('Удалить проект')
             ->assertDontSee('data-create-lesson-modal', false)
             ->assertSee('data-add-lessons-list-button', false)
@@ -798,7 +799,10 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Текстовый шаг A')
             ->assertSee('Текстовый шаг B')
             ->assertDontSee('Транскрибация')
-            ->assertDontSee('Глоссарий');
+            ->assertDontSee('Глоссарий')
+            ->call('open', 'docx')
+            ->assertSet('projectExportFormat', 'docx')
+            ->assertSee('Скачивание проекта в DOCX');
     }
 
     public function test_project_export_download_creates_zip_for_selected_step_and_skips_unprocessed_lessons(): void
@@ -865,6 +869,55 @@ class ProjectShowPageTest extends TestCase
 
         Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
             ->call('open', 'md')
+            ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
+            ->call('downloadProjectResults')
+            ->assertSet('show', false)
+            ->assertFileDownloaded($expectedFilename, contentType: 'application/zip');
+    }
+
+    public function test_project_export_download_creates_docx_zip_for_selected_step(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект Архив DOCX',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $stepVersions] = $this->createPipelineWithCustomSteps([
+            ['name' => 'Текстовый экспорт', 'type' => 'text'],
+        ]);
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $run->id,
+            'step_version_id' => $stepVersions['text']->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => "# Результат урока 1\n\n- **Пункт**",
+        ]);
+
+        $expectedFilename = Str::slug($project->name.'-'.$stepVersions['text']->name.'-docx', '_').'.zip';
+
+        Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
+            ->call('open', 'docx')
             ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
             ->call('downloadProjectResults')
             ->assertSet('show', false)

@@ -38,6 +38,8 @@ Route::prefix('pipeline-runs')->group(function (): void {
         ->whereNumber(['pipelineRun', 'step']);
     Route::get('{pipelineRun}/steps/{step}/export/md', [PipelineRunController::class, 'exportStepMarkdown'])
         ->whereNumber(['pipelineRun', 'step']);
+    Route::get('{pipelineRun}/steps/{step}/export/docx', [PipelineRunController::class, 'exportStepDocx'])
+        ->whereNumber(['pipelineRun', 'step']);
     Route::get('{pipelineRun}', [PipelineRunController::class, 'show'])
         ->whereNumber('pipelineRun');
     Route::post('{pipelineRun}/restart', [PipelineRunController::class, 'restart']);

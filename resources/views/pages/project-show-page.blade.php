@@ -127,6 +127,14 @@
                     Скачать проект в MD
                 </button>
                 <button type="button"
+                        wire:click="$dispatch('project-show:project-export-modal-open', { format: 'docx' })"
+                        class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                    </svg>
+                    Скачать проект в DOCX
+                </button>
+                <button type="button"
                         wire:click="$dispatch('project-show:delete-project-alert-open')"
                         class="w-full text-sm rounded-lg inset-ring-1 bg-red-500/20 px-3 py-2 font-semibold text-red-700 inset-ring-red-700 hover:text-red-50 shadow-xs hover:bg-red-500 hover:inset-ring-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:text-red-600 dark:inset-ring-red-600 dark:bg-red-900/50 dark:shadow-none  dark:hover:bg-red-600 dark:focus-visible:outline-red-600">
                     Удалить проект

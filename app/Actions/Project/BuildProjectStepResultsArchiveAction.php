@@ -5,6 +5,7 @@ namespace App\Actions\Project;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\Project;
+use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
@@ -16,6 +17,7 @@ class BuildProjectStepResultsArchiveAction
 {
     public function __construct(
         private readonly PipelineStepPdfExporter $pipelineStepPdfExporter,
+        private readonly PipelineStepDocxExporter $pipelineStepDocxExporter,
     ) {}
 
     /**
@@ -23,7 +25,7 @@ class BuildProjectStepResultsArchiveAction
      */
     public function handle(Project $project, int $pipelineVersionId, int $stepVersionId, string $format): array
     {
-        if (! in_array($format, ['pdf', 'md'], true)) {
+        if (! in_array($format, ['pdf', 'md', 'docx'], true)) {
             throw new RuntimeException('Неподдерживаемый формат архива.');
         }
 
@@ -100,9 +102,11 @@ class BuildProjectStepResultsArchiveAction
         foreach ($entries as $entry) {
             $run = $entry['run'];
             $step = $entry['step'];
-            $content = $format === 'pdf'
-                ? $this->pipelineStepPdfExporter->export($run, $step)
-                : (string) $step->result;
+            $content = match ($format) {
+                'pdf' => $this->pipelineStepPdfExporter->export($run, $step),
+                'docx' => $this->pipelineStepDocxExporter->export($run, $step),
+                default => (string) $step->result,
+            };
 
             $baseName = $this->normalizeArchiveBaseName($entry['lesson_name'].'-'.$stepName);
 
@@ -110,7 +114,11 @@ class BuildProjectStepResultsArchiveAction
                 $baseName = 'lesson_'.$run->lesson_id.'_step_'.$step->step_version_id;
             }
 
-            $extension = $format === 'pdf' ? 'pdf' : 'md';
+            $extension = match ($format) {
+                'pdf' => 'pdf',
+                'docx' => 'docx',
+                default => 'md',
+            };
             $archiveName = $this->resolveUniqueArchiveName($baseName, $extension, $usedNames);
             $filePath = $tmpDir.'/'.$archiveName;
 

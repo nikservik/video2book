@@ -9,6 +9,7 @@ use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\Project;
+use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Services\Project\ProjectRunDetailsQuery;
 use Illuminate\Contracts\View\View;
@@ -146,6 +147,19 @@ class ProjectRunPage extends Component
             echo $step->result;
         }, $filename, [
             'Content-Type' => 'text/markdown; charset=UTF-8',
+        ]);
+    }
+
+    public function downloadSelectedStepDocx(PipelineStepDocxExporter $exporter): StreamedResponse
+    {
+        $step = $this->selectedStepForExport();
+        $filename = $this->selectedStepExportFilename($step, 'docx');
+        $docxContent = $exporter->export($this->pipelineRun, $step);
+
+        return response()->streamDownload(function () use ($docxContent): void {
+            echo $docxContent;
+        }, $filename, [
+            'Content-Type' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
         ]);
     }
 
