@@ -120,6 +120,16 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - На странице проекта для красной иконки неудачной загрузки аудио добавлен hover-tooltip с текстом `download_error` (если сообщение пустое, показывается fallback `Ошибка загрузки аудио`).
 - В виджете очереди на главной список задач ограничен первыми 5 элементами; если задач больше, внизу отображается строка `Ещё N задач`.
 
+## [2026-02-19] feat: упрощённая invite-аутентификация web-layer
+
+- Добавлена миграция `2026_02_19_190000_add_access_token_and_team_user`: создаёт единственного пользователя `team@local` (если отсутствует) и поле `users.access_token`.
+- Добавлен web-маршрут инвайта `GET /invite/{token}` и отдельный контроллер `AcceptInviteController`: проверяет токен, ставит постоянный cookie и редиректит на `home`.
+- Добавлен middleware `AuthenticateTeamAccessToken`, который валидирует cookie-токен, авторизует пользователя в guard `web` и блокирует доступ при ошибке.
+- Для неавторизованных запросов добавлена отдельная страница `resources/views/auth/access-closed.blade.php` c единственной надписью `Доступ закрыт`.
+- Добавлена artisan-команда `auth:generate-invite`, генерирующая новый UUID-подобный токен и печатающая invite-ссылку для запуска через Forge.
+- Добавлены feature-тесты на middleware/invite-flow и консольную команду; базовый `tests/TestCase.php` настроен на автоподстановку валидного cookie в web-тестах.
+- Обновлены `README.md` и `docs/server.md` с описанием нового auth-flow и операционной команды.
+
 ## [2026-02-19] feat: экспорт результата шага в DOCX
 
 - Добавлен сервис `PipelineStepDocxExporter` на базе `phpoffice/phpword`: конвертация Markdown через AST `league/commonmark` с поддержкой заголовков `#-###`, вложенных `ul/ol`, `bold` и `italic`.

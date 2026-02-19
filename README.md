@@ -50,6 +50,8 @@ npm install
 - `LLM_ANTHROPIC_MAX_TOKENS=64000`
 - `YTDLP_BINARY=yt-dlp`
 - `QUEUE_CONNECTION=database`
+- `SIMPLE_AUTH_EMAIL=team@local`
+- `SIMPLE_AUTH_COOKIE_NAME=video2book_access_token`
 
 ### 3. Запуск разработки
 
@@ -66,6 +68,19 @@ php artisan serve
 php artisan queue:listen --tries=1 --queue=pipelines
 npm run dev
 ```
+
+### 4. Доступ в веб-интерфейс (invite)
+
+- После миграции создаётся единственный пользователь `team@local`.
+- Доступ в web-layer работает по invite-токену в cookie.
+- Чтобы выдать новый invite (например, через Forge), выполните:
+
+```bash
+php artisan auth:generate-invite
+```
+
+- Команда выводит готовую ссылку вида `https://.../invite/{token}`.
+- После перехода по ссылке браузер получает постоянный cookie и редиректится на главную.
 
 ## Архитектура репозитория
 

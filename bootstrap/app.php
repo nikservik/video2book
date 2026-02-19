@@ -11,8 +11,12 @@ return Application::configure(basePath: dirname(__DIR__))
         commands: __DIR__.'/../routes/console.php',
         health: '/up',
     )
+    ->withCommands()
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
+        $middleware->alias([
+            'team.token' => \App\Http\Middleware\AuthenticateTeamAccessToken::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         //
