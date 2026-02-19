@@ -794,14 +794,20 @@ class ProjectShowPageTest extends TestCase
             ->call('open', 'pdf')
             ->assertSet('show', true)
             ->assertSet('projectExportFormat', 'pdf')
+            ->assertSet('projectExportArchiveFileNaming', 'lesson_step')
             ->assertSet('projectExportSelection', $pipelineVersionB->id.':'.$stepVersionsB['text']->id)
             ->assertSee('Скачивание проекта в PDF')
+            ->assertSee('Именование файлов в архиве')
+            ->assertSee('Урок.pdf')
+            ->assertSee('Урок - шаг.pdf')
             ->assertSee('Текстовый шаг A')
             ->assertSee('Текстовый шаг B')
             ->assertDontSee('Транскрибация')
             ->assertDontSee('Глоссарий')
             ->call('open', 'docx')
             ->assertSet('projectExportFormat', 'docx')
+            ->assertSee('Урок.docx')
+            ->assertSee('Урок - шаг.docx')
             ->assertSee('Скачивание проекта в DOCX');
     }
 
@@ -865,7 +871,7 @@ class ProjectShowPageTest extends TestCase
             'result' => null,
         ]);
 
-        $expectedFilename = Str::slug($project->name.'-'.$stepVersions['text']->name.'-md', '_').'.zip';
+        $expectedFilename = Str::slug($project->name, '_').'.zip';
 
         Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
             ->call('open', 'md')
@@ -914,7 +920,7 @@ class ProjectShowPageTest extends TestCase
             'result' => "# Результат урока 1\n\n- **Пункт**",
         ]);
 
-        $expectedFilename = Str::slug($project->name.'-'.$stepVersions['text']->name.'-docx', '_').'.zip';
+        $expectedFilename = Str::slug($project->name, '_').'.zip';
 
         Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
             ->call('open', 'docx')

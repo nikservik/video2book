@@ -15,6 +15,10 @@ use ZipArchive;
 
 class BuildProjectStepResultsArchiveAction
 {
+    private const ARCHIVE_FILE_NAMING_LESSON = 'lesson';
+
+    private const ARCHIVE_FILE_NAMING_LESSON_STEP = 'lesson_step';
+
     public function __construct(
         private readonly PipelineStepPdfExporter $pipelineStepPdfExporter,
         private readonly PipelineStepDocxExporter $pipelineStepDocxExporter,
@@ -23,10 +27,18 @@ class BuildProjectStepResultsArchiveAction
     /**
      * @return array{archive_path:string,cleanup_dir:string,download_filename:string,content_type:string}
      */
-    public function handle(Project $project, int $pipelineVersionId, int $stepVersionId, string $format): array
-    {
+    public function handle(
+        Project $project,
+        int $pipelineVersionId,
+        int $stepVersionId,
+        string $format,
+        string $archiveFileNaming = self::ARCHIVE_FILE_NAMING_LESSON_STEP,
+    ): array {
         if (! in_array($format, ['pdf', 'md', 'docx'], true)) {
             throw new RuntimeException('Неподдерживаемый формат архива.');
+        }
+        if (! in_array($archiveFileNaming, [self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP], true)) {
+            throw new RuntimeException('Неподдерживаемый формат именования файлов в архиве.');
         }
 
         $lessons = $project->lessons()
@@ -108,10 +120,16 @@ class BuildProjectStepResultsArchiveAction
                 default => (string) $step->result,
             };
 
-            $baseName = $this->normalizeArchiveBaseName($entry['lesson_name'].'-'.$stepName);
+            $baseName = $this->resolveArchiveBaseName(
+                lessonName: $entry['lesson_name'],
+                stepName: $stepName,
+                run: $run,
+                step: $step,
+                archiveFileNaming: $archiveFileNaming,
+            );
 
             if ($baseName === '') {
-                $baseName = 'lesson_'.$run->lesson_id.'_step_'.$step->step_version_id;
+                $baseName = 'lesson_'.$run->lesson_id;
             }
 
             $extension = match ($format) {
@@ -128,10 +146,10 @@ class BuildProjectStepResultsArchiveAction
 
         $zip->close();
 
-        $downloadBaseName = Str::slug($project->name.'-'.$stepName.'-'.$format, '_');
+        $downloadBaseName = Str::slug($project->name, '_');
 
         if ($downloadBaseName === '') {
-            $downloadBaseName = 'project-export-'.$format;
+            $downloadBaseName = 'project-export';
         }
 
         return [
@@ -168,5 +186,29 @@ class BuildProjectStepResultsArchiveAction
         $normalized = trim($normalized, " .\t\n\r\0\x0B");
 
         return $normalized;
+    }
+
+    private function resolveArchiveBaseName(
+        string $lessonName,
+        string $stepName,
+        PipelineRun $run,
+        PipelineRunStep $step,
+        string $archiveFileNaming,
+    ): string {
+        $candidate = match ($archiveFileNaming) {
+            self::ARCHIVE_FILE_NAMING_LESSON => $lessonName,
+            default => $lessonName.' - '.$stepName,
+        };
+
+        $baseName = $this->normalizeArchiveBaseName($candidate);
+
+        if ($baseName !== '') {
+            return $baseName;
+        }
+
+        return match ($archiveFileNaming) {
+            self::ARCHIVE_FILE_NAMING_LESSON => 'lesson_'.$run->lesson_id,
+            default => 'lesson_'.$run->lesson_id.'_step_'.$step->step_version_id,
+        };
     }
 }

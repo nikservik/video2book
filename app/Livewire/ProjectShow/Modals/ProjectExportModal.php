@@ -15,6 +15,10 @@ use Livewire\Component;
 
 class ProjectExportModal extends Component
 {
+    private const ARCHIVE_FILE_NAMING_LESSON = 'lesson';
+
+    private const ARCHIVE_FILE_NAMING_LESSON_STEP = 'lesson_step';
+
     public int $projectId;
 
     public bool $show = false;
@@ -22,6 +26,8 @@ class ProjectExportModal extends Component
     public string $projectExportFormat = 'pdf';
 
     public ?string $projectExportSelection = null;
+
+    public string $projectExportArchiveFileNaming = self::ARCHIVE_FILE_NAMING_LESSON_STEP;
 
     /**
      * @var array<int, array{id:int,label:string,steps:array<int, array{id:int,name:string}>}>
@@ -67,16 +73,28 @@ class ProjectExportModal extends Component
         $this->dispatch('project-show:modal-closed');
     }
 
+    public function setProjectExportArchiveFileNaming(string $value): void
+    {
+        if (! in_array($value, [self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP], true)) {
+            return;
+        }
+
+        $this->projectExportArchiveFileNaming = $value;
+    }
+
     public function downloadProjectResults(BuildProjectStepResultsArchiveAction $buildProjectStepResultsArchiveAction)
     {
         $availableSelections = $this->availableProjectExportSelections();
 
         $validated = validator([
             'projectExportSelection' => $this->projectExportSelection,
+            'projectExportArchiveFileNaming' => $this->projectExportArchiveFileNaming,
         ], [
             'projectExportSelection' => ['required', 'string', Rule::in($availableSelections)],
+            'projectExportArchiveFileNaming' => ['required', 'string', Rule::in([self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP])],
         ], [], [
             'projectExportSelection' => 'шаг для скачивания',
+            'projectExportArchiveFileNaming' => 'именование файлов в архиве',
         ])->validate();
 
         [$pipelineVersionId, $stepVersionId] = $this->parseProjectExportSelection($validated['projectExportSelection']);
@@ -89,6 +107,7 @@ class ProjectExportModal extends Component
                 pipelineVersionId: $pipelineVersionId,
                 stepVersionId: $stepVersionId,
                 format: $this->projectExportFormat,
+                archiveFileNaming: $validated['projectExportArchiveFileNaming'],
             );
         } catch (ValidationException $exception) {
             $this->addError(
@@ -118,6 +137,13 @@ class ProjectExportModal extends Component
     public function getProjectExportTitleProperty(): string
     {
         return sprintf('Скачивание проекта в %s', Str::upper($this->projectExportFormat));
+    }
+
+    public function getProjectExportFileExtensionProperty(): string
+    {
+        return in_array($this->projectExportFormat, ['pdf', 'md', 'docx'], true)
+            ? $this->projectExportFormat
+            : 'pdf';
     }
 
     public function isProjectExportPipelineExpanded(int $pipelineVersionId): bool

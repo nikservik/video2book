@@ -48,7 +48,30 @@
                         </div>
                     @endif
 
+                    <div>
+                        <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Именование файлов в архиве</label>
+                        <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                            <button type="button"
+                                    wire:click="setProjectExportArchiveFileNaming('lesson')"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 {{ $projectExportArchiveFileNaming === 'lesson'
+                                        ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500'
+                                        : 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500' }}">
+                                Урок.{{ $this->projectExportFileExtension }}
+                            </button>
+                            <button type="button"
+                                    wire:click="setProjectExportArchiveFileNaming('lesson_step')"
+                                    class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 {{ $projectExportArchiveFileNaming === 'lesson_step'
+                                        ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500'
+                                        : 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500' }}">
+                                Урок - шаг.{{ $this->projectExportFileExtension }}
+                            </button>
+                        </div>
+                    </div>
+
                     @error('projectExportSelection')
+                        <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                    @enderror
+                    @error('projectExportArchiveFileNaming')
                         <p class="text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                     @enderror
 

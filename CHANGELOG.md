@@ -127,6 +127,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - На странице прогона (`projects.runs.show`) добавлена кнопка `Скачать DOCX` после `Скачать MD`, подключён Livewire-экшен `downloadSelectedStepDocx`.
 - На странице проекта (`projects.show`) добавлена кнопка `Скачать проект в DOCX` после `Скачать проект в MD`, а modal выбора pipeline/шага переиспользован без отдельной ветки.
 - Экспорт архива результатов проекта расширен форматом `docx` в `BuildProjectStepResultsArchiveAction`: сборка ZIP выполняется тем же потоком, что для `pdf`, с формированием DOCX через `PipelineStepDocxExporter`.
+- Для экспорта проекта (`PDF`/`MD`/`DOCX`) добавлен выбор именования файлов внутри ZIP (`Урок.{ext}` или `Урок - шаг.{ext}`), а имя скачиваемого ZIP упрощено до названия проекта.
 - В API добавлен endpoint `GET /api/pipeline-runs/{run}/steps/{step}/export/docx` с теми же проверками принадлежности шага и наличия результата, что и в PDF/MD-экспорте.
 - Добавлены тесты: feature-тест скачивания DOCX на странице прогона, feature-тест API DOCX-экспорта и unit-тест форматирования DOCX-структуры.
 - Убрано добавление служебного заголовка `Урок — Шаг` в начале DOCX: экспорт теперь содержит только контент исходного Markdown шага.

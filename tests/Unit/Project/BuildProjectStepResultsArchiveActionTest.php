@@ -14,6 +14,7 @@ use App\Models\Step;
 use App\Models\StepVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
+use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
 use ZipArchive;
@@ -111,14 +112,15 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         $zip = new ZipArchive;
         $zip->open($archive['archive_path']);
 
-        $expectedFileOne = $lessonOne->name.'-'.$textStepVersion->name.'.md';
-        $expectedFileTwo = $lessonTwo->name.'-'.$textStepVersion->name.'.md';
+        $expectedFileOne = $lessonOne->name.' - '.$textStepVersion->name.'.md';
+        $expectedFileTwo = $lessonTwo->name.' - '.$textStepVersion->name.'.md';
 
         $this->assertSame(2, $zip->numFiles);
         $this->assertNotFalse($zip->locateName($expectedFileOne));
         $this->assertNotFalse($zip->locateName($expectedFileTwo));
         $this->assertSame('# Урок 1', $zip->getFromName($expectedFileOne));
         $this->assertSame('# Урок 2', $zip->getFromName($expectedFileTwo));
+        $this->assertSame(Str::slug($project->name, '_').'.zip', $archive['download_filename']);
 
         $zip->close();
         File::deleteDirectory($archive['cleanup_dir']);
@@ -173,11 +175,68 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         $zip = new ZipArchive;
         $zip->open($archive['archive_path']);
 
-        $expectedFile = $lesson->name.'-'.$textStepVersion->name.'.docx';
+        $expectedFile = $lesson->name.' - '.$textStepVersion->name.'.docx';
 
         $this->assertSame(1, $zip->numFiles);
         $this->assertNotFalse($zip->locateName($expectedFile));
         $this->assertStringStartsWith('PK', (string) $zip->getFromName($expectedFile));
+        $this->assertSame(Str::slug($project->name, '_').'.zip', $archive['download_filename']);
+
+        $zip->close();
+        File::deleteDirectory($archive['cleanup_dir']);
+    }
+
+    public function test_it_builds_markdown_zip_with_lesson_only_file_naming(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект Только урок',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $run->id,
+            'step_version_id' => $textStepVersion->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => '# Урок 1',
+        ]);
+
+        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
+            project: $project,
+            pipelineVersionId: $pipelineVersion->id,
+            stepVersionId: $textStepVersion->id,
+            format: 'md',
+            archiveFileNaming: 'lesson',
+        );
+
+        $zip = new ZipArchive;
+        $zip->open($archive['archive_path']);
+
+        $this->assertNotFalse($zip->locateName($lesson->name.'.md'));
+        $this->assertFalse($zip->locateName($lesson->name.' - '.$textStepVersion->name.'.md'));
+        $this->assertSame('# Урок 1', $zip->getFromName($lesson->name.'.md'));
 
         $zip->close();
         File::deleteDirectory($archive['cleanup_dir']);
