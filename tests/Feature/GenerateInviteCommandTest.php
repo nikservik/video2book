@@ -25,4 +25,18 @@ class GenerateInviteCommandTest extends TestCase
         $this->assertNotNull($user->access_token);
         $this->assertStringContainsString('-', (string) $user->access_token);
     }
+
+    public function test_artisan_command_creates_team_user_when_missing_and_prints_invite_link(): void
+    {
+        User::query()->delete();
+
+        $this->artisan('auth:generate-invite')
+            ->expectsOutputToContain('/invite/')
+            ->assertSuccessful();
+
+        $user = User::query()->where('email', config('simple_auth.email'))->first();
+
+        $this->assertNotNull($user);
+        $this->assertNotNull($user?->access_token);
+    }
 }

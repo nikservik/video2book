@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\User;
 use Illuminate\Console\Command;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Str;
 
 class GenerateTeamInviteCommand extends Command
@@ -16,15 +17,15 @@ class GenerateTeamInviteCommand extends Command
     {
         $email = (string) config('simple_auth.email', 'team@local');
 
-        $user = User::query()
-            ->where('email', $email)
-            ->first();
-
-        if ($user === null) {
-            $this->error("User {$email} not found. Run migrations first.");
-
-            return self::FAILURE;
-        }
+        $user = User::query()->firstOrCreate(
+            ['email' => $email],
+            [
+                'name' => 'Team',
+                'email_verified_at' => now(),
+                'password' => Hash::make(Str::random(64)),
+                'remember_token' => Str::random(10),
+            ]
+        );
 
         $token = (string) Str::uuid();
 
@@ -32,7 +33,8 @@ class GenerateTeamInviteCommand extends Command
             'access_token' => $token,
         ])->save();
 
-        $inviteLink = route('invites.accept', ['token' => $token], absolute: true);
+        $baseUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
+        $inviteLink = "{$baseUrl}/invite/{$token}";
 
         $this->line($inviteLink);
 
