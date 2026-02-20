@@ -3,6 +3,7 @@
 namespace Tests\Feature;
 
 use App\Jobs\DownloadLessonAudioJob;
+use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
 use App\Models\Lesson;
 use App\Models\Pipeline;
@@ -161,6 +162,114 @@ class LessonDownloadTest extends TestCase
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('failed', data_get($lesson->settings, 'download_status'));
         $this->assertSame('network error', data_get($lesson->settings, 'download_error'));
+    }
+
+    public function test_normalize_uploaded_audio_job_marks_lesson_complete_and_dispatches_pipeline(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $project = Project::query()->create([
+            'name' => 'Course',
+            'tags' => 'demo',
+        ]);
+        $tag = ProjectTag::query()->create(['slug' => 'default', 'description' => null]);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson uploaded audio',
+            'tag' => $tag->slug,
+            'settings' => [
+                'quality' => 'high',
+                'downloading' => true,
+                'download_status' => 'queued',
+                'download_source' => 'uploaded_audio',
+            ],
+        ]);
+
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        Storage::disk('local')->put('downloader/'.$lesson->id.'/abc/uploaded.wav', 'audio');
+
+        $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
+        $service->shouldReceive('normalizeStoredAudio')
+            ->once()
+            ->andReturnUsing(function (Lesson $invokedLesson, string $sourcePath) use ($lesson): string {
+                $this->assertSame($lesson->id, $invokedLesson->id);
+                $this->assertSame('downloader/'.$lesson->id.'/abc/uploaded.wav', $sourcePath);
+
+                return 'lessons/'.$invokedLesson->id.'.mp3';
+            });
+
+        $job = new NormalizeUploadedLessonAudioJob($lesson->id, 'downloader/'.$lesson->id.'/abc/uploaded.wav');
+
+        $job->handle(
+            $service,
+            app(PipelineRunService::class),
+            app(PipelineEventBroadcaster::class)
+        );
+
+        $lesson->refresh();
+        $this->assertSame('lessons/'.$lesson->id.'.mp3', $lesson->source_filename);
+        $this->assertFalse(data_get($lesson->settings, 'downloading'));
+        $this->assertSame('completed', data_get($lesson->settings, 'download_status'));
+        $this->assertEquals(100, data_get($lesson->settings, 'download_progress'));
+
+        Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $queuedJob) use ($run) {
+            return $queuedJob->pipelineRunId === $run->id;
+        });
+    }
+
+    public function test_normalize_uploaded_audio_job_marks_failure_on_exception(): void
+    {
+        Storage::fake('local');
+        Queue::fake();
+
+        [$pipeline, $version] = $this->createPipelineWithSteps();
+        $project = Project::query()->create(['name' => 'Course', 'tags' => 'demo']);
+        $tag = ProjectTag::query()->create(['slug' => 'default', 'description' => null]);
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson uploaded failure',
+            'tag' => $tag->slug,
+            'settings' => [
+                'quality' => 'high',
+                'downloading' => true,
+                'download_status' => 'queued',
+                'download_source' => 'uploaded_audio',
+            ],
+        ]);
+
+        app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        Storage::disk('local')->put('downloader/'.$lesson->id.'/abc/uploaded.wav', 'audio');
+
+        $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
+        $service->shouldReceive('normalizeStoredAudio')
+            ->once()
+            ->withArgs(function (Lesson $invokedLesson, string $sourcePath) use ($lesson): bool {
+                $this->assertSame($lesson->id, $invokedLesson->id);
+                $this->assertSame('downloader/'.$lesson->id.'/abc/uploaded.wav', $sourcePath);
+
+                return true;
+            })
+            ->andThrow(new RuntimeException('normalize error'));
+
+        $job = new NormalizeUploadedLessonAudioJob($lesson->id, 'downloader/'.$lesson->id.'/abc/uploaded.wav');
+
+        try {
+            $job->handle(
+                $service,
+                app(PipelineRunService::class),
+                app(PipelineEventBroadcaster::class)
+            );
+            $this->fail('Job should throw exception');
+        } catch (RuntimeException $exception) {
+            $this->assertSame('normalize error', $exception->getMessage());
+        }
+
+        $lesson->refresh();
+        $this->assertFalse(data_get($lesson->settings, 'downloading'));
+        $this->assertSame('failed', data_get($lesson->settings, 'download_status'));
+        $this->assertSame('normalize error', data_get($lesson->settings, 'download_error'));
     }
 
     /**

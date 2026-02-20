@@ -3,7 +3,9 @@
 namespace Tests\Feature;
 
 use App\Jobs\DownloadLessonAudioJob;
+use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
+use App\Livewire\ProjectShow\Modals\AddLessonFromAudioModal;
 use App\Livewire\ProjectShow\Modals\AddLessonsListModal;
 use App\Livewire\ProjectShow\Modals\AddPipelineToLessonModal;
 use App\Livewire\ProjectShow\Modals\CreateLessonModal;
@@ -25,6 +27,7 @@ use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -61,12 +64,14 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('lg:col-span-1', false)
             ->assertSee('md:grid-cols-2', false)
             ->assertSee('Добавить урок')
+            ->assertSee('Добавить урок из аудио')
             ->assertSee('Редактировать проект')
             ->assertSee('Скачать проект в PDF')
             ->assertSee('Скачать проект в MD')
             ->assertSee('Скачать проект в DOCX')
             ->assertSee('Удалить проект')
             ->assertDontSee('data-create-lesson-modal', false)
+            ->assertDontSee('data-add-lesson-from-audio-modal', false)
             ->assertSee('data-add-lessons-list-button', false)
             ->assertSee('data-disabled="true"', false)
             ->assertDontSee('data-add-lessons-list-modal', false)
@@ -1051,6 +1056,28 @@ class ProjectShowPageTest extends TestCase
             ->assertDontSee('Ссылка на YouTube');
     }
 
+    public function test_add_lesson_from_audio_modal_can_be_opened_and_closed(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект для аудио-урока',
+            'tags' => null,
+        ]);
+
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        Livewire::test(AddLessonFromAudioModal::class, ['projectId' => $project->id])
+            ->assertSet('show', false)
+            ->call('open')
+            ->assertSet('show', true)
+            ->assertSet('newLessonPipelineVersionId', $pipelineVersion->id)
+            ->assertSee('Добавить урок из аудио')
+            ->assertSee('Перетащите аудиофайл сюда или нажмите для выбора')
+            ->assertSee('Версия пайплайна')
+            ->call('close')
+            ->assertSet('show', false)
+            ->assertDontSee('Перетащите аудиофайл сюда или нажмите для выбора');
+    }
+
     public function test_add_lessons_list_modal_can_be_opened_and_closed(): void
     {
         [, $pipelineVersion] = $this->createPipelineWithSteps();
@@ -1191,6 +1218,68 @@ class ProjectShowPageTest extends TestCase
             ->assertHasErrors([
                 'newLessonName' => 'required',
                 'newLessonYoutubeUrl' => 'url',
+            ]);
+    }
+
+    public function test_create_lesson_from_audio_queues_normalization_before_pipeline_processing(): void
+    {
+        Queue::fake();
+
+        $project = Project::query()->create([
+            'name' => 'Проект с аудио-уроком',
+            'tags' => null,
+        ]);
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        Livewire::test(AddLessonFromAudioModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonName', 'Новый урок из файла')
+            ->set('newLessonAudioFile', UploadedFile::fake()->create('lesson.wav', 512, 'audio/wav'))
+            ->set('newLessonPipelineVersionId', $pipelineVersion->id)
+            ->call('createLessonFromAudio')
+            ->assertSet('show', false);
+
+        $lesson = Lesson::query()
+            ->where('project_id', $project->id)
+            ->where('name', 'Новый урок из файла')
+            ->first();
+
+        $this->assertNotNull($lesson);
+        $this->assertSame('queued', data_get($lesson?->settings, 'download_status'));
+        $this->assertTrue((bool) data_get($lesson?->settings, 'downloading'));
+        $this->assertSame('uploaded_audio', data_get($lesson?->settings, 'download_source'));
+
+        $this->assertDatabaseHas('pipeline_runs', [
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'queued',
+        ]);
+
+        Queue::assertPushedOn(NormalizeUploadedLessonAudioJob::QUEUE, NormalizeUploadedLessonAudioJob::class, function (NormalizeUploadedLessonAudioJob $job) use ($lesson): bool {
+            return $job->lessonId === $lesson->id
+                && str_starts_with($job->uploadedAudioPath, 'downloader/'.$lesson->id.'/');
+        });
+
+        Queue::assertNotPushed(ProcessPipelineJob::class);
+    }
+
+    public function test_create_lesson_from_audio_requires_valid_fields(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с аудио-валидацией',
+            'tags' => null,
+        ]);
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        Livewire::test(AddLessonFromAudioModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonName', '')
+            ->set('newLessonAudioFile', UploadedFile::fake()->create('notes.txt', 10, 'text/plain'))
+            ->set('newLessonPipelineVersionId', $pipelineVersion->id)
+            ->call('createLessonFromAudio')
+            ->assertHasErrors([
+                'newLessonName' => 'required',
+                'newLessonAudioFile' => 'mimetypes',
             ]);
     }
 

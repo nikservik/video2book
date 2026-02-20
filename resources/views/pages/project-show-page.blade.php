@@ -95,6 +95,11 @@
                     Добавить урок
                 </button>
                 <button type="button"
+                        wire:click="$dispatch('project-show:add-lesson-from-audio-modal-open')"
+                        class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                    Добавить урок из аудио
+                </button>
+                <button type="button"
                         wire:click="$dispatch('project-show:add-lessons-list-modal-open')"
                         @disabled($project->default_pipeline_version_id === null)
                         data-add-lessons-list-button
@@ -138,6 +143,7 @@
     </div>
 
     <livewire:project-show.modals.create-lesson-modal :project-id="$project->id" :key="'project-show-create-lesson-modal-'.$project->id" />
+    <livewire:project-show.modals.add-lesson-from-audio-modal :project-id="$project->id" :key="'project-show-add-lesson-from-audio-modal-'.$project->id" />
     <livewire:project-show.modals.add-lessons-list-modal :project-id="$project->id" :key="'project-show-add-lessons-list-modal-'.$project->id" />
     <livewire:project-show.modals.add-pipeline-to-lesson-modal :project-id="$project->id" :key="'project-show-add-pipeline-modal-'.$project->id" />
     <livewire:project-show.modals.project-export-modal :project-id="$project->id" :key="'project-show-export-modal-'.$project->id" />

@@ -3,6 +3,7 @@
 namespace App\Services\Home;
 
 use App\Jobs\DownloadLessonAudioJob;
+use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
 use App\Models\Lesson;
 use App\Models\PipelineRun;
@@ -61,7 +62,7 @@ class QueueWidgetDataProvider
                 continue;
             }
 
-            if ($commandName === DownloadLessonAudioJob::class) {
+            if (in_array($commandName, [DownloadLessonAudioJob::class, NormalizeUploadedLessonAudioJob::class], true)) {
                 $lessonId = $this->extractIntegerPropertyFromPayload($payload, 'lessonId');
 
                 if ($lessonId !== null) {

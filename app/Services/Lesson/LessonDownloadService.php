@@ -31,6 +31,8 @@ class LessonDownloadService
         $tempDirectory = 'downloader/'.$lesson->id.'/'.Str::uuid()->toString();
         $disk->makeDirectory($tempDirectory);
         $absoluteTempDirectory = $disk->path($tempDirectory);
+        $diskRoot = rtrim($disk->path(''), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
+        $relativeInput = null;
 
         try {
             $downloadedFile = $this->downloadAudio(
@@ -39,11 +41,10 @@ class LessonDownloadService
                 $onProgress,
                 $referer,
             );
-            $relativeInput = $this->relativeLocalPath($downloadedFile);
+            $relativeInput = $this->relativeLocalPath($downloadedFile, $diskRoot);
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
             $this->normalizeAudio($relativeInput, $outputPath, $lesson);
-            $disk->delete($relativeInput);
             $onProgress?->__invoke(100.0);
 
             return $outputPath;
@@ -54,14 +55,41 @@ class LessonDownloadService
                 $exception
             );
         } finally {
-            $disk->deleteDirectory($tempDirectory);
+            if (is_string($relativeInput) && $relativeInput !== '') {
+                $disk->delete($relativeInput);
+            }
+        }
+    }
+
+    public function normalizeStoredAudio(Lesson $lesson, string $sourcePath): string
+    {
+        $disk = Storage::disk('local');
+
+        try {
+            if (! $disk->exists($sourcePath)) {
+                throw new RuntimeException('Загруженный аудиофайл не найден во временном хранилище.');
+            }
+
+            $outputPath = 'lessons/'.$lesson->id.'.mp3';
+
+            $this->normalizeAudio($sourcePath, $outputPath, $lesson);
+
+            return $outputPath;
+        } catch (Throwable $exception) {
+            throw new RuntimeException(
+                'Не удалось нормализовать загруженное аудио: '.$exception->getMessage(),
+                0,
+                $exception
+            );
+        } finally {
+            $disk->delete($sourcePath);
         }
     }
 
     /**
      * @param  callable(float):void|null  $onProgress
      */
-    private function downloadAudio(
+    protected function downloadAudio(
         string $targetDirectory,
         string $url,
         ?callable $onProgress = null,
@@ -144,7 +172,7 @@ class LessonDownloadService
         return $options;
     }
 
-    private function normalizeAudio(string $inputPath, string $outputPath, Lesson $lesson): void
+    protected function normalizeAudio(string $inputPath, string $outputPath, Lesson $lesson): void
     {
         $settings = $this->resolveQualitySettings($lesson);
 
@@ -162,15 +190,13 @@ class LessonDownloadService
         $exporter->save($outputPath);
     }
 
-    private function relativeLocalPath(string $absolutePath): string
+    private function relativeLocalPath(string $absolutePath, string $diskRoot): string
     {
-        $root = rtrim(config('filesystems.disks.local.root', storage_path('app/private')), DIRECTORY_SEPARATOR).DIRECTORY_SEPARATOR;
-
-        if (! str_starts_with($absolutePath, $root)) {
+        if (! str_starts_with($absolutePath, $diskRoot)) {
             return $absolutePath;
         }
 
-        return ltrim(substr($absolutePath, strlen($root)), DIRECTORY_SEPARATOR);
+        return ltrim(substr($absolutePath, strlen($diskRoot)), DIRECTORY_SEPARATOR);
     }
 
     /**
