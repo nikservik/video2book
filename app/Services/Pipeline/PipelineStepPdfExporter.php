@@ -4,9 +4,8 @@ namespace App\Services\Pipeline;
 
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
-use Illuminate\Support\Str;
+use Barryvdh\DomPDF\Facade\Pdf;
 use League\CommonMark\CommonMarkConverter;
-use TCPDF;
 
 class PipelineStepPdfExporter
 {
@@ -17,49 +16,67 @@ class PipelineStepPdfExporter
      */
     public function export(PipelineRun $run, PipelineRunStep $step): string
     {
-        $lessonName = $run->lesson?->name ?? 'Урок';
-        $stepName = $step->stepVersion?->name ?? 'Шаг';
-        $title = sprintf('%s — %s', $lessonName, $stepName);
-
+        $title = $run->lesson?->name ?? 'Урок';
         $html = $this->renderHtml($title, $step->result ?? '');
 
-        $pdf = new TCPDF;
-        $pdf->SetTitle($title);
-        $pdf->SetAuthor(config('app.name', 'Video2Book'));
-        $pdf->SetMargins(15, 20, 15);
-        $pdf->AddPage();
-        $pdf->writeHTML($html, true, false, true, false, '');
-
-        return $pdf->Output(Str::random(8).'.pdf', 'S');
+        return Pdf::loadHTML($html)
+            ->setPaper('a4', 'portrait')
+            ->output();
     }
 
     private function renderHtml(string $title, string $markdown): string
     {
         $body = $this->markdown->convert($markdown)->getContent();
+        $escapedTitle = $this->escape($title);
+        $logo = 'uni-logo.png';
 
         return <<<HTML
 <!doctype html>
 <html lang="ru">
 <head>
+  <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
   <meta charset="UTF-8">
+  <title>{$escapedTitle}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:ital,wght@0,200..1000;1,200..1000&display=swap" rel="stylesheet">
   <style>
-    body { font-family: DejaVu Sans, sans-serif; font-size: 12px; color: #1f2937; }
-    h1, h2, h3, h4 { color: #111827; margin: 0 0 8px; }
-    h1 { font-size: 20px; }
-    h2 { font-size: 16px; }
-    h3 { font-size: 14px; }
-    h4 { font-size: 13px; }
-    p { margin: 0 0 8px; line-height: 1.5; }
-    ul, ol { margin: 0 0 10px 18px; padding: 0; }
-    li { margin-bottom: 4px; }
+    @page { margin: 30mm 20mm 25mm; }
+    body { margin: 0; font-family: Nunito, sans-serif; text-align: justify; font-size: 11pt; line-height: 1; color: #111827; }
+    h1, h2, h3 { text-align: left; color: #111827; line-height: 1; break-after: avoid-page; page-break-after: avoid; }
+    h1 { font-size: 20pt; }
+    h2 { font-size: 14pt; margin-top: 20px; }
+    h3 { font-size: 13pt; margin-top: 14px; }
+    p { margin: 10px 0; widows: 2; orphans: 2; }
+    ul { margin: 12px 0 12px 20px; padding: 0; }
+    ol { margin: 12px 0 12px 28px; padding: 0; }
+    ul ul, ol ol, ul ol, ol ul { margin-top: 0; margin-bottom: 0; }
+    li { margin-top: 3px; margin-bottom: 3px; }
     strong { font-weight: 700; }
     em { font-style: italic; }
     u { text-decoration: underline; }
+    #header, #footer { position: fixed; left: 0; right: 0; font-size: 10pt; }
+    #header { top: -15mm; color: #555; }
+    #footer { bottom: -10mm; }
+    #header table, #footer table { width: 100%; border-collapse: collapse; border: none; }
+    #header td, #footer td { padding: 0; width: 50%; }
+    .page-number { text-align: center; }
+    .page-number:before { content: counter(page); }
   </style>
 </head>
 <body>
-  <h1>{$this->escape($title)}</h1>
-  {$body}
+    <div id="header">
+      <table>
+        <tr>
+          <td>{$escapedTitle}</td>
+          <td style="text-align: right;"><img width="150" src="{$logo}" /></td>
+        </tr>
+      </table>
+    </div>
+
+    <div id="footer">
+      <div class="page-number"></div>
+    </div>
+
+    {$body}
 </body>
 </html>
 HTML;

@@ -23,6 +23,7 @@
 - Livewire (целевая серверная UI-архитектура)
 - Laravel AI SDK (`laravel/ai`) как единый слой для OpenAI / Anthropic / Gemini
 - `protonemedia/laravel-ffmpeg` и `norkunas/youtube-dl-php`
+- `barryvdh/laravel-dompdf` для PDF-экспорта (HTML/CSS)
 
 ## Быстрый старт
 
