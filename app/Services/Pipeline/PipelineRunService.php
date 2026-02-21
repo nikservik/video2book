@@ -24,6 +24,36 @@ final class PipelineRunService
      */
     public function createRun(Lesson $lesson, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
     {
+        return $this->createRunInternal(
+            lesson: $lesson,
+            pipelineVersion: $pipelineVersion,
+            sourceRun: null,
+            dispatchJob: $dispatchJob,
+        );
+    }
+
+    /**
+     * Создаёт новый прогон для версии пайплайна и переиспользует результаты
+     * неизменённых шагов из последнего завершённого прогона этого же урока.
+     */
+    public function createRunReusingUnchangedPrefix(Lesson $lesson, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
+    {
+        $sourceRun = $this->resolveReusableSourceRun($lesson, $pipelineVersion);
+
+        return $this->createRunInternal(
+            lesson: $lesson,
+            pipelineVersion: $pipelineVersion,
+            sourceRun: $sourceRun,
+            dispatchJob: $dispatchJob,
+        );
+    }
+
+    private function createRunInternal(
+        Lesson $lesson,
+        PipelineVersion $pipelineVersion,
+        ?PipelineRun $sourceRun,
+        bool $dispatchJob,
+    ): PipelineRun {
         $pipelineVersion->loadMissing('versionSteps.stepVersion.step');
 
         /** @var Collection<int, PipelineVersionStep> $versionSteps */
@@ -35,10 +65,13 @@ final class PipelineRunService
             ]);
         }
 
-        $run = DB::transaction(function () use ($lesson, $pipelineVersion, $versionSteps) {
+        $reusablePrefixSteps = $this->resolveReusablePrefixSteps($versionSteps, $sourceRun);
+        $allStepsReused = count($reusablePrefixSteps) === $versionSteps->count();
+
+        $run = DB::transaction(function () use ($lesson, $pipelineVersion, $versionSteps, $reusablePrefixSteps, $allStepsReused) {
             $run = $lesson->pipelineRuns()->create([
                 'pipeline_version_id' => $pipelineVersion->id,
-                'status' => 'queued',
+                'status' => $allStepsReused ? 'done' : 'queued',
                 'state' => [],
             ]);
 
@@ -50,26 +83,94 @@ final class PipelineRunService
                     continue;
                 }
 
+                $position = $versionStep->position ?? ($index + 1);
+                $reusedStep = $reusablePrefixSteps[$position] ?? null;
+
                 $run->steps()->create([
                     'step_version_id' => $stepVersion->id,
-                    'position' => $versionStep->position ?? ($index + 1),
-                    'status' => 'pending',
+                    'position' => $position,
+                    'status' => $reusedStep === null ? 'pending' : 'done',
+                    'start_time' => null,
+                    'end_time' => null,
+                    'error' => null,
+                    'result' => $reusedStep?->result,
+                    'input_tokens' => $reusedStep === null ? null : 0,
+                    'output_tokens' => $reusedStep === null ? null : 0,
+                    'cost' => $reusedStep === null ? null : 0,
                 ]);
             }
 
             return $run;
         });
 
-        if ($dispatchJob) {
+        if ($dispatchJob && $run->status === 'queued') {
             ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
         }
 
         $run->load('pipelineVersion', 'lesson', 'steps.stepVersion.step');
 
-        $this->eventBroadcaster->queueRunUpdated($run);
+        if (in_array($run->status, ['queued', 'running'], true)) {
+            $this->eventBroadcaster->queueRunUpdated($run);
+        } else {
+            $this->eventBroadcaster->queueRunRemoved($run->id);
+        }
+
         $this->eventBroadcaster->runUpdated($run);
 
         return $run;
+    }
+
+    private function resolveReusableSourceRun(Lesson $lesson, PipelineVersion $pipelineVersion): ?PipelineRun
+    {
+        return PipelineRun::query()
+            ->where('lesson_id', $lesson->id)
+            ->where('status', 'done')
+            ->whereHas('pipelineVersion', function ($query) use ($pipelineVersion): void {
+                $query->where('pipeline_id', $pipelineVersion->pipeline_id);
+            })
+            ->with(['steps' => fn ($query) => $query->orderBy('position')->orderBy('id')])
+            ->orderByDesc('id')
+            ->first();
+    }
+
+    /**
+     * @param  Collection<int, PipelineVersionStep>  $versionSteps
+     * @return array<int, PipelineRunStep>
+     */
+    private function resolveReusablePrefixSteps(Collection $versionSteps, ?PipelineRun $sourceRun): array
+    {
+        if ($sourceRun === null) {
+            return [];
+        }
+
+        $sourceRun->loadMissing('steps');
+        $sourceSteps = $sourceRun->steps->sortBy('position')->values();
+        $reusableSteps = [];
+
+        foreach ($versionSteps as $index => $versionStep) {
+            /** @var StepVersion|null $stepVersion */
+            $stepVersion = $versionStep->stepVersion;
+
+            /** @var PipelineRunStep|null $sourceStep */
+            $sourceStep = $sourceSteps->get($index);
+
+            if ($stepVersion === null || $sourceStep === null) {
+                break;
+            }
+
+            if ((int) $sourceStep->step_version_id !== (int) $stepVersion->id) {
+                break;
+            }
+
+            if ($sourceStep->status !== 'done') {
+                break;
+            }
+
+            $position = (int) ($versionStep->position ?? ($index + 1));
+            $reusableSteps[$position] = $sourceStep;
+        }
+
+        return $reusableSteps;
     }
 
     /**

@@ -32,6 +32,6 @@ class AddPipelineVersionToLessonAction
 
         $pipelineVersion = PipelineVersion::query()->findOrFail($pipelineVersionId);
 
-        $this->pipelineRunService->createRun($lesson, $pipelineVersion);
+        $this->pipelineRunService->createRunReusingUnchangedPrefix($lesson, $pipelineVersion);
     }
 }
