@@ -18,6 +18,7 @@
 + Обновление результатов по мере обработки
 + Экспорт выбранного шага в PDF / MD / DOCX
 + PDF-экспорт переведён на `barryvdh/laravel-dompdf` (генерация из HTML/CSS)
++ Шаблон PDF вынесен в Blade: `resources/views/pdf/pipeline-step.blade.php` (`Pdf::loadView`)
 
 ## Pipeline 
 + Список 

@@ -12,6 +12,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
 ### Changed
 - Экспорт PDF результата шага переведён с `TCPDF` на `barryvdh/laravel-dompdf`: обновлён `PipelineStepPdfExporter`, удалён пакет `elibyy/tcpdf-laravel`, добавлен unit-тест генерации PDF.
+- HTML-разметка PDF-экспорта вынесена из `PipelineStepPdfExporter` в Blade-шаблон `resources/views/pdf/pipeline-step.blade.php`; генерация переведена на `Pdf::loadView(...)`.
 - Транскрибация через `gemini` переведена на multimodal-flow (audio attachment + prompt в текстовом запросе), а для `whisper-*` сохранён стандартный STT путь Laravel AI SDK.
 - Добавлен основной Blade-лейаут `resources/views/layouts/app.blade.php` по шаблону dashboard-навигации (desktop + mobile), `welcome` переведён на этот layout.
 - Локальная иконка приложения подключена как favicon (`public/favicon.png`, без преобразования исходного `resources/images/favicon.png`) и как логотип в основном layout.
