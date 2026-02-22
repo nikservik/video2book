@@ -194,8 +194,9 @@
             <div class="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
                 @if (! empty($breadcrumbs))
                     <nav aria-label="Breadcrumb" data-breadcrumbs class="py-4 flex">
-                        <ol role="list" class="flex items-center gap-3 text-gray-500 dark:text-gray-400">
-                            <li>
+                        <ol role="list"
+                            class="flex flex-wrap items-center gap-x-3 gap-y-2 pl-7 text-gray-500 dark:text-gray-400 md:flex-nowrap md:gap-y-0 mc:pl-0">
+                            <li class="-ml-7 shrink-0 md:ml-0">
                                 <a href="{{ route('home') }}"
                                    wire:navigate
                                    class="text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
@@ -209,21 +210,21 @@
                                 </a>
                             </li>
                             @foreach (($breadcrumbs ?? []) as $breadcrumb)
-                                <li class="flex items-center gap-3 text-sm">
+                                <li class="flex min-w-0 max-w-full flex-nowrap items-center gap-3 text-sm">
                                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"
                                          stroke-width="1.5" stroke="currentColor"
                                          class="size-4 shrink-0 text-gray-400 dark:text-gray-500" aria-hidden="true">
                                         <path stroke-linecap="round" stroke-linejoin="round" d="m9 5.25 7.5 6.75-7.5 6.75"/>
                                     </svg>
                                     @if (($breadcrumb['current'] ?? false) || empty($breadcrumb['url']))
-                                        <span class="font-medium text-gray-700 dark:text-gray-200"
+                                        <span class="max-w-full font-medium text-gray-700 dark:text-gray-200"
                                               @if ($breadcrumb['current'] ?? false) aria-current="page" @endif>
                                             {{ $breadcrumb['label'] }}
                                         </span>
                                     @else
                                         <a href="{{ $breadcrumb['url'] }}"
                                            wire:navigate
-                                           class="font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
+                                           class="max-w-full font-medium text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200">
                                             {{ $breadcrumb['label'] }}
                                         </a>
                                     @endif

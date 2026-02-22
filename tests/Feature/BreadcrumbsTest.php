@@ -27,6 +27,18 @@ class BreadcrumbsTest extends TestCase
             ], false);
     }
 
+    public function test_projects_index_renders_mobile_breadcrumb_wrapping_classes(): void
+    {
+        $response = $this->get(route('projects.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('flex flex-wrap items-start gap-x-3 gap-y-2 pl-6', false)
+            ->assertSee('class="-ml-6 shrink-0 sm:ml-0"', false)
+            ->assertSee('flex min-w-0 max-w-full flex-nowrap items-start gap-3 text-sm sm:items-center"', false)
+            ->assertSee('max-w-full break-words', false);
+    }
+
     public function test_project_show_renders_breadcrumbs_path(): void
     {
         $project = Project::query()->create([
