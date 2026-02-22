@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-22] feat: длительность аудио урока
+- После нормализации аудио через `ffprobe` длительность сохраняется в `lesson.settings.audio_duration_seconds`.
+- На карточке урока страницы проекта рядом с иконкой статуса загрузки добавлен вывод длительности в формате `HH:MM`.
+- Добавлены feature/unit-тесты для сохранения и отображения длительности.
+
+## [2026-02-22] fix: стабилизация загрузки аудиофайла в модале урока
+- На странице проекта polling списка уроков теперь приостанавливается во время `livewire`-загрузки аудиофайла и возобновляется после `finish/error/cancel`.
+- В `AddLessonFromAudioModal` добавлен безопасный сброс флага upload при закрытии модала.
+- В контейнере модала `Добавить урок из аудио` заменён `wire:click.stop` на `x-on:click.stop`, чтобы клик по зоне выбора файла не инициировал лишний Livewire-запрос и не сбрасывал file-input во время upload.
+- В модале `Добавить урок из аудио` добавлено toast-уведомление (по шаблону `twui` `overlay/notification`) с кнопкой `Обновить страницу`, которое показывается при `livewire-upload-error`.
+
 ## [Unreleased]
 
 ### Planned

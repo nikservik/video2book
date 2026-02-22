@@ -49,7 +49,7 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         $lastProgressBroadcastAt = null;
 
         try {
-            $downloadedPath = $downloadService->downloadAndNormalize(
+            $downloadResult = $downloadService->downloadAndNormalize(
                 lesson: $lesson,
                 url: $this->sourceUrl,
                 onProgress: function (float $progress) use (&$lesson, $eventBroadcaster, &$lastProgressBroadcastAt): void {
@@ -70,7 +70,11 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
                 referer: $this->projectReferer($lesson),
             );
 
-            $lesson = $this->markAsCompleted($lesson, $downloadedPath);
+            $lesson = $this->markAsCompleted(
+                lesson: $lesson,
+                path: $downloadResult['path'],
+                durationSeconds: $downloadResult['duration_seconds'],
+            );
             $eventBroadcaster->downloadCompleted($lesson);
 
             $pipelineRunService->dispatchQueuedRuns($lesson);
@@ -107,14 +111,18 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         return $lesson->fresh('project');
     }
 
-    private function markAsCompleted(Lesson $lesson, string $path): Lesson
-    {
+    private function markAsCompleted(
+        Lesson $lesson,
+        string $path,
+        ?int $durationSeconds,
+    ): Lesson {
         $settings = $lesson->settings ?? [];
         $settings['downloading'] = false;
         $settings['download_status'] = 'completed';
         $settings['download_progress'] = 100;
         $settings['download_error'] = null;
         $settings['download_source'] = null;
+        $settings['audio_duration_seconds'] = $durationSeconds;
 
         $lesson->forceFill([
             'settings' => $settings,

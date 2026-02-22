@@ -94,7 +94,10 @@ class LessonDownloadTest extends TestCase
                 $callback(12.3);
                 $callback(100.0);
 
-                return 'lessons/'.$invokedLesson->id.'.mp3';
+                return [
+                    'path' => 'lessons/'.$invokedLesson->id.'.mp3',
+                    'duration_seconds' => 4050,
+                ];
             });
 
         $job = new DownloadLessonAudioJob($lesson->id, 'https://youtube.com/watch?v=ready');
@@ -110,6 +113,7 @@ class LessonDownloadTest extends TestCase
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('completed', data_get($lesson->settings, 'download_status'));
         $this->assertEquals(100, data_get($lesson->settings, 'download_progress'));
+        $this->assertSame(4050, data_get($lesson->settings, 'audio_duration_seconds'));
 
         Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $queuedJob) use ($run) {
             return $queuedJob->pipelineRunId === $run->id;
@@ -193,11 +197,14 @@ class LessonDownloadTest extends TestCase
         $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
         $service->shouldReceive('normalizeStoredAudio')
             ->once()
-            ->andReturnUsing(function (Lesson $invokedLesson, string $sourcePath) use ($lesson): string {
+            ->andReturnUsing(function (Lesson $invokedLesson, string $sourcePath) use ($lesson): array {
                 $this->assertSame($lesson->id, $invokedLesson->id);
                 $this->assertSame('downloader/'.$lesson->id.'/abc/uploaded.wav', $sourcePath);
 
-                return 'lessons/'.$invokedLesson->id.'.mp3';
+                return [
+                    'path' => 'lessons/'.$invokedLesson->id.'.mp3',
+                    'duration_seconds' => 1830,
+                ];
             });
 
         $job = new NormalizeUploadedLessonAudioJob($lesson->id, 'downloader/'.$lesson->id.'/abc/uploaded.wav');
@@ -213,6 +220,7 @@ class LessonDownloadTest extends TestCase
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('completed', data_get($lesson->settings, 'download_status'));
         $this->assertEquals(100, data_get($lesson->settings, 'download_progress'));
+        $this->assertSame(1830, data_get($lesson->settings, 'audio_duration_seconds'));
 
         Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $queuedJob) use ($run) {
             return $queuedJob->pipelineRunId === $run->id;

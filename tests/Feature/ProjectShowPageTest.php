@@ -193,6 +193,21 @@ class ProjectShowPageTest extends TestCase
             ->assertDontSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
+    public function test_project_page_disables_lessons_polling_while_audio_upload_is_in_progress(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с загрузкой аудио',
+            'tags' => null,
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false)
+            ->dispatch('project-show:audio-upload-started')
+            ->assertDontSee('wire:poll.2s="refreshProjectLessons"', false)
+            ->dispatch('project-show:audio-upload-finished')
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
+    }
+
     public function test_project_page_keeps_lessons_order_when_modal_state_changes(): void
     {
         ProjectTag::query()->create([
@@ -287,6 +302,45 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('text-gray-500 dark:text-gray-400', false)
             ->assertSee('text-yellow-500 dark:text-yellow-400', false)
             ->assertSee('text-green-500 dark:text-green-400', false);
+    }
+
+    public function test_project_page_shows_audio_duration_for_loaded_lessons_in_hh_mm_format(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с длительностью',
+            'tags' => null,
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок с длительностью',
+            'tag' => 'default',
+            'source_filename' => 'lessons/101.mp3',
+            'settings' => [
+                'audio_duration_seconds' => 5415,
+            ],
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок в очереди',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [
+                'download_status' => 'queued',
+                'audio_duration_seconds' => 3600,
+            ],
+        ]);
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertSee('data-audio-duration="01:30"', false)
+            ->assertDontSee('data-audio-duration="01:00"', false);
     }
 
     public function test_delete_project_alert_can_be_opened_and_closed(): void
@@ -1077,6 +1131,8 @@ class ProjectShowPageTest extends TestCase
             ->assertSet('newLessonPipelineVersionId', $pipelineVersion->id)
             ->assertSee('Добавить урок из аудио')
             ->assertSee('Перетащите аудиофайл сюда или нажмите для выбора')
+            ->assertSee('Не удалось загрузить файл')
+            ->assertSee('Обновить страницу')
             ->assertSee('Версия пайплайна')
             ->call('close')
             ->assertSet('show', false)

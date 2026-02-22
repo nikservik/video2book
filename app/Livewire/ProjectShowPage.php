@@ -14,6 +14,8 @@ class ProjectShowPage extends Component
 
     public int $openedModalCount = 0;
 
+    public bool $isAudioUploadInProgress = false;
+
     public function mount(Project $project): void
     {
         $this->project = $this->loadProjectDetails($project);
@@ -39,9 +41,21 @@ class ProjectShowPage extends Component
         $this->project = $this->loadProjectDetails($this->project->fresh());
     }
 
+    #[On('project-show:audio-upload-started')]
+    public function markAudioUploadStarted(): void
+    {
+        $this->isAudioUploadInProgress = true;
+    }
+
+    #[On('project-show:audio-upload-finished')]
+    public function markAudioUploadFinished(): void
+    {
+        $this->isAudioUploadInProgress = false;
+    }
+
     public function getShouldPollProjectLessonsProperty(): bool
     {
-        return $this->openedModalCount === 0;
+        return $this->openedModalCount === 0 && ! $this->isAudioUploadInProgress;
     }
 
     public function pipelineRunStatusLabel(?string $status): string
@@ -116,6 +130,30 @@ class ProjectShowPage extends Component
         $error = trim((string) data_get($settings, 'download_error', ''));
 
         return $error !== '' ? $error : 'Ошибка загрузки аудио';
+    }
+
+    public function lessonAudioDurationLabel(?array $settings, ?string $sourceFilename): ?string
+    {
+        if ($this->lessonAudioDownloadStatus($settings, $sourceFilename) !== 'loaded') {
+            return null;
+        }
+
+        $durationSeconds = data_get($settings, 'audio_duration_seconds');
+
+        if (! is_numeric($durationSeconds)) {
+            return null;
+        }
+
+        $durationSeconds = (int) $durationSeconds;
+
+        if ($durationSeconds <= 0) {
+            return null;
+        }
+
+        $hours = intdiv($durationSeconds, 3600);
+        $minutes = intdiv($durationSeconds % 3600, 60);
+
+        return sprintf('%02d:%02d', $hours, $minutes);
     }
 
     public function render(): View

@@ -52,9 +52,10 @@ class LessonDownloadServiceTest extends TestCase
             }
         );
 
-        $normalizedPath = $service->normalizeStoredAudio($lesson, $sourcePath);
+        $result = $service->normalizeStoredAudio($lesson, $sourcePath);
 
-        $this->assertSame('lessons/'.$lesson->id.'.mp3', $normalizedPath);
+        $this->assertSame('lessons/'.$lesson->id.'.mp3', $result['path']);
+        $this->assertNull($result['duration_seconds']);
         Storage::disk('local')->assertMissing($sourcePath);
     }
 
@@ -100,9 +101,10 @@ class LessonDownloadServiceTest extends TestCase
             }
         );
 
-        $normalizedPath = $service->downloadAndNormalize($lesson, 'https://youtube.com/watch?v=abc');
+        $result = $service->downloadAndNormalize($lesson, 'https://youtube.com/watch?v=abc');
 
-        $this->assertSame('lessons/'.$lesson->id.'.mp3', $normalizedPath);
+        $this->assertSame('lessons/'.$lesson->id.'.mp3', $result['path']);
+        $this->assertNull($result['duration_seconds']);
         $this->assertSame([], Storage::disk('local')->allFiles('downloader/'.$lesson->id));
     }
 

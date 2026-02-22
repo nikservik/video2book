@@ -64,6 +64,7 @@ class AddLessonFromAudioModal extends Component
         }
 
         $this->show = false;
+        $this->dispatch('project-show:audio-upload-finished');
         $this->dispatch('project-show:modal-closed');
     }
 

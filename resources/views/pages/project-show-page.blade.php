@@ -116,6 +116,12 @@
                                           <path fill-rule="evenodd" d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm5.25-9.25a.75.75 0 0 0-1.5 0v4.59l-1.95-2.1a.75.75 0 1 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V7.75Z" clip-rule="evenodd" />
                                         </svg>
                                     </span>
+                                    @if (($lessonAudioDuration = $this->lessonAudioDurationLabel($lesson->settings, $lesson->source_filename)) !== null)
+                                        <span data-audio-duration="{{ $lessonAudioDuration }}"
+                                              class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                            {{ $lessonAudioDuration }}
+                                        </span>
+                                    @endif
                                 </button>
                                 <div class="mt-px flex items-center gap-1">
                                     <button type="button"

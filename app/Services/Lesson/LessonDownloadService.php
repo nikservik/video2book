@@ -20,13 +20,14 @@ class LessonDownloadService
      * Скачивает аудио с YouTube и нормализует его в MP3 с нужными параметрами.
      *
      * @param  callable(float):void|null  $onProgress
+     * @return array{path: string, duration_seconds: int|null}
      */
     public function downloadAndNormalize(
         Lesson $lesson,
         string $url,
         ?callable $onProgress = null,
         ?string $referer = null,
-    ): string {
+    ): array {
         $disk = Storage::disk('local');
         $tempDirectory = 'downloader/'.$lesson->id.'/'.Str::uuid()->toString();
         $disk->makeDirectory($tempDirectory);
@@ -45,9 +46,13 @@ class LessonDownloadService
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
             $this->normalizeAudio($relativeInput, $outputPath, $lesson);
+            $durationSeconds = $this->resolveAudioDurationInSeconds($outputPath);
             $onProgress?->__invoke(100.0);
 
-            return $outputPath;
+            return [
+                'path' => $outputPath,
+                'duration_seconds' => $durationSeconds,
+            ];
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 'Не удалось скачать или нормализовать аудио: '.$exception->getMessage(),
@@ -61,7 +66,10 @@ class LessonDownloadService
         }
     }
 
-    public function normalizeStoredAudio(Lesson $lesson, string $sourcePath): string
+    /**
+     * @return array{path: string, duration_seconds: int|null}
+     */
+    public function normalizeStoredAudio(Lesson $lesson, string $sourcePath): array
     {
         $disk = Storage::disk('local');
 
@@ -73,8 +81,12 @@ class LessonDownloadService
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
             $this->normalizeAudio($sourcePath, $outputPath, $lesson);
+            $durationSeconds = $this->resolveAudioDurationInSeconds($outputPath);
 
-            return $outputPath;
+            return [
+                'path' => $outputPath,
+                'duration_seconds' => $durationSeconds,
+            ];
         } catch (Throwable $exception) {
             throw new RuntimeException(
                 'Не удалось нормализовать загруженное аудио: '.$exception->getMessage(),
@@ -218,5 +230,18 @@ class LessonDownloadService
         $proxy = trim((string) config('downloader.proxy', ''));
 
         return $proxy !== '' ? $proxy : null;
+    }
+
+    private function resolveAudioDurationInSeconds(string $audioPath): ?int
+    {
+        try {
+            $duration = FFMpeg::fromDisk('local')
+                ->open($audioPath)
+                ->getDurationInSeconds();
+        } catch (Throwable) {
+            return null;
+        }
+
+        return $duration > 0 ? (int) $duration : null;
     }
 }

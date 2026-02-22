@@ -1,11 +1,15 @@
 <div>
 @if ($show)
-    <div class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" data-add-lesson-from-audio-modal>
+    <div class="fixed inset-0 z-50 overflow-y-auto"
+         role="dialog"
+         aria-modal="true"
+         x-data="{ showUploadErrorNotification: false }"
+         data-add-lesson-from-audio-modal>
         <div class="fixed inset-0 bg-gray-500/75 transition-opacity dark:bg-gray-900/50" wire:click="close"></div>
 
         <div tabindex="0" class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
             <div class="relative transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
-                 wire:click.stop>
+                 x-on:click.stop>
                 <form wire:submit="createLessonFromAudio" class="space-y-5">
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить урок из аудио</h3>
@@ -41,6 +45,10 @@
                             <input id="lesson-audio-file"
                                    type="file"
                                    wire:model="newLessonAudioFile"
+                                   x-on:livewire-upload-start="showUploadErrorNotification = false; $dispatch('project-show:audio-upload-started')"
+                                   x-on:livewire-upload-finish="$dispatch('project-show:audio-upload-finished')"
+                                   x-on:livewire-upload-cancel="$dispatch('project-show:audio-upload-finished')"
+                                   x-on:livewire-upload-error="showUploadErrorNotification = true; $dispatch('project-show:audio-upload-finished')"
                                    accept=".mp3,.wav,.m4a,.aac,.ogg,.oga,.flac,.webm,.mp4,audio/*"
                                    class="absolute inset-0 h-full w-full cursor-pointer opacity-0">
 
@@ -124,6 +132,51 @@
                 </form>
             </div>
         </div>
-    </div>
+
+        <div aria-live="assertive" class="pointer-events-none fixed inset-0 flex items-end px-4 py-6 sm:items-start sm:p-6">
+            <div class="flex w-full flex-col items-center space-y-4 sm:items-end">
+                <div x-show="showUploadErrorNotification"
+                     x-transition
+                     class="pointer-events-auto w-full max-w-sm translate-y-0 transform rounded-lg bg-white opacity-100 shadow-lg outline-1 outline-black/5 transition duration-300 ease-out sm:translate-x-0 dark:bg-gray-800 dark:-outline-offset-1 dark:outline-white/10">
+                    <div class="p-4">
+                        <div class="flex items-start">
+                            <div class="shrink-0">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true" class="size-6 text-red-500 dark:text-red-400">
+                                    <path d="M12 9v3.75m9.303 3.376c.866 1.5-.217 3.374-1.95 3.374H4.647c-1.733 0-2.816-1.874-1.95-3.374L10.05 3.374c.866-1.5 3.034-1.5 3.9 0l7.353 12.752ZM12 16.5h.008v.008H12V16.5Z" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </div>
+                            <div class="ml-3 w-0 flex-1 pt-0.5">
+                                <p class="text-sm font-medium text-gray-900 dark:text-white">Не удалось загрузить файл</p>
+                                <p class="mt-1 text-sm text-gray-500 dark:text-gray-400">
+                                    Попробуйте выбрать файл ещё раз. Если ошибка повторится, обновите страницу и повторите загрузку.
+                                </p>
+                                <div class="mt-3 flex items-center gap-2">
+                                    <button type="button"
+                                            x-on:click="window.location.reload()"
+                                            class="inline-flex items-center rounded-md bg-indigo-600 px-2.5 py-1.5 text-xs font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                                        Обновить страницу
+                                    </button>
+                                    <button type="button"
+                                            x-on:click="showUploadErrorNotification = false"
+                                            class="inline-flex items-center rounded-md px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-white/10">
+                                        Закрыть
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="ml-4 flex shrink-0">
+                                <button type="button"
+                                        x-on:click="showUploadErrorNotification = false"
+                                        class="inline-flex rounded-md text-gray-400 hover:text-gray-500 focus:outline-2 focus:outline-offset-2 focus:outline-indigo-600 dark:hover:text-white dark:focus:outline-indigo-500">
+                                    <span class="sr-only">Закрыть уведомление</span>
+                                    <svg viewBox="0 0 20 20" fill="currentColor" aria-hidden="true" class="size-5">
+                                        <path d="M6.28 5.22a.75.75 0 0 0-1.06 1.06L8.94 10l-3.72 3.72a.75.75 0 1 0 1.06 1.06L10 11.06l3.72 3.72a.75.75 0 1 0 1.06-1.06L11.06 10l3.72-3.72a.75.75 0 0 0-1.06-1.06L10 8.94 6.28 5.22Z"/>
+                                    </svg>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 @endif
 </div>

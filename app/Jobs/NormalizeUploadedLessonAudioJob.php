@@ -47,12 +47,16 @@ class NormalizeUploadedLessonAudioJob implements ShouldBeUnique, ShouldQueue
         $eventBroadcaster->downloadStarted($lesson);
 
         try {
-            $normalizedPath = $downloadService->normalizeStoredAudio(
+            $normalizedResult = $downloadService->normalizeStoredAudio(
                 lesson: $lesson,
                 sourcePath: $this->uploadedAudioPath,
             );
 
-            $lesson = $this->markAsCompleted($lesson, $normalizedPath);
+            $lesson = $this->markAsCompleted(
+                lesson: $lesson,
+                path: $normalizedResult['path'],
+                durationSeconds: $normalizedResult['duration_seconds'],
+            );
             $eventBroadcaster->downloadCompleted($lesson);
 
             $pipelineRunService->dispatchQueuedRuns($lesson);
@@ -77,14 +81,18 @@ class NormalizeUploadedLessonAudioJob implements ShouldBeUnique, ShouldQueue
         return $lesson->fresh('project');
     }
 
-    private function markAsCompleted(Lesson $lesson, string $path): Lesson
-    {
+    private function markAsCompleted(
+        Lesson $lesson,
+        string $path,
+        ?int $durationSeconds,
+    ): Lesson {
         $settings = $lesson->settings ?? [];
         $settings['downloading'] = false;
         $settings['download_status'] = 'completed';
         $settings['download_progress'] = 100;
         $settings['download_error'] = null;
         $settings['download_source'] = null;
+        $settings['audio_duration_seconds'] = $durationSeconds;
 
         $lesson->forceFill([
             'settings' => $settings,
