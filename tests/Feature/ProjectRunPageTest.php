@@ -35,6 +35,12 @@ class ProjectRunPageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Урок по Laravel')
             ->assertSee('Пайплайн обучения • v3')
+            ->assertSee('data-mobile-run-steps-dropdown', false)
+            ->assertSee('data-mobile-run-steps-toggle', false)
+            ->assertSee('data-mobile-run-steps-list', false)
+            ->assertSee('data-run-step-mobile="'.$firstRunStep->id.'"', false)
+            ->assertSee('hidden md:block md:col-span-1', false)
+            ->assertSee('grid grid-cols-1 gap-6 md:grid-cols-3', false)
             ->assertSee('wire:poll.2s="refreshRunSteps"', false)
             ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false)
             ->assertSee('Транскрибация')
@@ -210,11 +216,17 @@ class ProjectRunPageTest extends TestCase
             'pipelineRun' => $pipelineRun->fresh(),
         ]);
 
-        $this->assertTextOrder($component->html(), ['Саммаризация', 'Транскрибация']);
+        $this->assertTextOrder($component->html(), [
+            'data-run-step="'.$secondRunStep->id.'"',
+            'data-run-step="'.$firstRunStep->id.'"',
+        ]);
 
         $component->call('selectStep', $firstRunStep->id);
 
-        $this->assertTextOrder($component->html(), ['Саммаризация', 'Транскрибация']);
+        $this->assertTextOrder($component->html(), [
+            'data-run-step="'.$secondRunStep->id.'"',
+            'data-run-step="'.$firstRunStep->id.'"',
+        ]);
     }
 
     public function test_project_run_page_shows_control_buttons_based_on_steps_state(): void

@@ -45,8 +45,85 @@
         </div>
     </div>
 
-    <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <section class="rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm lg:col-span-2 dark:border-white/10 dark:bg-gray-800">
+    <div class="relative md:hidden"
+         x-data="{ isMobileRunStepsMenuOpen: false }"
+         x-on:click.outside="isMobileRunStepsMenuOpen = false"
+        data-mobile-run-steps-dropdown>
+        @if ($pipelineRun->steps->isNotEmpty())
+            <div class="relative">
+                <button type="button"
+                        x-on:click="isMobileRunStepsMenuOpen = !isMobileRunStepsMenuOpen"
+                        x-bind:aria-expanded="isMobileRunStepsMenuOpen ? 'true' : 'false'"
+                        class="w-full rounded-lg border border-gray-200 bg-white p-3 text-left transition hover:border-gray-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20 dark:focus-visible:outline-indigo-500"
+                        data-mobile-run-steps-toggle>
+                    <div class="flex items-center justify-between gap-3">
+                        <span class="truncate text-gray-900 dark:text-white">
+                            {{ $this->selectedStep?->stepVersion?->name ?? 'Без названия шага' }}
+                        </span>
+                        <span class="flex items-center gap-2">
+                            <span class="{{ $this->stepStatusBadgeClass($this->selectedStep?->status) }}">
+                                {{ $this->stepStatusLabel($this->selectedStep?->status) }}
+                            </span>
+                            <svg xmlns="http://www.w3.org/2000/svg"
+                                 viewBox="0 0 20 20"
+                                 fill="currentColor"
+                                 class="size-5 text-gray-400 transition-transform dark:text-gray-500"
+                                 x-bind:class="{ 'rotate-180': isMobileRunStepsMenuOpen }">
+                                <path fill-rule="evenodd" d="M5.22 8.22a.75.75 0 0 1 1.06 0L10 11.94l3.72-3.72a.75.75 0 1 1 1.06 1.06l-4.25 4.25a.75.75 0 0 1-1.06 0L5.22 9.28a.75.75 0 0 1 0-1.06Z" clip-rule="evenodd" />
+                            </svg>
+                        </span>
+                    </div>
+
+                    <div class="mt-2 flex flex-wrap items-center gap-2">
+                        <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($this->selectedStep?->input_tokens) }}</span>
+                        <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($this->selectedStep?->output_tokens) }}</span>
+                        <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($this->selectedStep?->cost) }}</span>
+                    </div>
+                </button>
+
+                <div x-show="isMobileRunStepsMenuOpen"
+                     x-transition
+                     style="display: none;"
+                     class="absolute left-0 top-0 z-20 w-full space-y-3 bg-gray-100 dark:bg-gray-900 rounded-lg"
+                     data-mobile-run-steps-list>
+                    @foreach ($pipelineRun->steps as $step)
+                        <button type="button"
+                                x-on:click="isMobileRunStepsMenuOpen = false"
+                                wire:click="selectStep({{ $step->id }})"
+                                data-run-step-mobile="{{ $step->id }}"
+                                data-active="{{ $selectedStepId === $step->id ? 'true' : 'false' }}"
+                                class="w-full rounded-lg border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-500 {{ $selectedStepId === $step->id
+                                    ? 'border-indigo-500 bg-indigo-100 dark:border-indigo-400 dark:bg-indigo-900'
+                                    : 'border-gray-200 bg-white hover:border-gray-300 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20' }}">
+                            <div class="flex items-center justify-between gap-3">
+                                <span class="truncate text-gray-900 dark:text-white">
+                                    {{ $step->stepVersion?->name ?? 'Без названия шага' }}
+                                </span>
+                                <span>
+                                    <span class="{{ $this->stepStatusBadgeClass($step->status) }}">
+                                        {{ $this->stepStatusLabel($step->status) }}
+                                    </span>
+                                </span>
+                            </div>
+
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($step->input_tokens) }}</span>
+                                <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($step->output_tokens) }}</span>
+                                <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($step->cost) }}</span>
+                            </div>
+                        </button>
+                    @endforeach
+                </div>
+            </div>
+        @else
+            <div class="rounded-lg border border-dashed border-gray-300 px-4 py-5 dark:border-white/15">
+                <p class="text-gray-600 dark:text-gray-300">В этом прогоне пока нет шагов.</p>
+            </div>
+        @endif
+    </div>
+
+    <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
+        <section class="rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm md:col-span-2 dark:border-white/10 dark:bg-gray-800">
             <div class="mb-6 flex flex-wrap items-center gap-3">
                 <button type="button"
                         wire:click="downloadSelectedStepPdf"
@@ -122,7 +199,7 @@
             </div>
         </section>
 
-        <aside class="lg:col-span-1" @if ($this->hasUnfinishedSteps) wire:poll.2s="refreshRunSteps" @endif>
+        <aside class="hidden md:block md:col-span-1" @if ($this->hasUnfinishedSteps) wire:poll.2s="refreshRunSteps" @endif>
             <div class="space-y-3">
                 @forelse ($pipelineRun->steps as $step)
                     <button type="button"
@@ -130,7 +207,7 @@
                             data-run-step="{{ $step->id }}"
                             data-active="{{ $selectedStepId === $step->id ? 'true' : 'false' }}"
                             class="w-full rounded-lg border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-500 {{ $selectedStepId === $step->id
-                                ? 'border-indigo-500 bg-indigo-50/60 dark:border-indigo-400 dark:bg-indigo-500/20'
+                                ? 'border-indigo-500 bg-indigo-100 dark:border-indigo-400 dark:bg-indigo-900'
                                 : 'border-gray-200 bg-white hover:border-gray-300 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20' }}">
                         <div class="flex items-center justify-between gap-3">
                             <span class="truncate text-gray-900 dark:text-white">
