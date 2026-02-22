@@ -25,7 +25,7 @@
              x-on:click.outside="if (! $event.target.closest('[data-project-actions-toggle]')) { isActionsMenuOpen = false }"
              x-transition
              data-project-actions-menu>
-            <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-gray-800 md:bg-transparent md:p-0 md:shadow-none md:border-none">
+            <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-gray-800 md:bg-transparent md:dark:bg-transparent md:p-0 md:shadow-none md:border-none">
                 <div class="space-y-3">
                     <button type="button"
                             x-on:click="isActionsMenuOpen = false"
