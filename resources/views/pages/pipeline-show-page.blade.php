@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <h1 class="mx-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+    <h1 class="mx-2 md:mx-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
         {{ $this->selectedVersionTitle }}
         <span class="ml-3 inline-block text-base font-normal tracking-normal text-gray-500 dark:text-gray-400">v{{ $this->selectedVersionNumber }}</span>
     </h1>

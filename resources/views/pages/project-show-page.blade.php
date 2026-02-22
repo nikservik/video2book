@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <h1 class="mx-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $project->name }}</h1>
+    <h1 class="mx-2 md:mx-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $project->name }}</h1>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section class="lg:col-span-2"
@@ -11,7 +11,7 @@
                     </p>
                 </div>
             @else
-                <div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+                <div class="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2">
                     @foreach ($project->lessons as $lesson)
                         <article wire:key="lesson-row-{{ $lesson->id }}"
                                  class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-800">

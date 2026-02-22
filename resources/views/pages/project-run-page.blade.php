@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <div class="mx-6 flex items-start justify-between gap-3">
+    <div class="mx-2 md:mx-4 flex items-start justify-between gap-3">
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-200">
             {{ $pipelineRun->lesson?->name ?? 'Урок' }}
             <span class="md:ml-3 inline-block tracking-normal text-lg font-normal text-gray-500 dark:text-gray-400">{{ $this->pipelineVersionLabel }}</span>
@@ -104,13 +104,13 @@
                 </span>
             </div>
 
-            <div class="rounded-lg bg-indigo-50 px-6 py-4 dark:bg-gray-900/50"
+            <div class="rounded-lg bg-indigo-50 -mx-4 md:mx-0 px-4 md:px-6 py-4 dark:bg-gray-900/50"
                  @if ($this->shouldPollSelectedStepResult) wire:poll.1s="refreshSelectedStepResult" @endif>
                 @if ($resultViewMode === 'preview')
                     <div data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
                          data-selected-step-result
                          data-result-mode="preview"
-                         class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
+                         class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
                         {!! $this->selectedStepResultPreview !!}
                     </div>
                 @else

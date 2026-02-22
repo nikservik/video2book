@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <div class="mx-6 flex items-center justify-between gap-3">
+    <div class="mx-2 md:mx-6 flex items-center justify-between gap-3">
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Пайплайны</h1>
         <button type="button"
                 wire:click="openCreatePipelineModal"
@@ -19,10 +19,10 @@
             </p>
         </div>
     @else
-        <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
+        <div class="grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3">
             @foreach ($pipelines as $pipeline)
                 <a href="{{ route('pipelines.show', $pipeline) }}" wire:navigate class="group block">
-                    <article class="rounded-lg border border-gray-200 bg-white px-6 py-4 shadow-sm transition group-hover:border-indigo-400 dark:border-white/10 dark:bg-gray-800 dark:group-hover:border-indigo-500/60">
+                    <article class="rounded-lg border border-gray-200 bg-white px-4 md:px-6 py-4 shadow-sm transition group-hover:border-indigo-400 dark:border-white/10 dark:bg-gray-800 dark:group-hover:border-indigo-500/60">
                         <div class="flex items-start justify-between gap-2">
                             <h2 class="font-semibold {{ $pipeline->currentVersion?->status === 'archived'
                                 ? 'text-gray-500 dark:text-gray-400'

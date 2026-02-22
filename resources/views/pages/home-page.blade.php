@@ -1,5 +1,5 @@
 <div class="space-y-6">
-    <h1 class="mx-6 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Главная</h1>
+    <h1 class="mx-2 md:mx-4 text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Главная</h1>
 
     <div class="grid grid-cols-1 gap-6 lg:grid-cols-3">
         <section class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-800 lg:col-span-2">
