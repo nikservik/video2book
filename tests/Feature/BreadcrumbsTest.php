@@ -33,10 +33,10 @@ class BreadcrumbsTest extends TestCase
 
         $response
             ->assertStatus(200)
-            ->assertSee('flex flex-wrap items-start gap-x-3 gap-y-2 pl-6', false)
-            ->assertSee('class="-ml-6 shrink-0 sm:ml-0"', false)
-            ->assertSee('flex min-w-0 max-w-full flex-nowrap items-start gap-3 text-sm sm:items-center"', false)
-            ->assertSee('max-w-full break-words', false);
+            ->assertSee('flex flex-wrap items-center gap-x-3 gap-y-2 pl-7', false)
+            ->assertSee('class="-ml-7 shrink-0 md:ml-0"', false)
+            ->assertSee('flex min-w-0 max-w-full flex-nowrap items-center gap-3 text-sm"', false)
+            ->assertSee('max-w-full font-medium', false);
     }
 
     public function test_project_show_renders_breadcrumbs_path(): void

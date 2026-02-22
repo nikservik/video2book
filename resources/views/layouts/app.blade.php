@@ -195,7 +195,7 @@
                 @if (! empty($breadcrumbs))
                     <nav aria-label="Breadcrumb" data-breadcrumbs class="py-4 flex">
                         <ol role="list"
-                            class="flex flex-wrap items-center gap-x-3 gap-y-2 pl-7 text-gray-500 dark:text-gray-400 md:flex-nowrap md:gap-y-0 mc:pl-0">
+                            class="flex flex-wrap items-center gap-x-3 gap-y-2 pl-7 text-gray-500 dark:text-gray-400 md:flex-nowrap md:gap-y-0 md:pl-0">
                             <li class="-ml-7 shrink-0 md:ml-0">
                                 <a href="{{ route('home') }}"
                                    wire:navigate
