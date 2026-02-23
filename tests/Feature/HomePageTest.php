@@ -18,7 +18,8 @@ class HomePageTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('Главная')
-            ->assertSee('Последние измененные проекты')
+            ->assertSee('Свежие проекты')
+            ->assertSee('mx-2 md:mx-6 text-lg font-semibold text-gray-900 dark:text-white', false)
             ->assertSee('Очередь обработки')
             ->assertSee('data-theme-set="light"', false)
             ->assertSee('data-theme-set="dark"', false)
@@ -27,7 +28,7 @@ class HomePageTest extends TestCase
             ->assertDontSee('Open user menu');
     }
 
-    public function test_home_page_shows_only_five_latest_updated_projects(): void
+    public function test_home_page_shows_only_six_latest_updated_projects(): void
     {
         $createdProjects = [];
 
@@ -38,6 +39,7 @@ class HomePageTest extends TestCase
             ['name' => 'Проект Гамма', 'updated_at' => Carbon::parse('2026-01-15 10:00:00')],
             ['name' => 'Проект Дельта', 'updated_at' => Carbon::parse('2026-01-20 10:00:00')],
             ['name' => 'Проект Эпсилон', 'updated_at' => Carbon::parse('2026-01-25 10:00:00')],
+            ['name' => 'Проект Дзета', 'updated_at' => Carbon::parse('2026-01-30 10:00:00')],
         ];
 
         foreach ($projects as $projectData) {
@@ -59,7 +61,12 @@ class HomePageTest extends TestCase
 
         $response
             ->assertStatus(200)
+            ->assertSee('md:grid-cols-2', false)
+            ->assertSee('md:gap-6', false)
+            ->assertSee('group-hover:border-indigo-400', false)
+            ->assertSee('Уроков:', false)
             ->assertSeeInOrder([
+                'Проект Дзета',
                 'Проект Эпсилон',
                 'Проект Дельта',
                 'Проект Гамма',
@@ -68,7 +75,7 @@ class HomePageTest extends TestCase
             ])
             ->assertDontSee('Архивный проект');
 
-        foreach (array_slice(array_reverse($createdProjects), 0, 5) as $project) {
+        foreach (array_slice(array_reverse($createdProjects), 0, 6) as $project) {
             $response->assertSee(route('projects.show', $project), false);
         }
     }

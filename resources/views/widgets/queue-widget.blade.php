@@ -1,5 +1,5 @@
 <div wire:poll.2s>
-    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $widget['title'] }}</h2>
+    <h2 class="mx-2 md:mx-4 text-lg font-semibold text-gray-900 dark:text-white">{{ $widget['title'] }}</h2>
 
     @if ($widget['items'] === [])
         <div class="mt-4 rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800">
