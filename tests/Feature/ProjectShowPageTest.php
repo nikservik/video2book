@@ -60,6 +60,9 @@ class ProjectShowPageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Проект Омега')
             ->assertSeeInOrder(['Урок 1', 'Урок 2', 'Урок 3'])
+            ->assertSee('Сортировка по дате добавления')
+            ->assertSee('Сортировка по названию')
+            ->assertSee('data-lesson-sort-select', false)
             ->assertSee('data-project-actions-toggle', false)
             ->assertSee('data-project-actions-menu', false)
             ->assertSee('md:hidden', false)
@@ -208,6 +211,45 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
+    public function test_project_page_disables_lessons_polling_while_lesson_sort_dropdown_is_open(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с открытой сортировкой',
+            'tags' => null,
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false)
+            ->call('markLessonSortDropdownOpened')
+            ->assertDontSee('wire:poll.2s="refreshProjectLessons"', false)
+            ->call('markLessonSortDropdownClosed')
+            ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
+    }
+
+    public function test_project_page_keeps_lessons_order_when_lesson_sort_dropdown_state_changes(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект со стабильной сортировкой в dropdown',
+            'tags' => null,
+        ]);
+
+        $this->createLesson($project->id, 'Урок 1', Carbon::parse('2026-02-01 10:00:00'));
+        $this->createLesson($project->id, 'Урок 3', Carbon::parse('2026-02-03 10:00:00'));
+        $this->createLesson($project->id, 'Урок 2', Carbon::parse('2026-02-02 10:00:00'));
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2'])
+            ->call('markLessonSortDropdownOpened')
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2'])
+            ->call('markLessonSortDropdownClosed')
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2']);
+    }
+
     public function test_project_page_keeps_lessons_order_when_modal_state_changes(): void
     {
         ProjectTag::query()->create([
@@ -230,6 +272,86 @@ class ProjectShowPageTest extends TestCase
             ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2'])
             ->call('markModalClosed')
             ->assertSeeInOrder(['lesson-row-1', 'lesson-row-3', 'lesson-row-2']);
+    }
+
+    public function test_project_page_sorts_lessons_by_name_when_saved_in_project_settings(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с сортировкой по названию',
+            'tags' => null,
+            'settings' => [
+                'lessons_sort' => 'name',
+            ],
+        ]);
+
+        $this->createLesson($project->id, 'Gamma lesson', Carbon::parse('2026-02-01 10:00:00'));
+        $this->createLesson($project->id, 'Alpha lesson', Carbon::parse('2026-02-02 10:00:00'));
+        $this->createLesson($project->id, 'Beta lesson', Carbon::parse('2026-02-03 10:00:00'));
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertSeeInOrder(['Alpha lesson', 'Beta lesson', 'Gamma lesson']);
+    }
+
+    public function test_project_page_sorts_lessons_by_name_with_numeric_icu_collation_on_pgsql(): void
+    {
+        if (config('database.default') !== 'pgsql') {
+            $this->markTestSkipped('ICU numeric collation sorting is only available on PostgreSQL.');
+        }
+
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с numeric-сортировкой',
+            'tags' => null,
+            'settings' => [
+                'lessons_sort' => 'name',
+            ],
+        ]);
+
+        $this->createLesson($project->id, 'Lesson 10', Carbon::parse('2026-02-01 10:00:00'));
+        $this->createLesson($project->id, 'Lesson 2', Carbon::parse('2026-02-02 10:00:00'));
+        $this->createLesson($project->id, 'Lesson 1', Carbon::parse('2026-02-03 10:00:00'));
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertSeeInOrder(['Lesson 1', 'Lesson 2', 'Lesson 10']);
+    }
+
+    public function test_project_page_can_change_lessons_sort_and_persist_it_in_project_settings(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект для смены сортировки',
+            'tags' => null,
+        ]);
+
+        $this->createLesson($project->id, 'Gamma lesson', Carbon::parse('2026-02-01 10:00:00'));
+        $this->createLesson($project->id, 'Alpha lesson', Carbon::parse('2026-02-02 10:00:00'));
+        $this->createLesson($project->id, 'Beta lesson', Carbon::parse('2026-02-03 10:00:00'));
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSet('lessonSort', 'created_at')
+            ->assertSeeInOrder(['lesson-row-1', 'lesson-row-2', 'lesson-row-3'])
+            ->set('lessonSort', 'name')
+            ->assertSet('lessonSort', 'name')
+            ->assertSeeInOrder(['lesson-row-2', 'lesson-row-3', 'lesson-row-1']);
+
+        $project->refresh();
+
+        $this->assertSame('name', data_get($project->settings, 'lessons_sort'));
     }
 
     public function test_project_page_shows_audio_download_icon_states_for_lessons(): void

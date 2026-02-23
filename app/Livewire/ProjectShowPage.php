@@ -10,35 +10,44 @@ use Livewire\Component;
 
 class ProjectShowPage extends Component
 {
+    private const LESSON_SORT_SETTING_KEY = 'lessons_sort';
+
     public Project $project;
 
     public int $openedModalCount = 0;
 
     public bool $isAudioUploadInProgress = false;
 
+    public bool $isLessonSortDropdownOpen = false;
+
+    public string $lessonSort = ProjectDetailsQuery::LESSON_SORT_CREATED_AT;
+
     public function mount(Project $project): void
     {
+        $this->lessonSort = $this->resolveLessonSortSetting(
+            data_get($project->settings, self::LESSON_SORT_SETTING_KEY)
+        );
         $this->project = $this->loadProjectDetails($project);
     }
 
     #[On('project-show:project-updated')]
     public function refreshProjectLessons(): void
     {
-        $this->project = $this->loadProjectDetails($this->project->fresh());
+        $this->reloadProjectDetails();
     }
 
     #[On('project-show:modal-opened')]
     public function markModalOpened(): void
     {
         $this->openedModalCount++;
-        $this->project = $this->loadProjectDetails($this->project->fresh());
+        $this->reloadProjectDetails();
     }
 
     #[On('project-show:modal-closed')]
     public function markModalClosed(): void
     {
         $this->openedModalCount = max(0, $this->openedModalCount - 1);
-        $this->project = $this->loadProjectDetails($this->project->fresh());
+        $this->reloadProjectDetails();
     }
 
     #[On('project-show:audio-upload-started')]
@@ -53,9 +62,59 @@ class ProjectShowPage extends Component
         $this->isAudioUploadInProgress = false;
     }
 
+    public function markLessonSortDropdownOpened(): void
+    {
+        $this->isLessonSortDropdownOpen = true;
+        $this->reloadProjectDetails();
+    }
+
+    public function markLessonSortDropdownClosed(): void
+    {
+        $this->isLessonSortDropdownOpen = false;
+        $this->reloadProjectDetails();
+    }
+
+    public function updatedLessonSort($value): void
+    {
+        $normalizedSort = $this->resolveLessonSortSetting($value);
+        $this->lessonSort = $normalizedSort;
+
+        $project = $this->project->fresh();
+        $settings = $project->settings ?? [];
+        $settings[self::LESSON_SORT_SETTING_KEY] = $normalizedSort;
+
+        $project->forceFill(['settings' => $settings])->save();
+        $this->project = $this->loadProjectDetails($project->fresh());
+    }
+
     public function getShouldPollProjectLessonsProperty(): bool
     {
-        return $this->openedModalCount === 0 && ! $this->isAudioUploadInProgress;
+        return $this->openedModalCount === 0
+            && ! $this->isAudioUploadInProgress
+            && ! $this->isLessonSortDropdownOpen;
+    }
+
+    /**
+     * @return array<int, array{value: string, label: string}>
+     */
+    public function lessonSortOptions(): array
+    {
+        return [
+            [
+                'value' => ProjectDetailsQuery::LESSON_SORT_CREATED_AT,
+                'label' => 'Сортировка по дате добавления',
+            ],
+            [
+                'value' => ProjectDetailsQuery::LESSON_SORT_NAME,
+                'label' => 'Сортировка по названию',
+            ],
+        ];
+    }
+
+    public function getSelectedLessonSortLabelProperty(): string
+    {
+        return collect($this->lessonSortOptions())
+            ->firstWhere('value', $this->lessonSort)['label'] ?? 'Сортировка по дате добавления';
     }
 
     public function pipelineRunStatusLabel(?string $status): string
@@ -171,6 +230,23 @@ class ProjectShowPage extends Component
 
     private function loadProjectDetails(Project $project): Project
     {
-        return app(ProjectDetailsQuery::class)->get($project);
+        return app(ProjectDetailsQuery::class)->get($project, $this->lessonSort);
+    }
+
+    private function reloadProjectDetails(): void
+    {
+        $project = $this->project->fresh();
+        $this->lessonSort = $this->resolveLessonSortSetting(
+            data_get($project->settings, self::LESSON_SORT_SETTING_KEY)
+        );
+        $this->project = $this->loadProjectDetails($project);
+    }
+
+    private function resolveLessonSortSetting(mixed $value): string
+    {
+        return match ((string) $value) {
+            ProjectDetailsQuery::LESSON_SORT_NAME => ProjectDetailsQuery::LESSON_SORT_NAME,
+            default => ProjectDetailsQuery::LESSON_SORT_CREATED_AT,
+        };
     }
 }

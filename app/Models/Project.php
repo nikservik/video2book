@@ -19,6 +19,14 @@ class Project extends Model
         'tags',
         'default_pipeline_version_id',
         'referer',
+        'settings',
+    ];
+
+    /**
+     * @var array<string, string>
+     */
+    protected $casts = [
+        'settings' => 'array',
     ];
 
     public function lessons(): HasMany

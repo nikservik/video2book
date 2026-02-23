@@ -22,11 +22,47 @@
     <div class="relative grid grid-cols-1 gap-6 md:grid-cols-3">
         <aside class="absolute top-0 right-0 left-0 z-20 md:order-2 md:static md:col-span-1 md:block"
              x-bind:class="{ 'hidden': !isActionsMenuOpen }"
-             x-on:click.outside="if (! $event.target.closest('[data-project-actions-toggle]')) { isActionsMenuOpen = false }"
+             x-on:click.outside="if (! $event.target.closest('[data-project-actions-toggle]') && ! $event.target.closest('[data-lesson-sort-select]') && ! $event.target.closest('el-options')) { isActionsMenuOpen = false }"
              x-transition
              data-project-actions-menu>
             <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-gray-800 md:bg-transparent md:dark:bg-transparent md:p-0 md:shadow-none md:border-none">
                 <div class="space-y-3">
+                    <div data-lesson-sort-select wire:ignore>
+                        <div>
+                            <el-select id="project-lessons-sort"
+                                       name="project_lessons_sort"
+                                       value="{{ $lessonSort }}"
+                                       wire:model.live="lessonSort"
+                                       x-on:change="$el.querySelector('el-options')?.hidePopover(); isActionsMenuOpen = false"
+                                       class="block w-full">
+                                <button type="button"
+                                        class="w-full text-sm font-semibold inline-flex items-center rounded-lg bg-white py-2 pr-2 pl-3 text-center text-gray-900  outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/10 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
+                                    <el-selectedcontent class="flex-1 truncate pl-6">{{ $this->selectedLessonSortLabel }}</el-selectedcontent>
+                                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
+                                         class="size-4 text-gray-500 dark:text-gray-400">
+                                        <path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd"/>
+                                    </svg>
+                                </button>
+
+                                <el-options anchor="bottom start" popover
+                                            x-on:toggle="
+                                                if ($event.newState === 'open') {
+                                                    $wire.markLessonSortDropdownOpened()
+                                                } else {
+                                                    $wire.markLessonSortDropdownClosed()
+                                                }
+                                            "
+                                            class=" w-(--button-width) overflow-auto rounded-lg bg-white shadow-lg outline-1 outline-black/5 [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10">
+                                    @foreach ($this->lessonSortOptions() as $option)
+                                        <el-option value="{{ $option['value'] }}"
+                                                   class="group/option relative block cursor-default px-3 py-2 text-sm text-gray-900 select-none focus:bg-indigo-600 focus:text-white focus:outline-hidden group-aria-selected/option:bg-indigo-50 group-aria-selected/option:font-semibold dark:text-white dark:focus:bg-indigo-500 dark:group-aria-selected/option:bg-indigo-500/20">
+                                            <span class="block truncate">{{ $option['label'] }}</span>
+                                        </el-option>
+                                    @endforeach
+                                </el-options>
+                            </el-select>
+                        </div>
+                    </div>
                     <button type="button"
                             x-on:click="isActionsMenuOpen = false"
                             wire:click="$dispatch('project-show:create-lesson-modal-open')"
