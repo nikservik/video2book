@@ -1,12 +1,14 @@
-<div wire:poll.2s class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-800">
+<div wire:poll.2s>
     <h2 class="text-lg font-semibold text-gray-900 dark:text-white">{{ $widget['title'] }}</h2>
 
     @if ($widget['items'] === [])
-        <p class="mt-3 text-gray-600 dark:text-gray-300">Очередь сейчас пуста.</p>
+        <div class="mt-4 rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800">
+            <p class="text-sm text-gray-600 dark:text-gray-300">Очередь сейчас пуста.</p>
+        </div>
     @else
         <ul class="mt-4 space-y-3">
             @foreach ($visibleItems as $task)
-                <li wire:key="queue-task-{{ $task['task_key'] }}" class="rounded-lg border border-gray-200 bg-gray-50 p-3 dark:border-white/10 dark:bg-gray-900/40">
+                <li wire:key="queue-task-{{ $task['task_key'] }}" class="rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800">
                     <div class="flex items-start gap-3" data-queue-task>
                         <div class="shrink-0 {{ $task['icon_color_class'] }}">
                             @if ($task['type'] === 'pipeline')

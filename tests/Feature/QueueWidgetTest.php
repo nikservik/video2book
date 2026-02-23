@@ -145,6 +145,7 @@ class QueueWidgetTest extends TestCase
             ->assertSee('Очередь обработки')
             ->assertSee('wire:poll.2s', false)
             ->assertSee('data-queue-task', false)
+            ->assertSee('rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800', false)
             ->assertSee('Урок обработки')
             ->assertSee('Урок скачивания')
             ->assertSee('Пайплайн виджета • v5')
@@ -168,6 +169,17 @@ class QueueWidgetTest extends TestCase
             ->assertSet('expandedTaskKeys', ['pipeline:123'])
             ->call('toggleTask', 'pipeline:123')
             ->assertSet('expandedTaskKeys', []);
+    }
+
+    public function test_empty_queue_message_is_rendered_as_task_card(): void
+    {
+        $response = $this->get(route('home'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Очередь сейчас пуста.')
+            ->assertSee('rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800', false)
+            ->assertDontSee('wire:poll.2s class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-800"', false);
     }
 
     public function test_widget_shows_only_first_five_tasks_and_more_counter(): void
