@@ -1,4 +1,6 @@
-<div class="space-y-6">
+<div class="space-y-6"
+     x-data="{ isActionsMenuOpen: false }"
+     x-on:keydown.escape.window="isActionsMenuOpen = false">
     <div class="mx-2 md:mx-4 flex items-start justify-between gap-3">
         <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-gray-200">
             {{ $pipelineRun->lesson?->name ?? 'Урок' }}
