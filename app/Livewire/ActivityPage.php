@@ -79,15 +79,27 @@ class ActivityPage extends Component
             ])
             ->all();
 
+        $projectIds = $activities->getCollection()
+            ->filter(fn (Activity $activity): bool => $activity->subject_type === Project::class && $activity->subject_id !== null)
+            ->map(fn (Activity $activity): int => (int) $activity->subject_id)
+            ->values()
+            ->all();
+
+        $projectNamesById = Project::withTrashed()
+            ->whereIn('id', $projectIds)
+            ->pluck('name', 'id')
+            ->map(fn (mixed $name): string => (string) $name)
+            ->all();
+
         $activities->setCollection(
-            $activities->getCollection()->map(function (Activity $activity) use ($causerNamesById, $pipelineRunNamesById, $lessonNamesById): array {
+            $activities->getCollection()->map(function (Activity $activity) use ($causerNamesById, $pipelineRunNamesById, $lessonNamesById, $projectNamesById): array {
                 return [
                     'id' => (int) $activity->id,
                     'dateTime' => $activity->created_at?->format('d.m.Y H:i') ?? '—',
                     'userName' => $this->resolveCauserName($activity, $causerNamesById),
                     'action' => $this->resolveActionLabel($activity->event),
                     'subjectTypeLabel' => $this->resolveSubjectTypeLabel($activity->subject_type),
-                    'subjectName' => $this->resolveSubjectName($activity, $pipelineRunNamesById, $lessonNamesById),
+                    'subjectName' => $this->resolveSubjectName($activity, $pipelineRunNamesById, $lessonNamesById, $projectNamesById),
                 ];
             })
         );
@@ -139,15 +151,18 @@ class ActivityPage extends Component
     /**
      * @param  array<int, string>  $pipelineRunNamesById
      * @param  array<int, string>  $lessonNamesById
+     * @param  array<int, string>  $projectNamesById
      */
-    private function resolveSubjectName(Activity $activity, array $pipelineRunNamesById, array $lessonNamesById): string
+    private function resolveSubjectName(Activity $activity, array $pipelineRunNamesById, array $lessonNamesById, array $projectNamesById): string
     {
         $subjectId = $activity->subject_id === null ? null : (int) $activity->subject_id;
         $attributes = $activity->properties['attributes'] ?? [];
         $old = $activity->properties['old'] ?? [];
 
         return match ($activity->subject_type) {
-            Project::class => (string) ($attributes['name'] ?? $old['name'] ?? ($subjectId === null ? 'Проект' : "Проект #{$subjectId}")),
+            Project::class => $subjectId === null
+                ? 'Проект'
+                : (string) ($attributes['name'] ?? $old['name'] ?? ($projectNamesById[$subjectId] ?? "Проект #{$subjectId}")),
             Lesson::class => $subjectId === null
                 ? 'Урок'
                 : ($lessonNamesById[$subjectId] ?? ($attributes['name'] ?? $old['name'] ?? "Урок #{$subjectId}")),

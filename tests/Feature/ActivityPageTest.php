@@ -11,6 +11,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Str;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class ActivityPageTest extends TestCase
@@ -167,6 +168,48 @@ class ActivityPageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('урок')
             ->assertSee('«Урок А1» в проекте «Проект А»');
+    }
+
+    public function test_activity_page_uses_project_name_for_updated_project_without_name_in_activity_properties(): void
+    {
+        $admin = $this->makeAdmin('Суперадмин', 'superadmin-project-updated@local');
+        $cookieName = (string) config('simple_auth.cookie_name');
+
+        $this->actingAs($admin);
+
+        $project = Project::query()->create([
+            'name' => 'Проект для активности',
+            'tags' => null,
+        ]);
+
+        $project->update([
+            'tags' => 'new-tags',
+        ]);
+
+        $updatedActivity = Activity::query()
+            ->where('event', 'updated')
+            ->where('subject_type', Project::class)
+            ->where('subject_id', $project->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($updatedActivity);
+        $this->assertArrayNotHasKey('name', $updatedActivity->properties['attributes'] ?? []);
+        $this->assertArrayNotHasKey('name', $updatedActivity->properties['old'] ?? []);
+
+        $response = $this
+            ->withCookie($cookieName, (string) $admin->access_token)
+            ->get(route('activity.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Суперадмин')
+            ->assertDontSee("Проект #{$project->id}");
+
+        $this->assertMatchesRegularExpression(
+            '/Суперадмин\s+—\s+изменил\(а\)\s+проект\s+«Проект для активности»/u',
+            $response->getContent()
+        );
     }
 
     private function makeAdmin(string $name, string $email): User

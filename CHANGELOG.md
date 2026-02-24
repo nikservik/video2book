@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: имя проекта в странице активности для updated-событий
+- На странице `Активность` для строк `изменил(а) проект` добавлен резолв имени через текущую запись `projects`, если `name` отсутствует в `activity.properties`.
+- Это устраняет отображение fallback `Проект #ID` в случаях, когда в событии `updated` изменились другие поля (`tags`, `settings` и т.п.) и `name` не попал в `logOnlyDirty`.
+- Добавлен feature-тест `ActivityPageTest::test_activity_page_uses_project_name_for_updated_project_without_name_in_activity_properties`.
+
 ## [2026-02-24] fix: тесты на сохранение YouTube-ссылки в уроке
 - Добавлены проверки, что при создании урока из YouTube ссылка сохраняется в `lesson.settings.url`.
 - Расширены feature-тесты `ProjectShowPageTest` и `ProjectsPageTest` для сценариев создания уроков из YouTube (одиночного и из списка).
