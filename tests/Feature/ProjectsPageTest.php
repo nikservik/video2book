@@ -2,8 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Jobs\DownloadLessonAudioJob;
 use App\Livewire\ProjectsPage;
+use App\Models\Folder;
 use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
@@ -21,16 +23,15 @@ class ProjectsPageTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_projects_page_shows_projects_sorted_by_last_update_with_lessons_count(): void
+    public function test_projects_page_shows_projects_for_expanded_folder_sorted_by_last_update_with_lessons_count(): void
     {
-        ProjectTag::query()->create([
-            'slug' => 'default',
-            'description' => null,
-        ]);
+        $this->ensureDefaultProjectTag();
 
-        $this->createProject('Старый проект', Carbon::parse('2026-01-10 10:00:00'), 1);
-        $this->createProject('Средний проект', Carbon::parse('2026-01-15 10:00:00'), 3);
-        $this->createProject('Новый проект', Carbon::parse('2026-01-20 10:00:00'), 0);
+        $folder = $this->defaultFolder();
+
+        $this->createProject($folder, 'Старый проект', Carbon::parse('2026-01-10 10:00:00'), 1);
+        $this->createProject($folder, 'Средний проект', Carbon::parse('2026-01-15 10:00:00'), 3);
+        $this->createProject($folder, 'Новый проект', Carbon::parse('2026-01-20 10:00:00'), 0);
 
         $response = $this->get(route('projects.index'));
 
@@ -46,37 +47,28 @@ class ProjectsPageTest extends TestCase
             ->assertSee('Уроков: 0');
     }
 
-    public function test_projects_page_has_pagination(): void
+    public function test_projects_page_shows_project_duration_from_settings(): void
     {
-        ProjectTag::query()->create([
-            'slug' => 'default',
-            'description' => null,
+        $folder = $this->defaultFolder();
+
+        Project::query()->create([
+            'folder_id' => $folder->id,
+            'name' => 'Проект с длительностью',
+            'tags' => null,
+            'settings' => [
+                RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY => 3600,
+            ],
         ]);
 
-        for ($index = 1; $index <= 16; $index++) {
-            $name = sprintf('PRJ-%02d', $index);
-            $updatedAt = Carbon::parse('2026-01-01 00:00:00')->addMinutes($index);
-            $this->createProject($name, $updatedAt, 0);
-        }
+        $response = $this->get(route('projects.index'));
 
-        $pageOne = $this->get(route('projects.index'));
-
-        $pageOne
+        $response
             ->assertStatus(200)
-            ->assertSee('PRJ-16')
-            ->assertSee('PRJ-02')
-            ->assertDontSee('PRJ-01')
-            ->assertSee('?page=2', false);
-
-        $pageTwo = $this->get(route('projects.index', ['page' => 2]));
-
-        $pageTwo
-            ->assertStatus(200)
-            ->assertSee('PRJ-01')
-            ->assertDontSee('PRJ-16');
+            ->assertSee('Длительность: 1ч 0м')
+            ->assertSee('1ч 0м');
     }
 
-    public function test_projects_page_cards_link_to_project_show_page(): void
+    public function test_projects_page_rows_include_links_to_project_show_page(): void
     {
         $project = Project::query()->create([
             'name' => 'Проект со ссылкой',
@@ -90,16 +82,53 @@ class ProjectsPageTest extends TestCase
             ->assertSee(route('projects.show', $project), false);
     }
 
-    public function test_projects_page_create_project_modal_can_be_opened_and_closed(): void
+    public function test_projects_page_create_folder_modal_can_be_opened_and_closed(): void
     {
         Livewire::test(ProjectsPage::class)
-            ->assertSet('showCreateProjectModal', false)
-            ->call('openCreateProjectModal')
+            ->assertSet('showCreateFolderModal', false)
+            ->call('openCreateFolderModal')
+            ->assertSet('showCreateFolderModal', true)
+            ->assertSee('data-create-folder-modal', false)
+            ->call('closeCreateFolderModal')
+            ->assertSet('showCreateFolderModal', false)
+            ->assertDontSee('data-create-folder-modal', false);
+    }
+
+    public function test_projects_page_can_create_and_rename_folder(): void
+    {
+        $component = Livewire::test(ProjectsPage::class)
+            ->call('openCreateFolderModal')
+            ->set('newFolderName', 'Курсы по теме')
+            ->call('createFolder')
+            ->assertSet('showCreateFolderModal', false)
+            ->assertHasNoErrors();
+
+        $folder = Folder::query()->where('name', 'Курсы по теме')->firstOrFail();
+
+        $component
+            ->call('openRenameFolderModal', $folder->id)
+            ->set('editingFolderName', 'Курсы обновлённые')
+            ->call('renameFolder')
+            ->assertSet('showRenameFolderModal', false)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('folders', [
+            'id' => $folder->id,
+            'name' => 'Курсы обновлённые',
+        ]);
+    }
+
+    public function test_projects_page_create_project_modal_opens_for_selected_folder(): void
+    {
+        $folder = Folder::query()->create([
+            'name' => 'Папка для создания',
+        ]);
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openCreateProjectModal', $folder->id)
             ->assertSet('showCreateProjectModal', true)
-            ->assertSee('data-create-project-modal', false)
-            ->call('closeCreateProjectModal')
-            ->assertSet('showCreateProjectModal', false)
-            ->assertDontSee('data-create-project-modal', false);
+            ->assertSet('newProjectFolderId', $folder->id)
+            ->assertSee('Добавить проект в «Папка для создания»');
     }
 
     public function test_projects_page_pipeline_dropdown_shows_pipeline_descriptions(): void
@@ -142,10 +171,14 @@ class ProjectsPageTest extends TestCase
             ->assertSee('Pipeline title • v1');
     }
 
-    public function test_projects_page_can_create_project_with_only_required_name(): void
+    public function test_projects_page_can_create_project_with_only_required_name_in_selected_folder(): void
     {
+        $folder = Folder::query()->create([
+            'name' => 'Папка с проектами',
+        ]);
+
         Livewire::test(ProjectsPage::class)
-            ->call('openCreateProjectModal')
+            ->call('openCreateProjectModal', $folder->id)
             ->set('newProjectName', 'Новый проект из модала')
             ->set('newProjectReferer', '')
             ->set('newProjectDefaultPipelineVersionId', null)
@@ -155,6 +188,7 @@ class ProjectsPageTest extends TestCase
             ->assertHasNoErrors();
 
         $this->assertDatabaseHas('projects', [
+            'folder_id' => $folder->id,
             'name' => 'Новый проект из модала',
             'referer' => null,
             'default_pipeline_version_id' => null,
@@ -164,14 +198,20 @@ class ProjectsPageTest extends TestCase
         $this->assertSame(0, $project->lessons()->count());
     }
 
-    public function test_projects_page_can_create_project_and_lessons_from_list(): void
+    public function test_projects_page_can_create_project_and_lessons_from_list_in_selected_folder(): void
     {
         Queue::fake();
+
+        $this->ensureDefaultProjectTag();
+
+        $folder = Folder::query()->create([
+            'name' => 'Папка с уроками',
+        ]);
 
         $pipelineVersion = $this->createPipelineWithSteps();
 
         Livewire::test(ProjectsPage::class)
-            ->call('openCreateProjectModal')
+            ->call('openCreateProjectModal', $folder->id)
             ->set('newProjectName', 'Курс с уроками')
             ->set('newProjectReferer', 'https://www.somesite.com/')
             ->set('newProjectDefaultPipelineVersionId', $pipelineVersion->id)
@@ -182,6 +222,7 @@ class ProjectsPageTest extends TestCase
 
         $project = Project::query()->where('name', 'Курс с уроками')->firstOrFail();
 
+        $this->assertSame($folder->id, $project->folder_id);
         $this->assertSame('https://www.somesite.com/', $project->referer);
         $this->assertSame($pipelineVersion->id, $project->default_pipeline_version_id);
 
@@ -208,9 +249,37 @@ class ProjectsPageTest extends TestCase
         ]);
     }
 
-    private function createProject(string $name, Carbon $updatedAt, int $lessonsCount): void
+    public function test_projects_page_can_move_project_to_another_closed_folder(): void
+    {
+        $sourceFolder = Folder::query()->create([
+            'name' => 'Исходная папка',
+        ]);
+        $targetFolder = Folder::query()->create([
+            'name' => 'Целевая папка',
+        ]);
+
+        $project = Project::query()->create([
+            'folder_id' => $sourceFolder->id,
+            'name' => 'Проект для переноса',
+            'tags' => null,
+        ]);
+
+        Livewire::test(ProjectsPage::class)
+            ->set('expandedFolderId', $sourceFolder->id)
+            ->call('moveProjectToFolder', $project->id, $targetFolder->id)
+            ->assertSet('expandedFolderId', $targetFolder->id)
+            ->assertHasNoErrors();
+
+        $this->assertDatabaseHas('projects', [
+            'id' => $project->id,
+            'folder_id' => $targetFolder->id,
+        ]);
+    }
+
+    private function createProject(Folder $folder, string $name, Carbon $updatedAt, int $lessonsCount): void
     {
         $project = Project::query()->create([
+            'folder_id' => $folder->id,
             'name' => $name,
             'tags' => null,
         ]);
@@ -267,5 +336,19 @@ class ProjectsPageTest extends TestCase
         ]);
 
         return $version;
+    }
+
+    private function defaultFolder(): Folder
+    {
+        return Folder::query()->where('name', 'Проекты')->firstOrFail();
+    }
+
+    private function ensureDefaultProjectTag(): void
+    {
+        ProjectTag::query()->firstOrCreate([
+            'slug' => 'default',
+        ], [
+            'description' => null,
+        ]);
     }
 }

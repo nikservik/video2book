@@ -24,6 +24,7 @@ class Project extends Model
      * @var list<string>
      */
     protected $fillable = [
+        'folder_id',
         'name',
         'tags',
         'default_pipeline_version_id',
@@ -43,6 +44,7 @@ class Project extends Model
         return LogOptions::defaults()
             ->useLogName('projects')
             ->logOnly([
+                'folder_id',
                 'name',
                 'tags',
                 'default_pipeline_version_id',
@@ -64,9 +66,27 @@ class Project extends Model
         return $this->shouldLogActivityEvent($eventName);
     }
 
+    protected static function booted(): void
+    {
+        static::creating(function (Project $project): void {
+            if ($project->folder_id !== null) {
+                return;
+            }
+
+            $project->folder_id = (int) Folder::query()
+                ->firstOrCreate(['name' => 'Проекты'])
+                ->id;
+        });
+    }
+
     public function lessons(): HasMany
     {
         return $this->hasMany(Lesson::class);
+    }
+
+    public function folder(): BelongsTo
+    {
+        return $this->belongsTo(Folder::class);
     }
 
     public function defaultPipelineVersion(): BelongsTo

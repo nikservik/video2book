@@ -28,7 +28,7 @@ class HomePageTest extends TestCase
             ->assertDontSee('Open user menu');
     }
 
-    public function test_home_page_shows_only_six_latest_updated_projects(): void
+    public function test_home_page_shows_only_five_latest_updated_projects(): void
     {
         $createdProjects = [];
 
@@ -61,23 +61,25 @@ class HomePageTest extends TestCase
 
         $response
             ->assertStatus(200)
-            ->assertSee('md:grid-cols-2', false)
-            ->assertSee('md:gap-6', false)
-            ->assertSee('group-hover:border-indigo-400', false)
+            ->assertSee('min-w-full divide-y divide-gray-200', false)
             ->assertSee('Уроков:', false)
+            ->assertSee('Длительность:', false)
+            ->assertSee('Проекты')
             ->assertSeeInOrder([
                 'Проект Дзета',
                 'Проект Эпсилон',
                 'Проект Дельта',
                 'Проект Гамма',
                 'Проект Бета',
-                'Проект Альфа',
             ])
+            ->assertDontSee('Проект Альфа')
             ->assertDontSee('Архивный проект');
 
-        foreach (array_slice(array_reverse($createdProjects), 0, 6) as $project) {
+        foreach (array_slice(array_reverse($createdProjects), 0, 5) as $project) {
             $response->assertSee(route('projects.show', $project), false);
         }
+
+        $response->assertDontSee(route('projects.show', $createdProjects[1]), false);
     }
 
     public function test_home_page_does_not_render_breadcrumbs(): void

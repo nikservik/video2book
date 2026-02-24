@@ -2,12 +2,21 @@
 
 namespace App\Livewire;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Services\Project\RecentProjectsQuery;
+use App\Support\AudioDurationLabelFormatter;
 use Illuminate\Contracts\View\View;
 use Livewire\Component;
 
 class HomePage extends Component
 {
+    public function projectDurationLabel(?array $settings): string
+    {
+        return app(AudioDurationLabelFormatter::class)->format(
+            data_get($settings, RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY)
+        ) ?? '—';
+    }
+
     public function render(): View
     {
         return view('pages.home-page', [

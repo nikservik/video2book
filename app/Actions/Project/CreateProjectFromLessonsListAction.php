@@ -13,6 +13,7 @@ class CreateProjectFromLessonsListAction
     ) {}
 
     public function handle(
+        int $folderId,
         string $projectName,
         ?string $referer,
         ?int $defaultPipelineVersionId,
@@ -27,6 +28,7 @@ class CreateProjectFromLessonsListAction
         }
 
         $project = Project::query()->create([
+            'folder_id' => $folderId,
             'name' => trim($projectName),
             'tags' => null,
             'default_pipeline_version_id' => $defaultPipelineVersionId,

@@ -10,17 +10,41 @@
                     Пока нет проектов. Создайте первый проект, чтобы увидеть его в этом списке.
                 </p>
             @else
-                <div class="mt-4 grid grid-cols-1 gap-4 md:grid-cols-2 md:gap-6">
-                    @foreach ($recentProjects as $project)
-                        <a href="{{ route('projects.show', $project) }}" wire:navigate class="group block">
-                            <article class="rounded-lg border border-gray-200 bg-white px-4 py-4 shadow-sm transition group-hover:border-indigo-400 dark:border-white/10 dark:bg-gray-800 dark:group-hover:border-indigo-500/60 md:px-6">
-                                <h3 class="font-semibold text-gray-900 dark:text-white">{{ $project->name }}</h3>
-                                <div class="mt-1 space-y-1 text-sm text-gray-600 dark:text-gray-300">
-                                    <p>Уроков: {{ $project->lessons_count }}</p>
-                                </div>
-                            </article>
-                        </a>
-                    @endforeach
+                <div class="mt-4 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800">
+                    <div class="overflow-x-auto">
+                        <table class="min-w-full divide-y divide-gray-200 dark:divide-white/10">
+                            <tbody class="divide-y divide-gray-200 dark:divide-white/10">
+                                @foreach ($recentProjects as $project)
+                                    <tr wire:key="home-project-{{ $project->id }}"
+                                        onclick="window.location.href='{{ route('projects.show', $project) }}'"
+                                        class="cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5">
+                                        <td class="px-2 py-3 text-xs text-gray-500 md:px-4 md:text-sm dark:text-gray-400">
+                                            <span class="block truncate">
+                                                {{ $project->folder?->name ?? 'Проекты' }}
+                                            </span>
+                                        </td>
+                                        <td class="w-full max-w-0 px-3 py-3 text-sm font-medium text-gray-900 md:w-auto md:max-w-none dark:text-white">
+                                            <p class="truncate">{{ $project->name }}</p>
+                                            <p class="font-normal md:hidden mt-1 leading-tight">
+                                                <span class="truncate inline-block mr-2 text-gray-500 dark:text-gray-400">
+                                                    Уроков: {{ $project->lessons_count }}
+                                                </span>
+                                                <span class="truncate inline-block text-gray-500 dark:text-gray-400">
+                                                    Длительность: {{ $this->projectDurationLabel($project->settings) }}
+                                                </span>
+                                            </p>
+                                        </td>
+                                        <td class="hidden px-4 py-3 text-sm text-gray-700 md:table-cell dark:text-gray-300">
+                                            Уроков: {{ $project->lessons_count }}
+                                        </td>
+                                        <td class="hidden px-4 py-3 text-sm text-gray-700 md:table-cell dark:text-gray-300">
+                                            {{ $this->projectDurationLabel($project->settings) }}
+                                        </td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             @endif
         </section>

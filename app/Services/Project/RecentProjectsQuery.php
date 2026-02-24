@@ -7,12 +7,13 @@ use Illuminate\Database\Eloquent\Collection;
 
 class RecentProjectsQuery
 {
-    public function get(int $limit = 6): Collection
+    public function get(int $limit = 5): Collection
     {
         return Project::query()
+            ->with('folder:id,name')
             ->withCount('lessons')
             ->latest('updated_at')
             ->limit($limit)
-            ->get(['id', 'name', 'updated_at']);
+            ->get(['id', 'folder_id', 'name', 'settings', 'updated_at']);
     }
 }
