@@ -27,7 +27,8 @@ class AccessLevelAuthorizationTest extends TestCase
             ->assertSee('data-menu-item="home"', false)
             ->assertSee('data-menu-item="projects"', false)
             ->assertDontSee('data-menu-item="pipelines"', false)
-            ->assertDontSee('data-menu-item="users"', false);
+            ->assertDontSee('data-menu-item="users"', false)
+            ->assertDontSee('data-menu-item="activity"', false);
     }
 
     public function test_navigation_for_admin_contains_pipelines_and_users(): void
@@ -43,7 +44,8 @@ class AccessLevelAuthorizationTest extends TestCase
             ->assertSee('data-menu-item="home"', false)
             ->assertSee('data-menu-item="projects"', false)
             ->assertSee('data-menu-item="pipelines"', false)
-            ->assertSee('data-menu-item="users"', false);
+            ->assertSee('data-menu-item="users"', false)
+            ->assertSee('data-menu-item="activity"', false);
     }
 
     public function test_regular_user_cannot_access_pipelines_and_users_pages(): void
@@ -73,6 +75,11 @@ class AccessLevelAuthorizationTest extends TestCase
 
         $this->withCookie($cookieName, (string) $user->access_token)
             ->get(route('users.index'))
+            ->assertStatus(403)
+            ->assertSee('Доступ закрыт');
+
+        $this->withCookie($cookieName, (string) $user->access_token)
+            ->get(route('activity.index'))
             ->assertStatus(403)
             ->assertSee('Доступ закрыт');
     }
@@ -106,6 +113,11 @@ class AccessLevelAuthorizationTest extends TestCase
             ->get(route('users.index'))
             ->assertStatus(200)
             ->assertSee('Пользователи');
+
+        $this->withCookie($cookieName, (string) $admin->access_token)
+            ->get(route('activity.index'))
+            ->assertStatus(200)
+            ->assertSee('Активность');
     }
 
     private function makeUserWithAccessLevel(int $accessLevel): User

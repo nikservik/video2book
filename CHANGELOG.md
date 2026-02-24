@@ -4,6 +4,24 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: формат названия урока в странице активности
+- Для записей типа `урок` на странице `Активность` к названию урока добавляется проект: `Урок в проекте «Проект»`.
+- Название собирается из связей `lesson -> project` (c `withTrashed`) с fallback на `Урок #ID`.
+- Добавлен feature-тест `ActivityPageTest::test_activity_page_appends_project_name_for_lesson_rows`.
+
+## [2026-02-24] fix: название прогона в странице активности
+- Для записей типа `прогон` на странице `Активность` название теперь формируется как `Урок — Пайплайн • vN`.
+- Название собирается из связанных `lesson` и `pipeline_version` с fallback на `Прогон #ID`.
+- Добавлен feature-тест `ActivityPageTest::test_activity_page_uses_lesson_and_pipeline_version_for_pipeline_run_name`.
+
+## [2026-02-24] feat: страница активности пользователей в админ-меню
+- Добавлен новый раздел меню `Активность` (`activity.index`), доступный только для `admin/superadmin`.
+- Реализована full-page Livewire-страница `ActivityPage`, которая показывает историю действий из `activity_log`.
+- Формат каждой строки: `d.m.Y H:i — имя пользователя — добавил(а)/изменил(а)/удалил(а) — проект/урок/прогон — название объекта`.
+- Добавлена пагинация по `20` записей на страницу.
+- Обновлены тесты доступа и активного пункта меню (`AccessLevelAuthorizationTest`, `NavigationMenuTest`) и добавлен новый `ActivityPageTest`.
+- Обновлены `README.md`, `docs/server.md` и `docs/next.md`.
+
 ## [2026-02-24] feat: soft delete для пользователей, проектов, уроков и прогонов
 - Добавлена миграция `2026_02_24_030000_add_soft_deletes_to_users_projects_lessons_pipeline_runs` с полями `deleted_at` для `users`, `projects`, `lessons`, `pipeline_runs`.
 - Модели `User`, `Project`, `Lesson` и `PipelineRun` переведены на `SoftDeletes`.

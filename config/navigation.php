@@ -30,5 +30,12 @@ return [
             'active' => 'users.*',
             'min_access_level' => 1,
         ],
+        [
+            'key' => 'activity',
+            'label' => 'Активность',
+            'route' => 'activity.index',
+            'active' => 'activity.*',
+            'min_access_level' => 1,
+        ],
     ],
 ];

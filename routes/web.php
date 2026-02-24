@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Web\Controllers\AcceptInviteController;
+use App\Livewire\ActivityPage;
 use App\Livewire\HomePage;
 use App\Livewire\PipelineShowPage;
 use App\Livewire\PipelinesPage;
@@ -27,4 +28,8 @@ Route::prefix('pipelines')->name('pipelines.')->group(function (): void {
 
 Route::prefix('users')->name('users.')->group(function (): void {
     Route::get('/', UsersPage::class)->name('index');
+});
+
+Route::prefix('activity')->name('activity.')->group(function (): void {
+    Route::get('/', ActivityPage::class)->name('index');
 });

@@ -67,6 +67,18 @@ class NavigationMenuTest extends TestCase
         $this->assertDoesNotMatchRegularExpression('/data-menu-item="projects"\s+data-active="true"/', $response->getContent());
     }
 
+    public function test_activity_menu_item_is_active_on_activity_page(): void
+    {
+        $response = $this->get(route('activity.index'));
+
+        $response->assertStatus(200);
+
+        $this->assertMatchesRegularExpression('/data-menu-item="activity"\s+data-active="true"/', $response->getContent());
+        $this->assertDoesNotMatchRegularExpression('/data-menu-item="home"\s+data-active="true"/', $response->getContent());
+        $this->assertDoesNotMatchRegularExpression('/data-menu-item="projects"\s+data-active="true"/', $response->getContent());
+        $this->assertDoesNotMatchRegularExpression('/data-menu-item="pipelines"\s+data-active="true"/', $response->getContent());
+    }
+
     /**
      * @return array{0: Project, 1: PipelineRun}
      */
