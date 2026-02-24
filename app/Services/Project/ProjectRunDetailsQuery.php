@@ -13,7 +13,7 @@ class ProjectRunDetailsQuery
             'pipelineVersion:id,title,version',
             'steps' => fn ($query) => $query
                 ->with([
-                    'stepVersion:id,name',
+                    'stepVersion:id,name,settings',
                 ])
                 ->orderBy('position')
                 ->select([

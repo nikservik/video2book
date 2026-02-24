@@ -12,6 +12,7 @@ use App\Models\User;
 use App\Services\Pipeline\PipelineDetailsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Livewire\Attributes\On;
 use Livewire\Component;
 
@@ -99,7 +100,8 @@ class PipelineShowPage extends Component
      *     position:int,
      *     step_version: StepVersion,
      *     input_step_name: string|null,
-     *     model_label: string
+     *     model_label: string,
+     *     is_default: bool
      * }>
      */
     public function getSelectedVersionStepsProperty(): array
@@ -135,11 +137,65 @@ class PipelineShowPage extends Component
                     'step_version' => $stepVersion,
                     'input_step_name' => $inputStepName,
                     'model_label' => $this->stepModelLabel($stepVersion),
+                    'is_default' => (bool) data_get($stepVersion->settings, 'is_default', false),
                 ];
             })
             ->filter()
             ->values()
             ->all();
+    }
+
+    public function setDefaultTextStep(int $stepVersionId): void
+    {
+        $selectedVersion = $this->selectedVersion;
+
+        if ($selectedVersion === null) {
+            return;
+        }
+
+        $selectedVersionStepVersions = $selectedVersion->versionSteps
+            ->pluck('stepVersion')
+            ->filter(fn ($stepVersion): bool => $stepVersion instanceof StepVersion)
+            ->values();
+
+        /** @var StepVersion|null $targetStepVersion */
+        $targetStepVersion = $selectedVersionStepVersions
+            ->first(fn (StepVersion $stepVersion): bool => $stepVersion->id === $stepVersionId);
+
+        if ($targetStepVersion === null || $targetStepVersion->type !== 'text') {
+            return;
+        }
+
+        DB::transaction(function () use ($selectedVersionStepVersions, $targetStepVersion): void {
+            foreach ($selectedVersionStepVersions as $stepVersion) {
+                $settings = is_array($stepVersion->settings) ? $stepVersion->settings : [];
+
+                if ($stepVersion->type !== 'text') {
+                    if (array_key_exists('is_default', $settings)) {
+                        unset($settings['is_default']);
+                        $stepVersion->update(['settings' => $settings]);
+                    }
+
+                    continue;
+                }
+
+                if ($stepVersion->id === $targetStepVersion->id) {
+                    if (! ((bool) data_get($settings, 'is_default', false))) {
+                        $settings['is_default'] = true;
+                        $stepVersion->update(['settings' => $settings]);
+                    }
+
+                    continue;
+                }
+
+                if (array_key_exists('is_default', $settings)) {
+                    unset($settings['is_default']);
+                    $stepVersion->update(['settings' => $settings]);
+                }
+            }
+        });
+
+        $this->pipeline = $this->loadPipeline($this->pipeline->fresh());
     }
 
     public function getSelectedVersionTitleProperty(): string

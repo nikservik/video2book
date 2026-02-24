@@ -170,6 +170,8 @@ class PipelinesPageTest extends TestCase
         $this->assertSame('draft', $secondStepVersion->status);
         $this->assertNull($firstStepVersion->input_step_id);
         $this->assertSame($firstStepVersion->step_id, $secondStepVersion->input_step_id);
+        $this->assertFalse((bool) data_get($firstStepVersion->settings, 'is_default', false));
+        $this->assertTrue((bool) data_get($secondStepVersion->settings, 'is_default', false));
 
         $firstStep = Step::query()->findOrFail($firstStepVersion->step_id);
         $secondStep = Step::query()->findOrFail($secondStepVersion->step_id);

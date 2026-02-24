@@ -72,6 +72,44 @@ class PipelineShowPageTest extends TestCase
             ->assertDontSee('Сводка v2');
     }
 
+    public function test_pipeline_show_page_renders_default_step_checkbox_only_for_text_steps(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $transcribeStepVersion = StepVersion::query()
+            ->where('name', 'Транскрибация v2')
+            ->firstOrFail();
+
+        $textStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->firstOrFail();
+
+        $response = $this->get(route('pipelines.show', $pipeline));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('data-step-default-checkbox="'.$textStepVersion->id.'"', false)
+            ->assertDontSee('data-step-default-checkbox="'.$transcribeStepVersion->id.'"', false);
+    }
+
+    public function test_pipeline_show_page_can_set_exactly_one_default_text_step_for_selected_version(): void
+    {
+        [$pipeline, $version, , $removedStepVersion, $dependentStepVersion] = $this->createPipelineForStepRemovalWithDependentSource();
+
+        $removedStepVersion->update(['settings' => ['model' => 'gpt-5-mini', 'is_default' => true]]);
+        $dependentStepVersion->update(['settings' => ['model' => 'gpt-5-mini']]);
+
+        Livewire::test(PipelineShowPage::class, ['pipeline' => $pipeline])
+            ->assertSet('selectedVersionId', $version->id)
+            ->call('setDefaultTextStep', $dependentStepVersion->id);
+
+        $removedStepVersion->refresh();
+        $dependentStepVersion->refresh();
+
+        $this->assertFalse((bool) data_get($removedStepVersion->settings, 'is_default', false));
+        $this->assertTrue((bool) data_get($dependentStepVersion->settings, 'is_default', false));
+    }
+
     public function test_step_edit_modal_can_be_opened_and_closed(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();

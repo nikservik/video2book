@@ -28,17 +28,26 @@ class CreatePipelineWithStepsAction
             $pipeline->update(['current_version_id' => $version->id]);
 
             $previousStep = null;
+            $hasDefaultTextStep = false;
 
             foreach (array_values($stepNames) as $index => $name) {
                 $step = $pipeline->steps()->create();
+                $stepType = $index === 0 ? 'transcribe' : 'text';
+
+                $settings = [];
+
+                if ($stepType === 'text' && ! $hasDefaultTextStep) {
+                    $settings['is_default'] = true;
+                    $hasDefaultTextStep = true;
+                }
 
                 $stepVersion = $step->versions()->create([
                     'name' => trim($name),
-                    'type' => $index === 0 ? 'transcribe' : 'text',
+                    'type' => $stepType,
                     'version' => 1,
                     'description' => null,
                     'prompt' => null,
-                    'settings' => [],
+                    'settings' => $settings,
                     'status' => 'draft',
                     'input_step_id' => $previousStep?->id,
                 ]);

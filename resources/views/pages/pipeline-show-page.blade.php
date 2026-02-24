@@ -40,8 +40,22 @@
                             @endif
 
                             <div class="flex items-start gap-3 pr-10">
-                                <span class="mt-2 text-gray-500 dark:text-gray-400">
+                                <div class="mt-1 flex w-6 shrink-0 flex-col items-center gap-2 text-gray-500 dark:text-gray-400">
                                     @if ($stepData['step_version']->type === 'text')
+                                        <div class="group grid size-4 grid-cols-1">
+                                            <input type="checkbox"
+                                                   aria-label="Сделать шаг по умолчанию"
+                                                   data-step-default-checkbox="{{ $stepData['step_version']->id }}"
+                                                   data-checked="{{ $stepData['is_default'] ? 'true' : 'false' }}"
+                                                   @checked($stepData['is_default'])
+                                                   wire:click="setDefaultTextStep({{ $stepData['step_version']->id }})"
+                                                   class="col-start-1 row-start-1 appearance-none rounded-sm border border-gray-300 bg-white checked:border-indigo-600 checked:bg-indigo-600 indeterminate:border-indigo-600 indeterminate:bg-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:border-gray-300 disabled:bg-gray-100 disabled:checked:bg-gray-100 dark:border-white/10 dark:bg-white/5 dark:checked:border-indigo-500 dark:checked:bg-indigo-500 dark:indeterminate:border-indigo-500 dark:indeterminate:bg-indigo-500 dark:focus-visible:outline-indigo-500 dark:disabled:border-white/5 dark:disabled:bg-white/10 dark:disabled:checked:bg-white/10 forced-colors:appearance-auto" />
+                                            <svg viewBox="0 0 14 14" fill="none"
+                                                 class="pointer-events-none col-start-1 row-start-1 size-3.5 self-center justify-self-center stroke-white group-has-disabled:stroke-gray-950/25 dark:group-has-disabled:stroke-white/25">
+                                                <path d="M3 8L6 11L11 3.5" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"
+                                                      class="opacity-0 group-has-checked:opacity-100" />
+                                            </svg>
+                                        </div>
                                         <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
                                           <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
                                         </svg>
@@ -54,7 +68,7 @@
                                           <path stroke-linecap="round" stroke-linejoin="round" d="M12 6.042A8.967 8.967 0 0 0 6 3.75c-1.052 0-2.062.18-3 .512v14.25A8.987 8.987 0 0 1 6 18c2.305 0 4.408.867 6 2.292m0-14.25a8.966 8.966 0 0 1 6-2.292c1.052 0 2.062.18 3 .512v14.25A8.987 8.987 0 0 0 18 18a8.967 8.967 0 0 0-6 2.292m0-14.25v14.25" />
                                         </svg>
                                     @endif
-                                </span>
+                                </div>
 
                                 <div class="min-w-0 flex-1">
                                     <div class="flex flex-wrap items-center gap-x-2 gap-y-1">

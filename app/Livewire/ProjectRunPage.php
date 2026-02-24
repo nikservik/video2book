@@ -44,12 +44,7 @@ class ProjectRunPage extends Component
         $authUser = auth()->user();
         $this->isZeroAccessLevelUser = $authUser instanceof User
             && (int) $authUser->access_level === User::ACCESS_LEVEL_USER;
-
-        $lastDoneStep = $this->pipelineRun->steps->last(
-            fn (PipelineRunStep $step): bool => $step->status === 'done'
-        );
-
-        $this->selectedStepId = $lastDoneStep?->id ?? $this->pipelineRun->steps->first()?->id;
+        $this->selectedStepId = $this->resolveInitialSelectedStepId();
     }
 
     public function selectStep(int $pipelineRunStepId): void
@@ -102,11 +97,7 @@ class ProjectRunPage extends Component
             return;
         }
 
-        $lastDoneStep = $this->pipelineRun->steps->last(
-            fn (PipelineRunStep $step): bool => $step->status === 'done'
-        );
-
-        $this->selectedStepId = $lastDoneStep?->id ?? $this->pipelineRun->steps->first()?->id;
+        $this->selectedStepId = $this->resolveInitialSelectedStepId();
     }
 
     public function refreshSelectedStepResult(): void
@@ -117,11 +108,7 @@ class ProjectRunPage extends Component
             return;
         }
 
-        $lastDoneStep = $this->pipelineRun->steps->last(
-            fn (PipelineRunStep $step): bool => $step->status === 'done'
-        );
-
-        $this->selectedStepId = $lastDoneStep?->id ?? $this->pipelineRun->steps->first()?->id;
+        $this->selectedStepId = $this->resolveInitialSelectedStepId();
     }
 
     public function setResultViewMode(string $mode): void
@@ -336,6 +323,40 @@ class ProjectRunPage extends Component
         $stepName = $step->stepVersion?->name ?? 'step';
 
         return Str::slug($lessonName.'-'.$stepName, '_').'.'.$extension;
+    }
+
+    private function resolveInitialSelectedStepId(): ?int
+    {
+        $defaultStep = $this->resolveDefaultRunStep();
+        $lastDoneStep = $this->pipelineRun->steps->last(
+            fn (PipelineRunStep $step): bool => $step->status === 'done'
+        );
+
+        if ($defaultStep !== null && $defaultStep->status === 'done') {
+            return $defaultStep->id;
+        }
+
+        if ($lastDoneStep !== null) {
+            return $lastDoneStep->id;
+        }
+
+        if ($defaultStep !== null) {
+            return $defaultStep->id;
+        }
+
+        return $this->pipelineRun->steps->first()?->id;
+    }
+
+    private function resolveDefaultRunStep(): ?PipelineRunStep
+    {
+        $defaultStep = $this->pipelineRun->steps
+            ->first(fn (PipelineRunStep $step): bool => (bool) data_get($step->stepVersion?->settings, 'is_default', false));
+
+        if ($defaultStep !== null) {
+            return $defaultStep;
+        }
+
+        return $this->pipelineRun->steps->last();
     }
 
     public function render(): View

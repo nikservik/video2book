@@ -176,6 +176,62 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('data-selected-step-id="'.$secondRunStep->id.'"', false);
     }
 
+    public function test_project_run_page_selects_default_step_when_it_is_done(): void
+    {
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $secondRunStep->update(['status' => 'done']);
+
+        $firstStepVersion = StepVersion::query()->findOrFail($firstRunStep->step_version_id);
+        $firstStepVersion->update([
+            'settings' => [
+                ...((array) $firstStepVersion->settings),
+                'is_default' => true,
+            ],
+        ]);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->assertSet('selectedStepId', $firstRunStep->id)
+            ->assertSee('data-selected-step-id="'.$firstRunStep->id.'"', false);
+    }
+
+    public function test_project_run_page_selects_last_done_step_when_default_step_is_not_done(): void
+    {
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $secondStepVersion = StepVersion::query()->findOrFail($secondRunStep->step_version_id);
+        $secondStepVersion->update([
+            'settings' => [
+                ...((array) $secondStepVersion->settings),
+                'is_default' => true,
+            ],
+        ]);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->assertSet('selectedStepId', $firstRunStep->id)
+            ->assertSee('data-selected-step-id="'.$firstRunStep->id.'"', false);
+    }
+
+    public function test_project_run_page_without_default_flag_selects_last_step_when_no_steps_done(): void
+    {
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $firstRunStep->update(['status' => 'pending']);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->assertSet('selectedStepId', $secondRunStep->id)
+            ->assertSee('data-selected-step-id="'.$secondRunStep->id.'"', false);
+    }
+
     public function test_project_run_page_can_toggle_result_preview_and_source_modes(): void
     {
         [$project, $pipelineRun] = $this->createProjectRunWithSteps();
