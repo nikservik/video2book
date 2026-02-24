@@ -27,6 +27,7 @@
 + PDF-экспорт переведён на `barryvdh/laravel-dompdf` (генерация из HTML/CSS)
 + Шаблон PDF вынесен в Blade: `resources/views/pdf/pipeline-step.blade.php` (`Pdf::loadView`)
 + Исправлен runtime-конфликт Alpine (`isActionsMenuOpen`) на странице прогона при переходах через `wire:navigate` и фоновых polling-запросах
++ Для пользователя с `access_level=0` список шагов (desktop/mobile) показывается в упрощённом виде: `Шаг N. {Название}` и только badge статуса (без метрик токенов/стоимости)
 
 ## Pipeline 
 + Список 

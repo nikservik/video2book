@@ -60,6 +60,9 @@
                         data-mobile-run-steps-toggle>
                     <div class="flex items-center justify-between gap-3">
                         <span class="truncate text-gray-900 dark:text-white">
+                            @if ($this->isZeroAccessLevelUser && $this->selectedStepNumber !== null)
+                                Шаг {{ $this->selectedStepNumber }}.
+                            @endif
                             {{ $this->selectedStep?->stepVersion?->name ?? 'Без названия шага' }}
                         </span>
                         <span class="flex items-center gap-2">
@@ -76,11 +79,13 @@
                         </span>
                     </div>
 
-                    <div class="mt-2 flex flex-wrap items-center gap-2">
-                        <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($this->selectedStep?->input_tokens) }}</span>
-                        <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($this->selectedStep?->output_tokens) }}</span>
-                        <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($this->selectedStep?->cost) }}</span>
-                    </div>
+                    @unless ($this->isZeroAccessLevelUser)
+                        <div class="mt-2 flex flex-wrap items-center gap-2">
+                            <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($this->selectedStep?->input_tokens) }}</span>
+                            <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($this->selectedStep?->output_tokens) }}</span>
+                            <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($this->selectedStep?->cost) }}</span>
+                        </div>
+                    @endunless
                 </button>
 
                 <div x-show="isMobileRunStepsMenuOpen"
@@ -99,6 +104,9 @@
                                     : 'border-gray-200 bg-white hover:border-gray-300 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20' }}">
                             <div class="flex items-center justify-between gap-3">
                                 <span class="truncate text-gray-900 dark:text-white">
+                                    @if ($this->isZeroAccessLevelUser)
+                                        Шаг {{ $loop->iteration }}.
+                                    @endif
                                     {{ $step->stepVersion?->name ?? 'Без названия шага' }}
                                 </span>
                                 <span>
@@ -108,11 +116,13 @@
                                 </span>
                             </div>
 
-                            <div class="mt-2 flex flex-wrap items-center gap-2">
-                                <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($step->input_tokens) }}</span>
-                                <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($step->output_tokens) }}</span>
-                                <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($step->cost) }}</span>
-                            </div>
+                            @unless ($this->isZeroAccessLevelUser)
+                                <div class="mt-2 flex flex-wrap items-center gap-2">
+                                    <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($step->input_tokens) }}</span>
+                                    <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($step->output_tokens) }}</span>
+                                    <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($step->cost) }}</span>
+                                </div>
+                            @endunless
                         </button>
                     @endforeach
                 </div>
@@ -204,15 +214,30 @@
         <aside class="hidden md:block md:col-span-1" @if ($this->hasUnfinishedSteps) wire:poll.2s="refreshRunSteps" @endif>
             <div class="space-y-3">
                 @forelse ($pipelineRun->steps as $step)
+                    @php
+                        $hasDesktopPointer = $this->isZeroAccessLevelUser && ! $loop->last;
+                        $isActiveStep = $selectedStepId === $step->id;
+                    @endphp
+
                     <button type="button"
                             wire:click="selectStep({{ $step->id }})"
                             data-run-step="{{ $step->id }}"
                             data-active="{{ $selectedStepId === $step->id ? 'true' : 'false' }}"
+                            data-run-step-pointer="{{ $hasDesktopPointer ? 'true' : 'false' }}"
                             class="w-full rounded-lg border p-3 text-left transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:focus-visible:outline-indigo-500 {{ $selectedStepId === $step->id
                                 ? 'border-indigo-500 bg-indigo-100 dark:border-indigo-400 dark:bg-indigo-900'
-                                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20' }}">
+                                : 'border-gray-200 bg-white hover:border-gray-300 dark:border-white/10 dark:bg-gray-800 dark:hover:border-white/20' }} {{ $hasDesktopPointer
+                                ? 'relative overflow-visible before:content-[\'\'] before:absolute before:left-1/2 before:top-full before:-translate-x-1/2 before:border-x-[11px] before:border-x-transparent before:border-t-[11px] after:content-[\'\'] after:absolute after:left-1/2 after:top-full after:-translate-x-1/2 after:-mt-px after:border-x-[10px] after:border-x-transparent after:border-t-[10px]'
+                                : '' }} {{ $hasDesktopPointer
+                                ? ($isActiveStep
+                                    ? 'before:border-t-indigo-500 dark:before:border-t-indigo-400 after:border-t-indigo-100 dark:after:border-t-indigo-900'
+                                    : 'before:border-t-gray-200 dark:before:border-t-white/10 after:border-t-white dark:after:border-t-gray-800')
+                                : '' }}">
                         <div class="flex items-center justify-between gap-3">
                             <span class="truncate text-gray-900 dark:text-white">
+                                @if ($this->isZeroAccessLevelUser)
+                                    Шаг {{ $loop->iteration }}.
+                                @endif
                                 {{ $step->stepVersion?->name ?? 'Без названия шага' }}
                             </span>
                             <span class="{{ $this->stepStatusBadgeClass($step->status) }}">
@@ -220,11 +245,13 @@
                             </span>
                         </div>
 
-                        <div class="mt-2 flex flex-wrap items-center gap-2">
-                            <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($step->input_tokens) }}</span>
-                            <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($step->output_tokens) }}</span>
-                            <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($step->cost) }}</span>
-                        </div>
+                        @unless ($this->isZeroAccessLevelUser)
+                            <div class="mt-2 flex flex-wrap items-center gap-2">
+                                <span class="{{ $this->tokenMetricsBadgeClass() }}">i:{{ $this->formatTokens($step->input_tokens) }}</span>
+                                <span class="{{ $this->tokenMetricsBadgeClass() }}">o:{{ $this->formatTokens($step->output_tokens) }}</span>
+                                <span class="{{ $this->costMetricsBadgeClass() }}">${{ $this->formatCost($step->cost) }}</span>
+                            </div>
+                        @endunless
                     </button>
                 @empty
                     <div class="rounded-lg border border-dashed border-gray-300 px-4 py-5 dark:border-white/15">

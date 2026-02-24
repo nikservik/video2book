@@ -9,6 +9,7 @@ use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Models\PipelineRun;
 use App\Models\PipelineRunStep;
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Services\Project\ProjectRunDetailsQuery;
@@ -27,6 +28,8 @@ class ProjectRunPage extends Component
 
     public string $resultViewMode = 'preview';
 
+    public bool $isZeroAccessLevelUser = false;
+
     public function mount(Project $project, PipelineRun $pipelineRun): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($pipelineRun);
@@ -37,6 +40,11 @@ class ProjectRunPage extends Component
         );
 
         $this->project = $project;
+
+        $authUser = auth()->user();
+        $this->isZeroAccessLevelUser = $authUser instanceof User
+            && (int) $authUser->access_level === User::ACCESS_LEVEL_USER;
+
         $lastDoneStep = $this->pipelineRun->steps->last(
             fn (PipelineRunStep $step): bool => $step->status === 'done'
         );
@@ -166,6 +174,23 @@ class ProjectRunPage extends Component
     public function getSelectedStepProperty(): ?PipelineRunStep
     {
         return $this->pipelineRun->steps->firstWhere('id', $this->selectedStepId);
+    }
+
+    public function getSelectedStepNumberProperty(): ?int
+    {
+        if ($this->selectedStep === null) {
+            return null;
+        }
+
+        $stepIndex = $this->pipelineRun->steps->search(
+            fn (PipelineRunStep $step): bool => $step->id === $this->selectedStep->id
+        );
+
+        if ($stepIndex === false) {
+            return null;
+        }
+
+        return $stepIndex + 1;
     }
 
     public function getSelectedStepResultProperty(): string

@@ -12,6 +12,7 @@ use App\Models\Project;
 use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
@@ -53,10 +54,51 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('Готово')
             ->assertSee('Обработка')
             ->assertSee('DOCX')
+            ->assertDontSee('data-run-step-pointer="true"', false)
             ->assertSee('i:1,234')
             ->assertSee('o:56,789')
             ->assertSee('$1.235')
             ->assertSee('data-selected-step-id="'.$firstRunStep->id.'"', false);
+    }
+
+    public function test_project_run_page_for_zero_access_level_user_shows_step_number_prefix_and_hides_metrics(): void
+    {
+        [$project, $pipelineRun] = $this->createProjectRunWithSteps();
+
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $user->access_token)
+            ->get(route('projects.runs.show', [
+                'project' => $project,
+                'pipelineRun' => $pipelineRun,
+            ]));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Готово')
+            ->assertSee('Обработка')
+            ->assertDontSee('i:1,234')
+            ->assertDontSee('o:56,789')
+            ->assertDontSee('$1.235')
+            ->assertDontSee('i:321')
+            ->assertDontSee('o:654')
+            ->assertDontSee('$0.045');
+
+        $response->assertSeeInOrder([
+            'Шаг 1.',
+            'Транскрибация',
+        ]);
+        $response->assertSeeInOrder([
+            'Шаг 2.',
+            'Саммаризация',
+        ]);
+
+        $this->assertSame(1, substr_count($response->getContent(), 'data-run-step-pointer="true"'));
+        $this->assertSame(1, substr_count($response->getContent(), 'data-run-step-pointer="false"'));
     }
 
     public function test_project_run_page_polls_selected_step_result_only_for_running_step(): void
