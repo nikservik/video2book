@@ -12,6 +12,10 @@ class AuthenticateTeamAccessToken
 {
     public function handle(Request $request, Closure $next): Response
     {
+        if ($request->routeIs('invites.accept')) {
+            return $next($request);
+        }
+
         $token = $request->cookie((string) config('simple_auth.cookie_name', 'video2book_access_token'));
 
         if (! is_string($token) || $token === '') {

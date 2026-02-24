@@ -7,7 +7,9 @@ use App\Models\Pipeline;
 use App\Models\PipelineRun;
 use App\Models\Project;
 use App\Models\ProjectTag;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class BreadcrumbsTest extends TestCase
@@ -80,6 +82,34 @@ class BreadcrumbsTest extends TestCase
 
         $this->assertDoesNotMatchRegularExpression('/<a[^>]*>\s*Урок\s*<\/a>/', $content);
         $this->assertDoesNotMatchRegularExpression('/<a[^>]*>\s*Пайплайн ран • v1\s*<\/a>/', $content);
+    }
+
+    public function test_project_run_page_hides_version_suffix_in_breadcrumbs_for_zero_access_level_user(): void
+    {
+        [$project, $pipelineRun] = $this->createProjectRun();
+
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $user->access_token)
+            ->get(route('projects.runs.show', [
+                'project' => $project,
+                'pipelineRun' => $pipelineRun,
+            ]));
+
+        $response
+            ->assertStatus(200)
+            ->assertSeeInOrder([
+                'aria-label="Breadcrumb"',
+                'Проекты',
+                'Проект Ран',
+                'Урок',
+                'Пайплайн ран',
+            ], false)
+            ->assertDontSee('Пайплайн ран • v1');
     }
 
     public function test_pipeline_pages_render_breadcrumbs_paths(): void

@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Http\Middleware\AuthenticateTeamAccessToken;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -68,5 +69,17 @@ class InviteAuthTest extends TestCase
         $response
             ->assertStatus(403)
             ->assertSee('Доступ закрыт');
+    }
+
+    public function test_team_token_middleware_is_applied_to_web_group_and_livewire_update_route(): void
+    {
+        $webMiddleware = app('router')->getMiddlewareGroups()['web'] ?? [];
+
+        $this->assertContains(AuthenticateTeamAccessToken::class, $webMiddleware);
+
+        $livewireUpdateRoute = app('router')->getRoutes()->getByName('default-livewire.update');
+
+        $this->assertNotNull($livewireUpdateRoute);
+        $this->assertContains('web', $livewireUpdateRoute->gatherMiddleware());
     }
 }

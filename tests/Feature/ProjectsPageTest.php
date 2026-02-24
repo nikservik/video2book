@@ -10,6 +10,7 @@ use App\Models\PipelineVersion;
 use App\Models\PipelineVersionStep;
 use App\Models\Project;
 use App\Models\ProjectTag;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
@@ -99,6 +100,46 @@ class ProjectsPageTest extends TestCase
             ->call('closeCreateProjectModal')
             ->assertSet('showCreateProjectModal', false)
             ->assertDontSee('data-create-project-modal', false);
+    }
+
+    public function test_projects_page_pipeline_dropdown_shows_pipeline_descriptions(): void
+    {
+        $versionWithDescription = $this->createPipelineWithSteps();
+        $versionWithDescription->update([
+            'description' => 'Пояснение для версии пайплайна',
+        ]);
+
+        $this->createPipelineWithSteps();
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openCreateProjectModal')
+            ->assertSee('Пояснение для версии пайплайна')
+            ->assertSee('Описание не задано.');
+    }
+
+    public function test_projects_page_hides_pipeline_version_number_for_zero_access_level_user(): void
+    {
+        $this->createPipelineWithSteps();
+
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+        ]);
+
+        $this->actingAs($user);
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openCreateProjectModal')
+            ->assertSee('Pipeline title')
+            ->assertDontSee('Pipeline title • v1');
+    }
+
+    public function test_projects_page_shows_pipeline_version_number_for_admin(): void
+    {
+        $this->createPipelineWithSteps();
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openCreateProjectModal')
+            ->assertSee('Pipeline title • v1');
     }
 
     public function test_projects_page_can_create_project_with_only_required_name(): void

@@ -79,6 +79,8 @@ class ProjectRunPageTest extends TestCase
 
         $response
             ->assertStatus(200)
+            ->assertSee('Пайплайн обучения')
+            ->assertDontSee('Пайплайн обучения • v3')
             ->assertSee('Готово')
             ->assertSee('Обработка')
             ->assertDontSee('i:1,234')

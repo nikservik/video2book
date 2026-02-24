@@ -4,6 +4,31 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: скрыт номер версии пайплайна на странице прогона для пользователей уровня 0
+- На странице `projects.runs.show` для пользователя с `access_level=0` в заголовке и breadcrumbs скрыт суффикс версии (`• vN`), отображается только название пайплайна.
+- Для `admin/superadmin` формат `Название • vN` на странице прогона сохранён без изменений.
+- Добавлены/обновлены feature-тесты `ProjectRunPageTest` и `BreadcrumbsTest`.
+
+## [2026-02-24] fix: скрыт номер версии в карточке прогона урока для пользователей уровня 0
+- На странице `projects.show` в карточке урока для прогона у пользователя с `access_level=0` отображается только название пайплайна (без суффикса `• vN`), а для `admin/superadmin` формат `Название • vN` сохранён.
+- Обновлён feature-тест `ProjectShowPageTest` на ролевое отображение подписи прогона.
+- Обновлены `README.md` и `docs/server.md`.
+
+## [2026-02-24] fix: авторизация для livewire update через middleware web-group
+- `AuthenticateTeamAccessToken` подключён к `web` middleware group в `bootstrap/app.php`, поэтому аутентификация по invite-cookie стабильно применяется и к `livewire.update` запросам.
+- В `AuthenticateTeamAccessToken` добавлено исключение для маршрута `invites.accept`, чтобы переход по invite-ссылке работал без предварительного cookie.
+- Маршруты `routes/web.php` переведены с локального `Route::middleware('team.token')` на общую защиту через `web` group.
+- Из `GetPipelineVersionOptionsAction` удалён fallback-резолв пользователя по cookie; формирование label снова опирается на `auth()->user()`/явно переданного viewer.
+- Добавлен регрессионный тест `InviteAuthTest::test_team_token_middleware_is_applied_to_web_group_and_livewire_update_route`.
+
+## [2026-02-24] refactor: общий dropdown выбора версии пайплайна
+- Повторяющаяся разметка dropdown выбора версии пайплайна вынесена в общий Blade-компонент `resources/views/components/pipeline-version-select.blade.php`.
+- Компонент подключён в модалках: создание проекта, редактирование проекта, добавление урока по ссылке, добавление урока из аудио, добавление версии пайплайна к уроку.
+- В списке опций dropdown для каждой версии добавлена вторая строка мелким шрифтом с `description` (fallback: `Описание не задано.`).
+- Для пользователей с `access_level=0` в dropdown скрывается номер версии (`• vN`); для `admin/superadmin` отображение номера версии сохранено.
+- `GetPipelineVersionOptionsAction` расширен полем `description` в наборе опций; обновлён unit-тест `GetPipelineVersionOptionsActionTest`.
+- Обновлены `README.md`, `docs/server.md` и `docs/next.md`.
+
 ## [2026-02-24] feat: шаг по умолчанию для text-шагов пайплайна
 - На странице пайплайна для шагов типа `text` добавлен checkbox выбора шага по умолчанию (расположен слева над иконкой типа шага).
 - Гарантируется единственный `default`-шаг в выбранной версии: при выборе нового шага флаг `settings.is_default` снимается с остальных шагов версии.

@@ -26,6 +26,7 @@ use App\Models\Project;
 use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Carbon;
@@ -156,6 +157,9 @@ class ProjectShowPageTest extends TestCase
             'state' => [],
         ]);
 
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->assertSet('showPipelineRunVersionInLessonCard', true);
+
         $response = $this->get(route('projects.show', $project));
 
         $response
@@ -169,6 +173,57 @@ class ProjectShowPageTest extends TestCase
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runDone]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runQueued]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runRunning]), false);
+    }
+
+    public function test_project_page_hides_pipeline_version_in_run_cards_for_zero_access_level_user(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект пользователя',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок пользователя',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $pipeline = Pipeline::query()->create();
+        $pipelineVersion = $pipeline->versions()->create([
+            'version' => 5,
+            'title' => 'Пайплайн пользователя',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $user->access_token)
+            ->get(route('projects.show', $project));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Пайплайн пользователя')
+            ->assertDontSee('Пайплайн пользователя • v5');
     }
 
     public function test_project_page_has_polling_for_lessons_list(): void

@@ -207,9 +207,15 @@ class ProjectRunPage extends Component
 
     public function getPipelineVersionLabelProperty(): string
     {
+        $pipelineTitle = $this->pipelineRun->pipelineVersion?->title ?? 'Без названия';
+
+        if ($this->isZeroAccessLevelUser) {
+            return $pipelineTitle;
+        }
+
         return sprintf(
             '%s • v%s',
-            $this->pipelineRun->pipelineVersion?->title ?? 'Без названия',
+            $pipelineTitle,
             (string) ($this->pipelineRun->pipelineVersion?->version ?? '—')
         );
     }

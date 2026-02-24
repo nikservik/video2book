@@ -29,7 +29,7 @@ class AddPipelineToLessonModal extends Component
     public array $existingLessonPipelineVersionIds = [];
 
     /**
-     * @var array<int, array{id:int,label:string}>
+     * @var array<int, array{id:int,label:string,description:string|null}>
      */
     public array $pipelineVersionOptions = [];
 
@@ -117,7 +117,7 @@ class AddPipelineToLessonModal extends Component
     }
 
     /**
-     * @return array<int, array{id:int,label:string}>
+     * @return array<int, array{id:int,label:string,description:string|null}>
      */
     public function getAddPipelineVersionOptionsProperty(): array
     {

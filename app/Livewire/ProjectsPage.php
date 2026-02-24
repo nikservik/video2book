@@ -24,7 +24,7 @@ class ProjectsPage extends Component
     public string $newProjectLessonsList = '';
 
     /**
-     * @var array<int, array{id:int,label:string}>
+     * @var array<int, array{id:int,label:string,description:string|null}>
      */
     public array $pipelineVersionOptions = [];
 

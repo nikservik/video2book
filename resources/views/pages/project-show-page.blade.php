@@ -190,7 +190,9 @@
                                                class="block rounded-lg border border-gray-200 bg-gray-100 px-3 py-1 hover:bg-gray-200 dark:border-white/10 dark:bg-gray-900/50 dark:hover:bg-white/5">
                                                 <div class="flex items-center justify-between gap-3">
                                                     <span class="truncate text-sm text-gray-700 dark:text-gray-200">
-                                                        {{ ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }} • v{{ $pipelineRun->pipelineVersion?->version ?? '—' }}
+                                                        {{ $this->showPipelineRunVersionInLessonCard
+                                                            ? (($pipelineRun->pipelineVersion?->title ?? 'Без названия').' • v'.($pipelineRun->pipelineVersion?->version ?? '—'))
+                                                            : ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }}
                                                     </span>
                                                     <span class="{{ $this->pipelineRunStatusBadgeClass($pipelineRun->status) }}">
                                                         {{ $this->pipelineRunStatusLabel($pipelineRun->status) }}

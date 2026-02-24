@@ -23,7 +23,7 @@ class RenameProjectModal extends Component
     public ?int $editableProjectDefaultPipelineVersionId = null;
 
     /**
-     * @var array<int, array{id:int,label:string}>
+     * @var array<int, array{id:int,label:string,description:string|null}>
      */
     public array $pipelineVersionOptions = [];
 

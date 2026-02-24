@@ -29,7 +29,7 @@ class AddLessonFromAudioModal extends Component
     public $newLessonAudioFile = null;
 
     /**
-     * @var array<int, array{id:int,label:string}>
+     * @var array<int, array{id:int,label:string,description:string|null}>
      */
     public array $pipelineVersionOptions = [];
 
@@ -122,7 +122,7 @@ class AddLessonFromAudioModal extends Component
     }
 
     /**
-     * @param  array<int, array{id:int,label:string}>  $pipelineVersionOptions
+     * @param  array<int, array{id:int,label:string,description:string|null}>  $pipelineVersionOptions
      */
     private function resolvePreferredPipelineVersionId(array $pipelineVersionOptions): ?int
     {

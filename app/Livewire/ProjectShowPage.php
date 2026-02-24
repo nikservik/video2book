@@ -3,6 +3,7 @@
 namespace App\Livewire;
 
 use App\Models\Project;
+use App\Models\User;
 use App\Services\Project\ProjectDetailsQuery;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
@@ -20,10 +21,16 @@ class ProjectShowPage extends Component
 
     public bool $isLessonSortDropdownOpen = false;
 
+    public bool $showPipelineRunVersionInLessonCard = true;
+
     public string $lessonSort = ProjectDetailsQuery::LESSON_SORT_CREATED_AT;
 
     public function mount(Project $project): void
     {
+        $authUser = auth()->user();
+        $this->showPipelineRunVersionInLessonCard = ! ($authUser instanceof User
+            && (int) $authUser->access_level === User::ACCESS_LEVEL_USER);
+
         $this->lessonSort = $this->resolveLessonSortSetting(
             data_get($project->settings, self::LESSON_SORT_SETTING_KEY)
         );
