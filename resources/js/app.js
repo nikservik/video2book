@@ -1,5 +1,6 @@
 import './bootstrap';
 import '@tailwindplus/elements';
+import 'trix';
 
 const THEME_KEY = 'video2book:theme';
 
@@ -111,3 +112,24 @@ document.addEventListener('click', (event) => {
 
 initializeThemeToggle();
 document.addEventListener('livewire:navigated', initializeThemeToggle);
+
+document.addEventListener("trix-before-initialize", () => {
+  // копируем поведение heading1 и меняем tagName на h2/h3
+  Trix.config.blockAttributes.heading2 = {
+    tagName: "h2",
+    terminal: true,
+    breakOnReturn: true,
+    group: false,
+  }
+
+  Trix.config.blockAttributes.heading3 = {
+    tagName: "h3",
+    terminal: true,
+    breakOnReturn: true,
+    group: false,
+  }
+
+  // (не обязательно) подписи для title/доступности
+  Trix.config.lang.heading2 = "H2"
+  Trix.config.lang.heading3 = "H3"
+})

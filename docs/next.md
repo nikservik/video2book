@@ -2,6 +2,9 @@
 
 ## [ ] Редактирование шагов
 
++ wysiwyg-редактор Trix уже установлен через pnpm
+  + Настроены импорты в app.js и в app.css 
+  + Добавлен обработчик события `trix-before-initialize` В app.js для добавления кастомных стилей h2 и h3.
 - Над контентом справа вверху блок кнопок иконками:
   - в режиме просмотра: 
     - синяя кнопка с иконкой «Редактировать»:
@@ -18,8 +21,67 @@
           <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
         </svg>
     
-- При переключении в режим редактирования включаем панель редактора над текстом. Она должна быть в режиме sticky.
+- При переключении в режим редактирования включаем панель редактора над текстом. 
+  - отключать редактор можно атрибутом `disabled` (`<trix-editor disabled></trix-editor>`)
 
-- В шаг прогона добавляем поле `original`
+- В БД в шаг прогона добавляем поле `original`
 - При первом сохранении изменений текста копируем изначальный `result` в `original`. После этого сохраняем правки в `result`.
 - При любом сохранении правок пишем в лог: {пользователь} изменил текст в шаге {номер шага прогона} в уроке «{урок}» проекта «{проект}»
+
+### Шаблон использования Trix
+```html
+<input type="hidden" id="content_input" wire:model.defer="content">
+
+<div wire:ignore>
+  <trix-toolbar id="content_toolbar">
+    <div class="trix-button-row">
+      <span class="trix-button-group trix-button-group--text-tools" data-trix-button-group="text-tools">
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-bold"
+                data-trix-attribute="bold" data-trix-key="b"
+                title="Bold" tabindex="-1">Bold</button>
+
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-italic"
+                data-trix-attribute="italic" data-trix-key="i"
+                title="Italic" tabindex="-1">Italic</button>
+      </span>
+
+      <span class="trix-button-group trix-button-group--block-tools" data-trix-button-group="block-tools">
+        <button type="button"
+                class="trix-button"
+                data-trix-attribute="heading2"
+                title="H2" tabindex="-1">H2</button>
+
+        <button type="button"
+                class="trix-button"
+                data-trix-attribute="heading3"
+                title="H3" tabindex="-1">H3</button>
+
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-bullet-list"
+                data-trix-attribute="bullet"
+                title="Bullets" tabindex="-1">Bullets</button>
+
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-number-list"
+                data-trix-attribute="number"
+                title="Numbers" tabindex="-1">Numbers</button>
+
+        <!-- вложенность списков -->
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-decrease-nesting-level"
+                data-trix-action="decreaseNestingLevel"
+                title="Outdent" tabindex="-1">Outdent</button>
+
+        <button type="button"
+                class="trix-button trix-button--icon trix-button--icon-increase-nesting-level"
+                data-trix-action="increaseNestingLevel"
+                title="Indent" tabindex="-1">Indent</button>
+      </span>
+    </div>
+  </trix-toolbar>
+
+  <trix-editor input="content_input" toolbar="content_toolbar"></trix-editor>
+</div>
+```
