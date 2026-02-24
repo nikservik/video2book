@@ -16,10 +16,12 @@ use App\Support\AudioDurationLabelFormatter;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Validation\Rule;
+use Livewire\Attributes\Url;
 use Livewire\Component;
 
 class ProjectsPage extends Component
 {
+    #[Url(as: 'f')]
     public ?int $expandedFolderId = null;
 
     public bool $showCreateFolderModal = false;
@@ -77,7 +79,10 @@ class ProjectsPage extends Component
     {
         $this->pipelineVersionOptions = app(GetPipelineVersionOptionsAction::class)->handle();
         $this->hydrateFolderVisibilityOptions();
-        $this->expandedFolderId = $this->defaultExpandedFolderId();
+        $visibleFolderIds = $this->visibleFolderIds();
+
+        $this->expandedFolderId = $this->expandedFolderIdFromUrl($visibleFolderIds)
+            ?? $this->defaultExpandedFolderId($visibleFolderIds);
     }
 
     public function openCreateFolderModal(): void
@@ -416,12 +421,37 @@ class ProjectsPage extends Component
             ->all();
     }
 
-    private function defaultExpandedFolderId(): ?int
+    /**
+     * @param  array<int, int>  $visibleFolderIds
+     */
+    private function defaultExpandedFolderId(array $visibleFolderIds): ?int
     {
-        $visibleFolderIds = $this->visibleFolderIds();
-
         return count($visibleFolderIds) === 1
             ? (int) $visibleFolderIds[0]
+            : null;
+    }
+
+    /**
+     * @param  array<int, int>  $visibleFolderIds
+     */
+    private function expandedFolderIdFromUrl(array $visibleFolderIds): ?int
+    {
+        $folderId = $this->expandedFolderId;
+
+        if ($folderId === null) {
+            $queryFolderId = request()->query('f');
+
+            if (is_numeric($queryFolderId)) {
+                $folderId = (int) $queryFolderId;
+            }
+        }
+
+        if ($folderId === null) {
+            return null;
+        }
+
+        return in_array($folderId, $visibleFolderIds, true)
+            ? $folderId
             : null;
     }
 

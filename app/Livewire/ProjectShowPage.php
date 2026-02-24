@@ -269,7 +269,7 @@ class ProjectShowPage extends Component
         ])->layout('layouts.app', [
             'title' => $this->project->name.' | '.config('app.name', 'Video2Book'),
             'breadcrumbs' => [
-                ['label' => 'Проекты', 'url' => route('projects.index')],
+                ['label' => 'Проекты', 'url' => route('projects.index', ['f' => $this->project->folder_id])],
                 ['label' => $this->project->name, 'current' => true],
             ],
         ]);

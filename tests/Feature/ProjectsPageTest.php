@@ -428,6 +428,47 @@ class ProjectsPageTest extends TestCase
             ->assertDontSee('Проект второй папки');
     }
 
+    public function test_projects_page_expands_folder_from_query_parameter_when_present(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $firstFolder = Folder::query()->create([
+            'name' => 'Первая папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+        $secondFolder = Folder::query()->create([
+            'name' => 'Вторая папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+
+        Project::query()->create([
+            'folder_id' => $firstFolder->id,
+            'name' => 'Проект первой папки',
+            'tags' => null,
+        ]);
+        Project::query()->create([
+            'folder_id' => $secondFolder->id,
+            'name' => 'Проект второй папки',
+            'tags' => null,
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $viewer->access_token)
+            ->get(route('projects.index', ['f' => $secondFolder->id]));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Первая папка')
+            ->assertSee('Вторая папка')
+            ->assertSee('Проект второй папки')
+            ->assertDontSee('Проект первой папки');
+    }
+
     private function createProject(Folder $folder, string $name, Carbon $updatedAt, int $lessonsCount): void
     {
         $project = Project::query()->create([

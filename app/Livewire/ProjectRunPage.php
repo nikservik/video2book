@@ -379,7 +379,7 @@ class ProjectRunPage extends Component
         ])->layout('layouts.app', [
             'title' => $lessonName.' | '.config('app.name', 'Video2Book'),
             'breadcrumbs' => [
-                ['label' => 'Проекты', 'url' => route('projects.index')],
+                ['label' => 'Проекты', 'url' => route('projects.index', ['f' => $this->project->folder_id])],
                 ['label' => $this->project->name, 'url' => route('projects.show', $this->project)],
                 ['label' => $lessonName],
                 ['label' => $this->pipelineVersionLabel, 'current' => true],

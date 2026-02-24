@@ -52,6 +52,7 @@ class BreadcrumbsTest extends TestCase
 
         $response
             ->assertStatus(200)
+            ->assertSee(route('projects.index', ['f' => $project->folder_id]), false)
             ->assertSeeInOrder([
                 'aria-label="Breadcrumb"',
                 'Проекты',
@@ -70,6 +71,7 @@ class BreadcrumbsTest extends TestCase
 
         $response
             ->assertStatus(200)
+            ->assertSee(route('projects.index', ['f' => $project->folder_id]), false)
             ->assertSeeInOrder([
                 'aria-label="Breadcrumb"',
                 'Проекты',
@@ -102,6 +104,7 @@ class BreadcrumbsTest extends TestCase
 
         $response
             ->assertStatus(200)
+            ->assertSee(route('projects.index', ['f' => $project->folder_id]), false)
             ->assertSeeInOrder([
                 'aria-label="Breadcrumb"',
                 'Проекты',
