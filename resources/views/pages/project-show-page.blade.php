@@ -169,14 +169,6 @@
             @else
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-white/10">
                     @foreach ($project->lessons as $lesson)
-                        @php
-                            $singlePipelineRun = $lesson->pipelineRuns->count() === 1
-                                ? $lesson->pipelineRuns->first()
-                                : null;
-                            $singlePipelineRunUrl = $singlePipelineRun === null
-                                ? null
-                                : route('projects.runs.show', ['project' => $project, 'pipelineRun' => $singlePipelineRun]);
-                        @endphp
                         <article wire:key="lesson-row-{{ $lesson->id }}"
                                  x-on:click="
                                      const runUrl = $el.dataset.singleRunUrl
@@ -196,11 +188,11 @@
 
                                      window.location.href = runUrl
                                  "
-                                 data-lesson-single-run="{{ $singlePipelineRun !== null ? 'true' : 'false' }}"
-                                 data-single-run-url="{{ $singlePipelineRunUrl ?? '' }}"
+                                 data-lesson-single-run="{{ $this->lessonHasSinglePipelineRun($lesson) ? 'true' : 'false' }}"
+                                 data-single-run-url="{{ $this->lessonSinglePipelineRunUrl($lesson) ?? '' }}"
                                  @class([
                                      'px-4 py-3 flex flex-col items-start gap-2 md:gap-3 md:pr-3 md:flex-row',
-                                     'cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5' => $singlePipelineRun !== null,
+                                     'cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5' => $this->lessonHasSinglePipelineRun($lesson),
                                  ])>
                             <div class="w-full flex items-start justify-between gap-3 md:w-2/3">
                                 <span class="text-base font-semibold text-gray-900 dark:text-white">
@@ -217,7 +209,7 @@
                                           <path fill-rule="evenodd" d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm5.25-9.25a.75.75 0 0 0-1.5 0v4.59l-1.95-2.1a.75.75 0 1 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V7.75Z" clip-rule="evenodd" />
                                         </svg>
                                     </span>
-                                    <span class="inline-block text-right w-8 min-w-8 shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span class="inline-block text-right w-10 min-w-10 shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">
                                         @if (($lessonAudioDuration = $this->lessonAudioDurationLabel($lesson->settings, $lesson->source_filename)) !== null)
                                             {{ $lessonAudioDuration }}
                                         @endif

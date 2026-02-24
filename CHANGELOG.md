@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] refactor: убран inline PHP из Blade страницы проекта
+- Логика определения single-run урока вынесена из `resources/views/pages/project-show-page.blade.php` в методы Livewire-компонента `ProjectShowPage`.
+- В шаблоне страницы проекта удалены `@php/@endphp` блоки; переход по клику для урока с одним прогоном работает через методы компонента.
+
 ## [2026-02-24] fix: клик по уроку с единственным прогоном
 - На странице проекта для урока с ровно одним прогоном добавлены hover-подсветка и переход в этот прогон по клику на весь блок урока.
 - Клики по вложенным контролам (`button`/`a`) внутри блока урока не перехватываются, поэтому кнопки урока и ссылки прогонов продолжают работать отдельно.

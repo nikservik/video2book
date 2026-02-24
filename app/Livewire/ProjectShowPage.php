@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
+use App\Models\Lesson;
+use App\Models\PipelineRun;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Project\ProjectDetailsQuery;
@@ -235,6 +237,29 @@ class ProjectShowPage extends Component
     {
         return app(AudioDurationLabelFormatter::class)
             ->format(data_get($settings, RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY));
+    }
+
+    public function lessonHasSinglePipelineRun(Lesson $lesson): bool
+    {
+        return $lesson->pipelineRuns->count() === 1;
+    }
+
+    public function lessonSinglePipelineRunUrl(Lesson $lesson): ?string
+    {
+        if (! $this->lessonHasSinglePipelineRun($lesson)) {
+            return null;
+        }
+
+        $pipelineRun = $lesson->pipelineRuns->first();
+
+        if (! $pipelineRun instanceof PipelineRun) {
+            return null;
+        }
+
+        return route('projects.runs.show', [
+            'project' => $this->project,
+            'pipelineRun' => $pipelineRun,
+        ]);
     }
 
     public function render(): View
