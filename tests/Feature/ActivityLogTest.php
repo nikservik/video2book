@@ -149,6 +149,51 @@ class ActivityLogTest extends TestCase
         );
     }
 
+    public function test_it_does_not_log_model_events_without_authenticated_user(): void
+    {
+        auth()->logout();
+        $this->assertNull(auth()->user());
+
+        ProjectTag::query()->firstOrCreate(['slug' => 'default'], ['description' => null]);
+
+        $project = Project::query()->create([
+            'name' => 'Project without causer',
+            'tags' => 'system',
+            'settings' => ['lessons_sort' => 'name'],
+        ]);
+
+        $project->update([
+            'name' => 'Project without causer updated',
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Lesson without causer',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $lesson->update([
+            'name' => 'Lesson without causer updated',
+        ]);
+
+        $pipelineVersion = $this->createPipelineVersion();
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'queued',
+            'state' => [],
+        ]);
+
+        $run->delete();
+        $lesson->delete();
+        $project->delete();
+
+        $this->assertSame(0, Activity::query()->count());
+    }
+
     private function assertActivityLogged(
         string $logName,
         string $event,

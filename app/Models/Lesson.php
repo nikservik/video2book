@@ -14,7 +14,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class Lesson extends Model
 {
     use HasFactory;
-    use LogsActivity;
+    use LogsActivity {
+        shouldLogEvent as protected shouldLogActivityEvent;
+    }
     use SoftDeletes;
 
     protected static $recordEvents = ['created', 'updated', 'deleted'];
@@ -50,6 +52,17 @@ class Lesson extends Model
             ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    protected function shouldLogEvent(string $eventName): bool
+    {
+        $causer = auth()->user();
+
+        if (! $causer instanceof User) {
+            return false;
+        }
+
+        return $this->shouldLogActivityEvent($eventName);
     }
 
     public function project(): BelongsTo

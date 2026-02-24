@@ -13,7 +13,9 @@ use Spatie\Activitylog\Traits\LogsActivity;
 class PipelineRun extends Model
 {
     use HasFactory;
-    use LogsActivity;
+    use LogsActivity {
+        shouldLogEvent as protected shouldLogActivityEvent;
+    }
     use SoftDeletes;
 
     protected static $recordEvents = ['created', 'deleted'];
@@ -47,6 +49,17 @@ class PipelineRun extends Model
             ])
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs();
+    }
+
+    protected function shouldLogEvent(string $eventName): bool
+    {
+        $causer = auth()->user();
+
+        if (! $causer instanceof User) {
+            return false;
+        }
+
+        return $this->shouldLogActivityEvent($eventName);
     }
 
     public function lesson(): BelongsTo

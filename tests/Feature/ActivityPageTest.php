@@ -166,7 +166,7 @@ class ActivityPageTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('урок')
-            ->assertSee('«Урок А1 в проекте «Проект А»»');
+            ->assertSee('«Урок А1» в проекте «Проект А»');
     }
 
     private function makeAdmin(string $name, string $email): User

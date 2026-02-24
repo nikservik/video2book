@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: в activity log сохраняются только действия с автором
+- Для моделей `Project`, `Lesson` и `PipelineRun` добавлена защита: событие логируется только если авторизован `App\Models\User`.
+- Фоновые/системные изменения без пользователя-автора больше не создают записи в `activity_log`.
+- Добавлен feature-тест `ActivityLogTest::test_it_does_not_log_model_events_without_authenticated_user`.
+- Обновлены `README.md` и `docs/server.md`.
+
 ## [2026-02-24] fix: на странице прогона оставлен только режим превью результата шага
 - На странице `projects.runs.show` убран переключатель `Превью / Исходник`; основной контент шага всегда отображается в режиме превью (рендер markdown в HTML).
 - Обновлён feature-тест `ProjectRunPageTest` под новый UX без режима `source`.
