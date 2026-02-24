@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Jobs\DownloadLessonAudioJob;
 use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
@@ -101,19 +102,41 @@ class LessonDownloadTest extends TestCase
             });
 
         $job = new DownloadLessonAudioJob($lesson->id, 'https://youtube.com/watch?v=ready');
+        $recalculateAction = Mockery::mock(RecalculateProjectLessonsAudioDurationAction::class);
+        $recalculateAction->shouldReceive('handle')
+            ->once()
+            ->withArgs(fn (Project $invokedProject): bool => $invokedProject->id === $project->id)
+            ->andReturnUsing(function (Project $invokedProject) use ($lesson): int {
+                $refreshedLesson = $lesson->fresh();
+                $settings = $refreshedLesson->settings ?? [];
+                $settings['audio_duration_seconds'] = 4050;
+                $refreshedLesson->forceFill(['settings' => $settings])->save();
+
+                $projectSettings = $invokedProject->settings ?? [];
+                $projectSettings[RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY] = 4050;
+                $invokedProject->forceFill(['settings' => $projectSettings])->save();
+
+                return 4050;
+            });
 
         $job->handle(
             $service,
             app(PipelineRunService::class),
-            app(PipelineEventBroadcaster::class)
+            app(PipelineEventBroadcaster::class),
+            $recalculateAction,
         );
 
         $lesson->refresh();
+        $project->refresh();
         $this->assertSame('lessons/'.$lesson->id.'.mp3', $lesson->source_filename);
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('completed', data_get($lesson->settings, 'download_status'));
         $this->assertEquals(100, data_get($lesson->settings, 'download_progress'));
         $this->assertSame(4050, data_get($lesson->settings, 'audio_duration_seconds'));
+        $this->assertSame(
+            4050,
+            data_get($project->settings, RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY)
+        );
 
         Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $queuedJob) use ($run) {
             return $queuedJob->pipelineRunId === $run->id;
@@ -150,12 +173,15 @@ class LessonDownloadTest extends TestCase
             ->andThrow(new RuntimeException('network error'));
 
         $job = new DownloadLessonAudioJob($lesson->id, 'https://youtube.com/watch?v=broken');
+        $recalculateAction = Mockery::mock(RecalculateProjectLessonsAudioDurationAction::class);
+        $recalculateAction->shouldReceive('handle')->never();
 
         try {
             $job->handle(
                 $service,
                 app(PipelineRunService::class),
-                app(PipelineEventBroadcaster::class)
+                app(PipelineEventBroadcaster::class),
+                $recalculateAction,
             );
             $this->fail('Job should throw exception');
         } catch (RuntimeException $exception) {
@@ -213,19 +239,41 @@ class LessonDownloadTest extends TestCase
             });
 
         $job = new NormalizeUploadedLessonAudioJob($lesson->id, 'downloader/'.$lesson->id.'/abc/uploaded.wav');
+        $recalculateAction = Mockery::mock(RecalculateProjectLessonsAudioDurationAction::class);
+        $recalculateAction->shouldReceive('handle')
+            ->once()
+            ->withArgs(fn (Project $invokedProject): bool => $invokedProject->id === $project->id)
+            ->andReturnUsing(function (Project $invokedProject) use ($lesson): int {
+                $refreshedLesson = $lesson->fresh();
+                $settings = $refreshedLesson->settings ?? [];
+                $settings['audio_duration_seconds'] = 1830;
+                $refreshedLesson->forceFill(['settings' => $settings])->save();
+
+                $projectSettings = $invokedProject->settings ?? [];
+                $projectSettings[RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY] = 1830;
+                $invokedProject->forceFill(['settings' => $projectSettings])->save();
+
+                return 1830;
+            });
 
         $job->handle(
             $service,
             app(PipelineRunService::class),
-            app(PipelineEventBroadcaster::class)
+            app(PipelineEventBroadcaster::class),
+            $recalculateAction,
         );
 
         $lesson->refresh();
+        $project->refresh();
         $this->assertSame('lessons/'.$lesson->id.'.mp3', $lesson->source_filename);
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('completed', data_get($lesson->settings, 'download_status'));
         $this->assertEquals(100, data_get($lesson->settings, 'download_progress'));
         $this->assertSame(1830, data_get($lesson->settings, 'audio_duration_seconds'));
+        $this->assertSame(
+            1830,
+            data_get($project->settings, RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY)
+        );
 
         Queue::assertPushedOn(ProcessPipelineJob::QUEUE, ProcessPipelineJob::class, function (ProcessPipelineJob $queuedJob) use ($run) {
             return $queuedJob->pipelineRunId === $run->id;
@@ -267,12 +315,15 @@ class LessonDownloadTest extends TestCase
             ->andThrow(new RuntimeException('normalize error'));
 
         $job = new NormalizeUploadedLessonAudioJob($lesson->id, 'downloader/'.$lesson->id.'/abc/uploaded.wav');
+        $recalculateAction = Mockery::mock(RecalculateProjectLessonsAudioDurationAction::class);
+        $recalculateAction->shouldReceive('handle')->never();
 
         try {
             $job->handle(
                 $service,
                 app(PipelineRunService::class),
-                app(PipelineEventBroadcaster::class)
+                app(PipelineEventBroadcaster::class),
+                $recalculateAction,
             );
             $this->fail('Job should throw exception');
         } catch (RuntimeException $exception) {

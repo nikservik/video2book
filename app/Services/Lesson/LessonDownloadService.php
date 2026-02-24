@@ -46,12 +46,11 @@ class LessonDownloadService
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
             $this->normalizeAudio($relativeInput, $outputPath, $lesson);
-            $durationSeconds = $this->resolveAudioDurationInSeconds($outputPath);
             $onProgress?->__invoke(100.0);
 
             return [
                 'path' => $outputPath,
-                'duration_seconds' => $durationSeconds,
+                'duration_seconds' => null,
             ];
         } catch (Throwable $exception) {
             throw new RuntimeException(
@@ -81,11 +80,10 @@ class LessonDownloadService
             $outputPath = 'lessons/'.$lesson->id.'.mp3';
 
             $this->normalizeAudio($sourcePath, $outputPath, $lesson);
-            $durationSeconds = $this->resolveAudioDurationInSeconds($outputPath);
 
             return [
                 'path' => $outputPath,
-                'duration_seconds' => $durationSeconds,
+                'duration_seconds' => null,
             ];
         } catch (Throwable $exception) {
             throw new RuntimeException(
@@ -230,18 +228,5 @@ class LessonDownloadService
         $proxy = trim((string) config('downloader.proxy', ''));
 
         return $proxy !== '' ? $proxy : null;
-    }
-
-    private function resolveAudioDurationInSeconds(string $audioPath): ?int
-    {
-        try {
-            $duration = FFMpeg::fromDisk('local')
-                ->open($audioPath)
-                ->getDurationInSeconds();
-        } catch (Throwable) {
-            return null;
-        }
-
-        return $duration > 0 ? (int) $duration : null;
     }
 }

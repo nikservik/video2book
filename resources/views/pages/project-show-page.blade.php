@@ -2,7 +2,14 @@
      x-data="{ isActionsMenuOpen: false }"
      x-on:keydown.escape.window="isActionsMenuOpen = false">
     <div class="mx-2 md:mx-6 flex items-center justify-between gap-3">
-        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">{{ $project->name }}</h1>
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">
+            {{ $project->name }}
+            @if (($projectAudioDuration = $this->projectLessonsAudioDurationLabel($project->settings)) !== null)
+                <span class="md:ml-3 inline-block tracking-normal text-lg font-normal text-gray-500 dark:text-gray-400">
+                    Длительность {{ $projectAudioDuration }}
+                </span>
+            @endif
+        </h1>
         <button type="button"
                 x-on:click="isActionsMenuOpen = !isActionsMenuOpen"
                 x-bind:aria-expanded="isActionsMenuOpen ? 'true' : 'false'"
@@ -27,99 +34,126 @@
              data-project-actions-menu>
             <div class="rounded-lg border border-gray-200 bg-white p-3 shadow-lg dark:border-white/10 dark:bg-gray-800 md:bg-transparent md:dark:bg-transparent md:p-0 md:shadow-none md:border-none">
                 <div class="space-y-3">
-                    <div data-lesson-sort-select wire:ignore>
-                        <div>
-                            <el-select id="project-lessons-sort"
-                                       name="project_lessons_sort"
-                                       value="{{ $lessonSort }}"
-                                       wire:model.live="lessonSort"
-                                       x-on:change="$el.querySelector('el-options')?.hidePopover(); isActionsMenuOpen = false"
-                                       class="block w-full">
-                                <button type="button"
-                                        class="w-full text-sm font-semibold inline-flex items-center rounded-lg bg-white py-2 pr-2 pl-3 text-center text-gray-900  outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/10 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
-                                    <el-selectedcontent class="flex-1 truncate pl-6">{{ $this->selectedLessonSortLabel }}</el-selectedcontent>
-                                    <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
-                                         class="size-4 text-gray-500 dark:text-gray-400">
-                                        <path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd"/>
-                                    </svg>
-                                </button>
+                    <div class="space-y-2" data-project-actions-section="settings">
+                        <div data-lesson-sort-select wire:ignore>
+                            <div>
+                                <el-select id="project-lessons-sort"
+                                           name="project_lessons_sort"
+                                           value="{{ $lessonSort }}"
+                                           wire:model.live="lessonSort"
+                                           x-on:change="$el.querySelector('el-options')?.hidePopover(); isActionsMenuOpen = false"
+                                           class="block w-full">
+                                    <button type="button"
+                                            class="w-full text-sm font-semibold inline-flex items-center rounded-lg bg-white py-2 pr-2 pl-3 text-center text-gray-900  outline-gray-300 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/10 dark:text-white dark:outline-white/10 dark:focus-visible:outline-indigo-500">
+                                        <el-selectedcontent class="flex-1 truncate pl-6">{{ $this->selectedLessonSortLabel }}</el-selectedcontent>
+                                        <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
+                                             class="size-4 text-gray-500 dark:text-gray-400">
+                                            <path d="M5.22 10.22a.75.75 0 0 1 1.06 0L8 11.94l1.72-1.72a.75.75 0 1 1 1.06 1.06l-2.25 2.25a.75.75 0 0 1-1.06 0l-2.25-2.25a.75.75 0 0 1 0-1.06ZM10.78 5.78a.75.75 0 0 1-1.06 0L8 4.06 6.28 5.78a.75.75 0 0 1-1.06-1.06l2.25-2.25a.75.75 0 0 1 1.06 0l2.25 2.25a.75.75 0 0 1 0 1.06Z" clip-rule="evenodd" fill-rule="evenodd"/>
+                                        </svg>
+                                    </button>
 
-                                <el-options anchor="bottom start" popover
-                                            x-on:toggle="
-                                                if ($event.newState === 'open') {
-                                                    $wire.markLessonSortDropdownOpened()
-                                                } else {
-                                                    $wire.markLessonSortDropdownClosed()
-                                                }
-                                            "
-                                            class=" w-(--button-width) overflow-auto rounded-lg bg-white shadow-lg outline-1 outline-black/5 [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10">
-                                    @foreach ($this->lessonSortOptions() as $option)
-                                        <el-option value="{{ $option['value'] }}"
-                                                   class="group/option relative block cursor-default px-3 py-2 text-sm text-gray-900 select-none focus:bg-indigo-600 focus:text-white focus:outline-hidden group-aria-selected/option:bg-indigo-50 group-aria-selected/option:font-semibold dark:text-white dark:focus:bg-indigo-500 dark:group-aria-selected/option:bg-indigo-500/20">
-                                            <span class="block truncate">{{ $option['label'] }}</span>
-                                        </el-option>
-                                    @endforeach
-                                </el-options>
-                            </el-select>
+                                    <el-options anchor="bottom start" popover
+                                                x-on:toggle="
+                                                    if ($event.newState === 'open') {
+                                                        $wire.markLessonSortDropdownOpened()
+                                                    } else {
+                                                        $wire.markLessonSortDropdownClosed()
+                                                    }
+                                                "
+                                                class=" w-(--button-width) overflow-auto rounded-lg bg-white shadow-lg outline-1 outline-black/5 [--anchor-gap:--spacing(1)] data-leave:transition data-leave:transition-discrete data-leave:duration-100 data-leave:ease-in data-closed:data-leave:opacity-0 dark:bg-gray-800 dark:shadow-none dark:-outline-offset-1 dark:outline-white/10">
+                                        @foreach ($this->lessonSortOptions() as $option)
+                                            <el-option value="{{ $option['value'] }}"
+                                                       class="group/option relative block cursor-default px-3 py-2 text-sm text-gray-900 select-none focus:bg-indigo-600 focus:text-white focus:outline-hidden group-aria-selected/option:bg-indigo-50 group-aria-selected/option:font-semibold dark:text-white dark:focus:bg-indigo-500 dark:group-aria-selected/option:bg-indigo-500/20">
+                                                <span class="block truncate">{{ $option['label'] }}</span>
+                                            </el-option>
+                                        @endforeach
+                                    </el-options>
+                                </el-select>
+                            </div>
                         </div>
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:rename-project-modal-open')"
+                                class="w-full text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            Редактировать проект
+                        </button>
+                        <button type="button"
+                                wire:click="recalculateProjectAudioDuration"
+                                wire:loading.attr="disabled"
+                                wire:target="recalculateProjectAudioDuration"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            <svg wire:loading
+                                 wire:target="recalculateProjectAudioDuration"
+                                 xmlns="http://www.w3.org/2000/svg"
+                                 fill="none"
+                                 viewBox="0 0 24 24"
+                                 class="size-4 animate-spin text-gray-500 dark:text-gray-300">
+                                <circle cx="12" cy="12" r="10" stroke="currentColor" stroke-width="3" class="opacity-25"/>
+                                <path fill="currentColor" class="opacity-75" d="M4 12a8 8 0 0 1 8-8v3a5 5 0 0 0-5 5H4Z"/>
+                            </svg>
+                            Пересчитать длительность
+                        </button>
                     </div>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:create-lesson-modal-open')"
-                            class="w-full text-sm rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
-                        Добавить урок
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:add-lesson-from-audio-modal-open')"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                        Добавить урок из аудио
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:add-lessons-list-modal-open')"
-                            @disabled($project->default_pipeline_version_id === null)
-                            data-add-lessons-list-button
-                            data-disabled="{{ $project->default_pipeline_version_id === null ? 'true' : 'false' }}"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
-                        </svg>
-                        Добавить список уроков
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:rename-project-modal-open')"
-                            class="w-full text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                        Редактировать проект
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:project-export-modal-open', { format: 'pdf' })"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
-                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                        </svg>
-                        Скачать проект в PDF
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:project-export-modal-open', { format: 'md' })"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                        Скачать проект в MD
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:project-export-modal-open', { format: 'docx' })"
-                            class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                        Скачать проект в DOCX
-                    </button>
-                    <button type="button"
-                            x-on:click="isActionsMenuOpen = false"
-                            wire:click="$dispatch('project-show:delete-project-alert-open')"
-                            class="w-full text-sm rounded-lg inset-ring-1 bg-red-500/20 px-3 py-2 font-semibold text-red-700 inset-ring-red-700 hover:text-red-50 shadow-xs hover:bg-red-500 hover:inset-ring-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:text-red-600 dark:inset-ring-red-600 dark:bg-red-900/50 dark:shadow-none dark:hover:bg-red-600 dark:focus-visible:outline-red-600">
-                        Удалить проект
-                    </button>
+
+                    <div class="space-y-2 border-t-0 border-gray-200 pt-3 dark:border-white/10" data-project-actions-section="lessons">
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:create-lesson-modal-open')"
+                                class="w-full text-sm rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                            Добавить урок
+                        </button>
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:add-lesson-from-audio-modal-open')"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            Добавить урок из аудио
+                        </button>
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:add-lessons-list-modal-open')"
+                                @disabled($project->default_pipeline_version_id === null)
+                                data-add-lessons-list-button
+                                data-disabled="{{ $project->default_pipeline_version_id === null ? 'true' : 'false' }}"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 12h16.5m-16.5 3.75h16.5M3.75 19.5h16.5M5.625 4.5h12.75a1.875 1.875 0 0 1 0 3.75H5.625a1.875 1.875 0 0 1 0-3.75Z" />
+                            </svg>
+                            Добавить список уроков
+                        </button>
+                    </div>
+
+                    <div class="space-y-2 border-t-0 border-gray-200 pt-3 dark:border-white/10" data-project-actions-section="exports">
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:project-export-modal-open', { format: 'pdf' })"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-indigo-600 px-3 py-2 font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                            </svg>
+                            Скачать проект в PDF
+                        </button>
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:project-export-modal-open', { format: 'md' })"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            Скачать проект в MD
+                        </button>
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:project-export-modal-open', { format: 'docx' })"
+                                class="w-full inline-flex items-center justify-center gap-2 text-sm rounded-lg bg-white px-3 py-2 font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                            Скачать проект в DOCX
+                        </button>
+                    </div>
+
+                    <div class="space-y-2 border-t-0 border-gray-200 pt-3 dark:border-white/10" data-project-actions-section="danger">
+                        <button type="button"
+                                x-on:click="isActionsMenuOpen = false"
+                                wire:click="$dispatch('project-show:delete-project-alert-open')"
+                                class="w-full text-sm rounded-lg inset-ring-1 bg-red-500/20 px-3 py-2 font-semibold text-red-700 inset-ring-red-700 hover:text-red-50 shadow-xs hover:bg-red-500 hover:inset-ring-red-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-red-600 dark:text-red-600 dark:inset-ring-red-600 dark:bg-red-900/50 dark:shadow-none dark:hover:bg-red-600 dark:focus-visible:outline-red-600">
+                            Удалить проект
+                        </button>
+                    </div>
                 </div>
             </div>
         </aside>
@@ -154,7 +188,7 @@
                                     </span>
                                     @if (($lessonAudioDuration = $this->lessonAudioDurationLabel($lesson->settings, $lesson->source_filename)) !== null)
                                         <span data-audio-duration="{{ $lessonAudioDuration }}"
-                                              class="text-xs font-medium text-gray-500 dark:text-gray-400">
+                                              class="shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">
                                             {{ $lessonAudioDuration }}
                                         </span>
                                     @endif

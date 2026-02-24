@@ -2,9 +2,11 @@
 
 namespace App\Livewire;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Models\Project;
 use App\Models\User;
 use App\Services\Project\ProjectDetailsQuery;
+use App\Support\AudioDurationLabelFormatter;
 use Illuminate\Contracts\View\View;
 use Livewire\Attributes\On;
 use Livewire\Component;
@@ -92,6 +94,15 @@ class ProjectShowPage extends Component
 
         $project->forceFill(['settings' => $settings])->save();
         $this->project = $this->loadProjectDetails($project->fresh());
+    }
+
+    public function recalculateProjectAudioDuration(
+        RecalculateProjectLessonsAudioDurationAction $recalculateProjectLessonsAudioDurationAction
+    ): void {
+        $project = $this->project->fresh();
+        $recalculateProjectLessonsAudioDurationAction->handle($project);
+
+        $this->reloadProjectDetails();
     }
 
     public function getShouldPollProjectLessonsProperty(): bool
@@ -204,22 +215,14 @@ class ProjectShowPage extends Component
             return null;
         }
 
-        $durationSeconds = data_get($settings, 'audio_duration_seconds');
+        return app(AudioDurationLabelFormatter::class)
+            ->format(data_get($settings, 'audio_duration_seconds'));
+    }
 
-        if (! is_numeric($durationSeconds)) {
-            return null;
-        }
-
-        $durationSeconds = (int) $durationSeconds;
-
-        if ($durationSeconds <= 0) {
-            return null;
-        }
-
-        $hours = intdiv($durationSeconds, 3600);
-        $minutes = intdiv($durationSeconds % 3600, 60);
-
-        return sprintf('%02d:%02d', $hours, $minutes);
+    public function projectLessonsAudioDurationLabel(?array $settings): ?string
+    {
+        return app(AudioDurationLabelFormatter::class)
+            ->format(data_get($settings, RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY));
     }
 
     public function render(): View

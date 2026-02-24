@@ -2,6 +2,7 @@
 
 namespace App\Jobs;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Models\Lesson;
 use App\Services\Lesson\LessonDownloadService;
 use App\Services\Pipeline\PipelineEventBroadcaster;
@@ -41,6 +42,7 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         LessonDownloadService $downloadService,
         PipelineRunService $pipelineRunService,
         PipelineEventBroadcaster $eventBroadcaster,
+        RecalculateProjectLessonsAudioDurationAction $recalculateProjectLessonsAudioDurationAction,
     ): void {
         $lesson = Lesson::query()->with('project')->findOrFail($this->lessonId);
         $lesson = $this->markAsRunning($lesson);
@@ -73,8 +75,13 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
             $lesson = $this->markAsCompleted(
                 lesson: $lesson,
                 path: $downloadResult['path'],
-                durationSeconds: $downloadResult['duration_seconds'],
             );
+
+            if ($lesson->project !== null) {
+                $recalculateProjectLessonsAudioDurationAction->handle($lesson->project);
+                $lesson = $lesson->fresh('project');
+            }
+
             $eventBroadcaster->downloadCompleted($lesson);
 
             $pipelineRunService->dispatchQueuedRuns($lesson);
@@ -115,7 +122,6 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
     private function markAsCompleted(
         Lesson $lesson,
         string $path,
-        ?int $durationSeconds,
     ): Lesson {
         $settings = $lesson->settings ?? [];
         $settings['downloading'] = false;
@@ -123,7 +129,6 @@ class DownloadLessonAudioJob implements ShouldBeUnique, ShouldQueue
         $settings['download_progress'] = 100;
         $settings['download_error'] = null;
         $settings['download_source'] = null;
-        $settings['audio_duration_seconds'] = $durationSeconds;
 
         $lesson->forceFill([
             'settings' => $settings,

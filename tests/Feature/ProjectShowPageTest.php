@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Project\RecalculateProjectLessonsAudioDurationAction;
 use App\Jobs\DownloadLessonAudioJob;
 use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Jobs\ProcessPipelineJob;
@@ -66,6 +67,12 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('data-lesson-sort-select', false)
             ->assertSee('data-project-actions-toggle', false)
             ->assertSee('data-project-actions-menu', false)
+            ->assertSeeInOrder([
+                'data-project-actions-section="settings"',
+                'data-project-actions-section="lessons"',
+                'data-project-actions-section="exports"',
+                'data-project-actions-section="danger"',
+            ], false)
             ->assertSee('md:hidden', false)
             ->assertSee('md:block', false)
             ->assertSee('md:order-2', false)
@@ -75,6 +82,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Добавить урок')
             ->assertSee('Добавить урок из аудио')
             ->assertSee('Редактировать проект')
+            ->assertSee('Пересчитать длительность')
             ->assertSee('Скачать проект в PDF')
             ->assertSee('Скачать проект в MD')
             ->assertSee('Скачать проект в DOCX')
@@ -281,6 +289,26 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('wire:poll.2s="refreshProjectLessons"', false);
     }
 
+    public function test_project_page_can_recalculate_project_audio_duration(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект для пересчёта длительности',
+            'tags' => null,
+            'settings' => [],
+        ]);
+
+        Livewire::test(ProjectShowPage::class, ['project' => $project])
+            ->call('recalculateProjectAudioDuration');
+
+        $this->assertSame(
+            0,
+            data_get(
+                $project->fresh()->settings,
+                RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY
+            )
+        );
+    }
+
     public function test_project_page_keeps_lessons_order_when_lesson_sort_dropdown_state_changes(): void
     {
         ProjectTag::query()->create([
@@ -481,7 +509,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('text-green-500 dark:text-green-400', false);
     }
 
-    public function test_project_page_shows_audio_duration_for_loaded_lessons_in_hh_mm_format(): void
+    public function test_project_page_shows_audio_duration_for_loaded_lessons_in_human_format(): void
     {
         ProjectTag::query()->create([
             'slug' => 'default',
@@ -516,8 +544,37 @@ class ProjectShowPageTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertStatus(200)
-            ->assertSee('data-audio-duration="01:30"', false)
-            ->assertDontSee('data-audio-duration="01:00"', false);
+            ->assertSee('data-audio-duration="1ч 30м"', false)
+            ->assertDontSee('data-audio-duration="1ч 0м"', false)
+            ->assertSee('shrink-0 whitespace-nowrap', false);
+    }
+
+    public function test_project_page_shows_total_audio_duration_in_heading_when_calculated(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект с общей длительностью',
+            'tags' => null,
+            'settings' => [
+                RecalculateProjectLessonsAudioDurationAction::PROJECT_TOTAL_DURATION_SETTING_KEY => 5415,
+            ],
+        ]);
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertSee('Длительность 1ч 30м');
+    }
+
+    public function test_project_page_hides_total_audio_duration_in_heading_when_not_calculated(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект без общей длительности',
+            'tags' => null,
+            'settings' => [],
+        ]);
+
+        $this->get(route('projects.show', $project))
+            ->assertStatus(200)
+            ->assertDontSee('Длительность ');
     }
 
     public function test_delete_project_alert_can_be_opened_and_closed(): void
