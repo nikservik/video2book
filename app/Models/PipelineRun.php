@@ -6,10 +6,15 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class PipelineRun extends Model
 {
     use HasFactory;
+    use LogsActivity;
+
+    protected static $recordEvents = ['created', 'deleted'];
 
     /**
      * @var list<string>
@@ -27,6 +32,20 @@ class PipelineRun extends Model
     protected $casts = [
         'state' => 'array',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('pipeline-runs')
+            ->logOnly([
+                'lesson_id',
+                'pipeline_version_id',
+                'status',
+                'state',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function lesson(): BelongsTo
     {

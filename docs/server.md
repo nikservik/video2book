@@ -59,6 +59,13 @@
 + При ротации токена текущим авторизованным пользователем новый токен сразу пробрасывается в auth-cookie, чтобы не терялся доступ
 + Карточка superadmin видна только самому superadmin
 
+## Логи действий
++ Подключён `spatie/laravel-activitylog` и создана таблица `activity_log`.
++ Для `Project` логируются события `created`, `updated`, `deleted`.
++ Для `Lesson` логируются события `created`, `updated`, `deleted`.
++ Для `PipelineRun` логируются события `created`, `deleted`.
++ В каждой записи фиксируются `causer_type/causer_id` (кто сделал) и `subject_type/subject_id` (над каким объектом).
+
 ## Очередь 
 + Виджет задач 
 + Механизм обновления 

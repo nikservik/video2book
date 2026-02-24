@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] feat: логирование действий пользователей через spatie/laravel-activitylog
+- Подключён пакет `spatie/laravel-activitylog`, опубликованы конфиг `config/activitylog.php` и миграции таблицы `activity_log`.
+- Для моделей `Project` и `Lesson` включено логирование событий `created`, `updated`, `deleted` с отдельными `log_name`.
+- Для модели `PipelineRun` включено логирование событий `created`, `deleted` (без логирования обновлений).
+- В логах автоматически сохраняются `causer_type/causer_id` и `subject_type/subject_id`, что фиксирует, кто выполнил действие и для какого объекта.
+- Добавлен feature-тест `ActivityLogTest` на проверку логирования проектов, уроков и прогонов.
+- Обновлены `README.md`, `docs/server.md` и `docs/next.md`.
+
 ## [2026-02-24] fix: ротация собственного invite-токена не разлогинивает админа
 - В `UsersPage::rotateInviteToken` при ротации токена текущего пользователя теперь сразу ставится новый auth-cookie (`simple_auth.cookie_name`) в ответ Livewire.
 - Это предотвращает потерю доступа после первой следующей перезагрузки/Livewire-запроса с уже невалидным старым токеном.

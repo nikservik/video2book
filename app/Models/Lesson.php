@@ -7,10 +7,15 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Spatie\Activitylog\LogOptions;
+use Spatie\Activitylog\Traits\LogsActivity;
 
 class Lesson extends Model
 {
     use HasFactory;
+    use LogsActivity;
+
+    protected static $recordEvents = ['created', 'updated', 'deleted'];
 
     /**
      * @var list<string>
@@ -29,6 +34,21 @@ class Lesson extends Model
     protected $casts = [
         'settings' => 'array',
     ];
+
+    public function getActivitylogOptions(): LogOptions
+    {
+        return LogOptions::defaults()
+            ->useLogName('lessons')
+            ->logOnly([
+                'project_id',
+                'name',
+                'tag',
+                'source_filename',
+                'settings',
+            ])
+            ->logOnlyDirty()
+            ->dontSubmitEmptyLogs();
+    }
 
     public function project(): BelongsTo
     {

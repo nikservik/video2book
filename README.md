@@ -13,6 +13,7 @@
 - Считает usage и стоимость по каждому шагу.
 - Экспортирует результаты шагов в PDF/Markdown/DOCX.
 - Поддерживает загрузку уроков по YouTube-ссылке через `yt-dlp`.
+- Ведёт журнал действий пользователей по проектам, урокам и прогонам с привязкой к пользователю и объекту.
 
 ## Технологии
 
@@ -24,6 +25,7 @@
 - Laravel AI SDK (`laravel/ai`) как единый слой для OpenAI / Anthropic / Gemini
 - `protonemedia/laravel-ffmpeg` и `norkunas/youtube-dl-php`
 - `barryvdh/laravel-dompdf` для PDF-экспорта (HTML/CSS)
+- `spatie/laravel-activitylog` для аудита действий пользователей
 
 ## Быстрый старт
 
