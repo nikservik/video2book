@@ -138,24 +138,36 @@ class ProjectShowPage extends Component
     public function pipelineRunStatusLabel(?string $status): string
     {
         return match ($status) {
-            'done' => 'Готово',
-            'queued' => 'В очереди',
-            'running' => 'Обработка',
-            'paused' => 'На паузе',
-            'failed' => 'Ошибка',
-            default => 'Неизвестно',
+            'done' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path fill-rule="evenodd" d="M12.416 3.376a.75.75 0 0 1 .208 1.04l-5 7.5a.75.75 0 0 1-1.154.114l-3-3a.75.75 0 0 1 1.06-1.06l2.353 2.353 4.493-6.74a.75.75 0 0 1 1.04-.207Z" clip-rule="evenodd" />
+                        </svg>',
+            'queued' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path fill-rule="evenodd" d="M1 8a7 7 0 1 1 14 0A7 7 0 0 1 1 8Zm7.75-4.25a.75.75 0 0 0-1.5 0V8c0 .414.336.75.75.75h3.25a.75.75 0 0 0 0-1.5h-2.5v-3.5Z" clip-rule="evenodd" />
+                        </svg>',
+            'running' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path fill-rule="evenodd" d="M12.78 7.595a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06l2.72-2.72-2.72-2.72a.75.75 0 0 1 1.06-1.06l3.25 3.25Zm-8.25-3.25 3.25 3.25a.75.75 0 0 1 0 1.06l-3.25 3.25a.75.75 0 0 1-1.06-1.06l2.72-2.72-2.72-2.72a.75.75 0 0 1 1.06-1.06Z" clip-rule="evenodd" />
+                        </svg>',
+            'paused' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path d="M4.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-1ZM10.5 2a.5.5 0 0 0-.5.5v11a.5.5 0 0 0 .5.5h1a.5.5 0 0 0 .5-.5v-11a.5.5 0 0 0-.5-.5h-1Z" />
+                        </svg>',
+            'failed' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path fill-rule="evenodd" d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" />
+                        </svg>',
+            default => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                          <path fill-rule="evenodd" d="M15 8A7 7 0 1 1 1 8a7 7 0 0 1 14 0Zm-6 3.5a1 1 0 1 1-2 0 1 1 0 0 1 2 0ZM7.293 5.293a1 1 0 1 1 .99 1.667c-.459.134-1.033.566-1.033 1.29v.25a.75.75 0 1 0 1.5 0v-.115a2.5 2.5 0 1 0-2.518-4.153.75.75 0 1 0 1.061 1.06Z" clip-rule="evenodd" />
+                        </svg>',
         };
     }
 
     public function pipelineRunStatusBadgeClass(?string $status): string
     {
         return match ($status) {
-            'done' => 'inline-flex items-center rounded-full bg-green-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-green-700 dark:bg-green-400/10 dark:text-green-400',
-            'queued' => 'inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
-            'running' => 'inline-flex items-center rounded-full bg-amber-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-amber-800 dark:bg-amber-400/10 dark:text-amber-300',
-            'paused' => 'inline-flex items-center rounded-full bg-sky-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-sky-700 dark:bg-sky-400/10 dark:text-sky-300',
-            'failed' => 'inline-flex items-center rounded-full bg-red-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-red-700 dark:bg-red-400/10 dark:text-red-400',
-            default => 'inline-flex items-center rounded-full bg-gray-100 px-2 py-1 text-xs font-medium whitespace-nowrap text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
+            'done' => 'inline-flex items-center rounded-full bg-green-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-green-700 dark:bg-green-400/10 dark:text-green-400',
+            'queued' => 'inline-flex items-center rounded-full bg-gray-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
+            'running' => 'inline-flex items-center rounded-full bg-amber-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-amber-800 dark:bg-amber-400/10 dark:text-amber-300',
+            'paused' => 'inline-flex items-center rounded-full bg-sky-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-sky-700 dark:bg-sky-400/10 dark:text-sky-300',
+            'failed' => 'inline-flex items-center rounded-full bg-red-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-red-700 dark:bg-red-400/10 dark:text-red-400',
+            default => 'inline-flex items-center rounded-full bg-gray-100 -mr-1 p-0.5 text-xs font-medium whitespace-nowrap text-gray-600 dark:bg-gray-400/10 dark:text-gray-400',
         };
     }
 

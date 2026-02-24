@@ -167,15 +167,15 @@
                     </p>
                 </div>
             @else
-                <div class="grid grid-cols-1 gap-4 md:gap-6 md:grid-cols-2">
+                <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-white/10">
                     @foreach ($project->lessons as $lesson)
                         <article wire:key="lesson-row-{{ $lesson->id }}"
-                                 class="rounded-lg border border-gray-200 bg-white p-4 shadow-sm dark:border-white/10 dark:bg-gray-800">
-                            <div class="flex items-start justify-between gap-3">
-                                <button type="button"
-                                        wire:click="$dispatch('project-show:rename-lesson-modal-open', { lessonId: {{ $lesson->id }} })"
-                                        class="inline-flex items-center gap-2 text-left font-semibold text-gray-900 hover:text-indigo-600 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:text-white dark:hover:text-indigo-400 dark:focus-visible:outline-indigo-500">
+                                 class="px-4 py-3 flex flex-col items-start gap-2 md:gap-3 md:pr-3 md:flex-row">
+                            <div class="w-full flex items-start justify-between gap-3 md:w-2/3">
+                                <span class="text-base font-semibold text-gray-900 dark:text-white">
                                     {{ $lesson->name }}
+                                </span>
+                                <div class="mt-px flex items-center gap-1">
                                     <span data-audio-download-status="{{ $this->lessonAudioDownloadStatus($lesson->settings, $lesson->source_filename) }}"
                                           @if ($this->lessonAudioDownloadStatus($lesson->settings, $lesson->source_filename) === 'failed')
                                               title="{{ $this->lessonAudioDownloadErrorTooltip($lesson->settings, $lesson->source_filename) }}"
@@ -186,25 +186,23 @@
                                           <path fill-rule="evenodd" d="M5.5 17a4.5 4.5 0 0 1-1.44-8.765 4.5 4.5 0 0 1 8.302-3.046 3.5 3.5 0 0 1 4.504 4.272A4 4 0 0 1 15 17H5.5Zm5.25-9.25a.75.75 0 0 0-1.5 0v4.59l-1.95-2.1a.75.75 0 1 0-1.1 1.02l3.25 3.5a.75.75 0 0 0 1.1 0l3.25-3.5a.75.75 0 1 0-1.1-1.02l-1.95 2.1V7.75Z" clip-rule="evenodd" />
                                         </svg>
                                     </span>
-                                    @if (($lessonAudioDuration = $this->lessonAudioDurationLabel($lesson->settings, $lesson->source_filename)) !== null)
-                                        <span data-audio-duration="{{ $lessonAudioDuration }}"
-                                              class="shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">
+                                    <span class="inline-block text-right w-8 min-w-8 shrink-0 whitespace-nowrap text-xs font-medium text-gray-500 dark:text-gray-400">
+                                        @if (($lessonAudioDuration = $this->lessonAudioDurationLabel($lesson->settings, $lesson->source_filename)) !== null)
                                             {{ $lessonAudioDuration }}
-                                        </span>
-                                    @endif
-                                </button>
-                                <div class="mt-px flex items-center gap-1">
+                                        @endif
+                                    </span>
                                     <button type="button"
-                                            wire:click="$dispatch('project-show:add-pipeline-to-lesson-modal-open', { lessonId: {{ $lesson->id }} })"
-                                            class="text-gray-500 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
-                                            aria-label="Добавить версию шаблона">
-                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
-                                          <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+                                            wire:click="$dispatch('project-show:rename-lesson-modal-open', { lessonId: {{ $lesson->id }} })"
+                                            class="inline-flex items-center rounded-lg bg-white p-1 font-semibold text-gray-500 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20"
+                                            aria-label="Изменить название урока">
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" class="size-4">
+                                          <path d="m5.433 13.917 1.262-3.155A4 4 0 0 1 7.58 9.42l6.92-6.918a2.121 2.121 0 0 1 3 3l-6.92 6.918c-.383.383-.84.685-1.343.886l-3.154 1.262a.5.5 0 0 1-.65-.65Z" />
+                                          <path d="M3.5 5.75c0-.69.56-1.25 1.25-1.25H10A.75.75 0 0 0 10 3H4.75A2.75 2.75 0 0 0 2 5.75v9.5A2.75 2.75 0 0 0 4.75 18h9.5A2.75 2.75 0 0 0 17 15.25V10a.75.75 0 0 0-1.5 0v5.25c0 .69-.56 1.25-1.25 1.25h-9.5c-.69 0-1.25-.56-1.25-1.25v-9.5Z" />
                                         </svg>
                                     </button>
                                     <button type="button"
                                             wire:click="$dispatch('project-show:delete-lesson-alert-open', { lessonId: {{ $lesson->id }} })"
-                                            class="text-gray-500 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
+                                            class="inline-flex items-center rounded-lg bg-white p-1 font-semibold text-gray-500 shadow-xs inset-ring inset-ring-gray-300 hover:text-red-600 hover:bg-red-400/50 hover:inset-ring-red-600 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-red-800/50 dark:hover:text-red-500 dark:hover:inset-ring-red-800/50"
                                             aria-label="Удалить урок">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
                                           <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
@@ -213,40 +211,50 @@
                                 </div>
                             </div>
 
-                            @if ($lesson->pipelineRuns->isEmpty())
-                                <p class="mt-3 text-gray-500 dark:text-gray-400">Прогонов пока нет.</p>
-                            @else
-                                <div class="mt-3 space-y-2">
-                                    @foreach ($lesson->pipelineRuns as $pipelineRun)
-                                        <div class="group relative">
-                                            <a href="{{ route('projects.runs.show', ['project' => $project, 'pipelineRun' => $pipelineRun]) }}"
-                                               wire:navigate
-                                               class="block rounded-lg border border-gray-200 bg-gray-100 px-3 py-1 hover:bg-gray-200 dark:border-white/10 dark:bg-gray-900/50 dark:hover:bg-white/5">
-                                                <div class="flex items-center justify-between gap-3">
-                                                    <span class="truncate text-sm text-gray-700 dark:text-gray-200">
-                                                        {{ $this->showPipelineRunVersionInLessonCard
-                                                            ? (($pipelineRun->pipelineVersion?->title ?? 'Без названия').' • v'.($pipelineRun->pipelineVersion?->version ?? '—'))
-                                                            : ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }}
-                                                    </span>
-                                                    <span class="{{ $this->pipelineRunStatusBadgeClass($pipelineRun->status) }}">
-                                                        {{ $this->pipelineRunStatusLabel($pipelineRun->status) }}
-                                                    </span>
-                                                </div>
-                                            </a>
-                                            @if ($this->showPipelineRunVersionInLessonCard)
-                                                <button type="button"
-                                                        wire:click="$dispatch('project-show:delete-run-alert-open', { pipelineRunId: {{ $pipelineRun->id }} })"
-                                                        class="absolute inset-y-0 right-0 z-10 flex items-center rounded-lg bg-gray-200/80 px-2 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
-                                                        aria-label="Удалить прогон">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
-                                                      <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                                                    </svg>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    @endforeach
-                                </div>
-                            @endif
+                            <div class="w-full md:w-1/3 flex items-start gap-1">
+                                @if ($lesson->pipelineRuns->isEmpty())
+                                    <p class="w-full text-sm text-center py-0.5 text-gray-500 dark:text-gray-400">Шаблонов пока нет</p>
+                                @else
+                                    <div class="min-w-0 space-y-1">
+                                        @foreach ($lesson->pipelineRuns as $pipelineRun)
+                                            <div class="group relative min-w-0">
+                                                <a href="{{ route('projects.runs.show', ['project' => $project, 'pipelineRun' => $pipelineRun]) }}"
+                                                   wire:navigate
+                                                   class="block min-w-0 rounded-lg border border-gray-200 bg-gray-100 px-3 py-0.5 hover:bg-gray-200 dark:border-white/10 dark:bg-gray-900/50 dark:hover:bg-white/5">
+                                                    <div class="flex items-center justify-between gap-3">
+                                                        <span class="truncate text-sm text-gray-700 dark:text-gray-200">
+                                                            {{ $this->showPipelineRunVersionInLessonCard
+                                                                ? (($pipelineRun->pipelineVersion?->title ?? 'Без названия').' • v'.($pipelineRun->pipelineVersion?->version ?? '—'))
+                                                                : ($pipelineRun->pipelineVersion?->title ?? 'Без названия') }}
+                                                        </span>
+                                                        <span class="{{ $this->pipelineRunStatusBadgeClass($pipelineRun->status) }}">
+                                                            {!! $this->pipelineRunStatusLabel($pipelineRun->status) !!}
+                                                        </span>
+                                                    </div>
+                                                </a>
+                                                @if ($this->showPipelineRunVersionInLessonCard)
+                                                    <button type="button"
+                                                            wire:click="$dispatch('project-show:delete-run-alert-open', { pipelineRunId: {{ $pipelineRun->id }} })"
+                                                            class="absolute inset-y-0 right-0 z-10 flex items-center rounded-lg bg-gray-200/80 px-2 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
+                                                            aria-label="Удалить прогон">
+                                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                                          <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                                                        </svg>
+                                                    </button>
+                                                @endif
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                @endif
+                                <button type="button"
+                                        wire:click="$dispatch('project-show:add-pipeline-to-lesson-modal-open', { lessonId: {{ $lesson->id }} })"
+                                        class="inline-flex items-center rounded-lg bg-white p-1 font-semibold text-gray-500 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20"
+                                        aria-label="Добавить версию шаблона">
+                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                      <path d="M8.75 3.75a.75.75 0 0 0-1.5 0v3.5h-3.5a.75.75 0 0 0 0 1.5h3.5v3.5a.75.75 0 0 0 1.5 0v-3.5h3.5a.75.75 0 0 0 0-1.5h-3.5v-3.5Z" />
+                                    </svg>
+                                </button>
+                            </div>
                         </article>
                     @endforeach
                 </div>
