@@ -12,6 +12,7 @@ use App\Services\User\PaginatedUsersQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -203,6 +204,24 @@ class UsersPage extends Component
         }
 
         $rotateUserInviteTokenAction->handle($user);
+
+        $viewer = $this->viewer();
+
+        if ($viewer->id === $user->id) {
+            $cookie = Cookie::forever(
+                name: (string) config('simple_auth.cookie_name', 'video2book_access_token'),
+                value: (string) $user->access_token,
+                path: '/',
+                domain: config('session.domain'),
+                secure: config('session.secure'),
+                httpOnly: true,
+                raw: false,
+                sameSite: config('session.same_site')
+            );
+
+            Cookie::queue($cookie);
+            Auth::guard('web')->setUser($user);
+        }
     }
 
     public function canDelete(User $user): bool

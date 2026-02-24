@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: ротация собственного invite-токена не разлогинивает админа
+- В `UsersPage::rotateInviteToken` при ротации токена текущего пользователя теперь сразу ставится новый auth-cookie (`simple_auth.cookie_name`) в ответ Livewire.
+- Это предотвращает потерю доступа после первой следующей перезагрузки/Livewire-запроса с уже невалидным старым токеном.
+- Добавлен feature-тест `UsersPageTest::test_rotating_own_token_queues_auth_cookie_with_new_value`.
+
 ## [2026-02-24] feat: переключатель уровня доступа в модалках пользователя
 - В модалках добавления и редактирования пользователя (`users.index`) добавлен переключатель уровня доступа в виде двух кнопок: `пользователь` / `админ` (по стилю переключателя именования файлов в экспорте проекта).
 - Выбранный уровень теперь сохраняется при создании и редактировании пользователя через `UsersPage` и `UpdateUserAction`.

@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Livewire\UsersPage;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Cookie;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
@@ -116,6 +117,27 @@ class UsersPageTest extends TestCase
 
         $user->refresh();
         $this->assertNotSame($oldToken, (string) $user->access_token);
+    }
+
+    public function test_rotating_own_token_queues_auth_cookie_with_new_value(): void
+    {
+        $admin = $this->makeUser('Admin', 'admin@local', User::ACCESS_LEVEL_ADMIN);
+        $oldToken = (string) $admin->access_token;
+
+        Cookie::flushQueuedCookies();
+
+        Livewire::actingAs($admin)
+            ->test(UsersPage::class)
+            ->call('openEditUserModal', $admin->id)
+            ->call('rotateInviteToken');
+
+        $admin->refresh();
+
+        $this->assertNotSame($oldToken, (string) $admin->access_token);
+
+        $queuedCookie = Cookie::queued((string) config('simple_auth.cookie_name'));
+        $this->assertInstanceOf(\Symfony\Component\HttpFoundation\Cookie::class, $queuedCookie);
+        $this->assertSame((string) $admin->access_token, $queuedCookie->getValue());
     }
 
     public function test_users_page_can_delete_regular_user(): void
