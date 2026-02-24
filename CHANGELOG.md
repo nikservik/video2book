@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: тесты на сохранение YouTube-ссылки в уроке
+- Добавлены проверки, что при создании урока из YouTube ссылка сохраняется в `lesson.settings.url`.
+- Расширены feature-тесты `ProjectShowPageTest` и `ProjectsPageTest` для сценариев создания уроков из YouTube (одиночного и из списка).
+- Добавлен unit-тест `CreateProjectLessonFromYoutubeActionTest` с проверкой `settings.url` и постановки `DownloadLessonAudioJob`.
+
 ## [2026-02-24] fix: breadcrumb-ссылка на проекты сохраняет папку через query-параметр
 - На страницах `Проект` и `Прогон` breadcrumb-ссылка `Проекты` теперь формируется как `projects.index?f={folder_id текущего проекта}`.
 - Это позволяет при возврате на страницу проектов сразу раскрывать нужную папку.

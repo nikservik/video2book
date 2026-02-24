@@ -25,12 +25,15 @@ class CreateProjectLessonFromYoutubeAction
     ): Lesson {
         $pipelineVersion = PipelineVersion::query()->findOrFail($pipelineVersionId);
 
-        $lesson = DB::transaction(function () use ($project, $lessonName, $pipelineVersion): Lesson {
+        $lesson = DB::transaction(function () use ($youtubeUrl, $project, $lessonName, $pipelineVersion): Lesson {
             $lesson = Lesson::query()->create([
                 'project_id' => $project->id,
                 'name' => trim($lessonName),
                 'tag' => LessonTagResolver::resolve(null),
-                'settings' => ['quality' => 'low'],
+                'settings' => [
+                    'quality' => 'low',
+                    'url' => $youtubeUrl,
+                ],
             ]);
 
             $this->pipelineRunService->createRun($lesson, $pipelineVersion, dispatchJob: false);

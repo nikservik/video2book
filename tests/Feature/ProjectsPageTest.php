@@ -299,6 +299,14 @@ class ProjectsPageTest extends TestCase
         $lessons = $project->lessons()->orderBy('id')->pluck('name')->all();
 
         $this->assertSame(['Урок 1', 'Урок 2'], $lessons);
+        $this->assertSame(
+            'https://www.youtube.com/watch?v=video1',
+            data_get($project->lessons()->where('name', 'Урок 1')->first()?->settings, 'url')
+        );
+        $this->assertSame(
+            'https://www.youtube.com/watch?v=video2',
+            data_get($project->lessons()->where('name', 'Урок 2')->first()?->settings, 'url')
+        );
 
         Queue::assertPushedOn(DownloadLessonAudioJob::QUEUE, DownloadLessonAudioJob::class);
         Queue::assertPushed(DownloadLessonAudioJob::class, 2);
