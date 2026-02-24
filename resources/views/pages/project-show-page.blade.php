@@ -233,14 +233,16 @@
                                                     </span>
                                                 </div>
                                             </a>
-                                            <button type="button"
-                                                    wire:click="$dispatch('project-show:delete-run-alert-open', { pipelineRunId: {{ $pipelineRun->id }} })"
-                                                    class="absolute inset-y-0 right-0 z-10 flex items-center rounded-lg bg-gray-200/80 px-2 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
-                                                    aria-label="Удалить прогон">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
-                                                  <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
-                                                </svg>
-                                            </button>
+                                            @if ($this->showPipelineRunVersionInLessonCard)
+                                                <button type="button"
+                                                        wire:click="$dispatch('project-show:delete-run-alert-open', { pipelineRunId: {{ $pipelineRun->id }} })"
+                                                        class="absolute inset-y-0 right-0 z-10 flex items-center rounded-lg bg-gray-200/80 px-2 text-gray-500 opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 hover:text-gray-700 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-600 dark:bg-gray-800/80 dark:text-gray-400 dark:hover:text-gray-200 dark:focus-visible:outline-gray-500"
+                                                        aria-label="Удалить прогон">
+                                                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 16 16" fill="currentColor" class="size-4">
+                                                      <path d="M5.28 4.22a.75.75 0 0 0-1.06 1.06L6.94 8l-2.72 2.72a.75.75 0 1 0 1.06 1.06L8 9.06l2.72 2.72a.75.75 0 1 0 1.06-1.06L9.06 8l2.72-2.72a.75.75 0 0 0-1.06-1.06L8 6.94 5.28 4.22Z" />
+                                                    </svg>
+                                                </button>
+                                            @endif
                                         </div>
                                     @endforeach
                                 </div>

@@ -175,6 +175,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('md:grid-cols-2', false)
             ->assertSee('Урок с прогонами')
             ->assertSee('Базовый пайплайн • v4')
+            ->assertSee('aria-label="Удалить прогон"', false)
             ->assertSee('Готово')
             ->assertSee('В очереди')
             ->assertSee('Обработка')
@@ -231,7 +232,8 @@ class ProjectShowPageTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('Пайплайн пользователя')
-            ->assertDontSee('Пайплайн пользователя • v5');
+            ->assertDontSee('Пайплайн пользователя • v5')
+            ->assertDontSee('aria-label="Удалить прогон"', false);
     }
 
     public function test_project_page_has_polling_for_lessons_list(): void
