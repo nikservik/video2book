@@ -26,8 +26,6 @@ class ProjectRunPage extends Component
 
     public ?int $selectedStepId = null;
 
-    public string $resultViewMode = 'preview';
-
     public bool $isZeroAccessLevelUser = false;
 
     public function mount(Project $project, PipelineRun $pipelineRun): void
@@ -109,15 +107,6 @@ class ProjectRunPage extends Component
         }
 
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
-    }
-
-    public function setResultViewMode(string $mode): void
-    {
-        if (! in_array($mode, ['preview', 'source'], true)) {
-            return;
-        }
-
-        $this->resultViewMode = $mode;
     }
 
     public function downloadSelectedStepPdf(PipelineStepPdfExporter $exporter): StreamedResponse

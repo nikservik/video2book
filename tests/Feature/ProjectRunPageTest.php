@@ -234,7 +234,7 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('data-selected-step-id="'.$secondRunStep->id.'"', false);
     }
 
-    public function test_project_run_page_can_toggle_result_preview_and_source_modes(): void
+    public function test_project_run_page_shows_only_preview_mode_for_step_result(): void
     {
         [$project, $pipelineRun] = $this->createProjectRunWithSteps();
 
@@ -242,18 +242,14 @@ class ProjectRunPageTest extends TestCase
             'project' => $project,
             'pipelineRun' => $pipelineRun,
         ])
-            ->assertSet('resultViewMode', 'preview')
             ->assertSee('data-result-mode="preview"', false)
             ->assertSee('<h2>Заголовок первого шага</h2>', false)
-            ->call('setResultViewMode', 'source')
-            ->assertSet('resultViewMode', 'source')
-            ->assertSee('data-result-mode="source"', false)
-            ->assertSee('## Заголовок первого шага')
-            ->assertSee('- Пункт 1')
-            ->call('setResultViewMode', 'preview')
-            ->assertSet('resultViewMode', 'preview')
-            ->assertSee('data-result-mode="preview"', false)
-            ->assertSee('<h2>Заголовок первого шага</h2>', false);
+            ->assertSee('<li>Пункт 1</li>', false)
+            ->assertDontSee('data-result-view="preview"', false)
+            ->assertDontSee('data-result-view="source"', false)
+            ->assertDontSee('data-result-mode="source"', false)
+            ->assertDontSee('Исходник')
+            ->assertDontSee('Превью');
     }
 
     public function test_project_run_page_shows_failed_step_error_in_result_block_when_result_is_missing(): void
@@ -279,10 +275,7 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('text-red-700', false)
             ->assertSee('Ошибка LLM: timeout')
             ->assertDontSee('Результат для выбранного шага пока не сформирован.')
-            ->call('setResultViewMode', 'source')
-            ->assertSee('data-result-mode="source"', false)
-            ->assertSee('data-selected-step-error', false)
-            ->assertSee('Ошибка LLM: timeout');
+            ->assertDontSee('data-result-mode="source"', false);
 
         $this->assertSame('Ошибка LLM: timeout', $component->instance()->selectedStepErrorMessage);
     }

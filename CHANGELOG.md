@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: на странице прогона оставлен только режим превью результата шага
+- На странице `projects.runs.show` убран переключатель `Превью / Исходник`; основной контент шага всегда отображается в режиме превью (рендер markdown в HTML).
+- Обновлён feature-тест `ProjectRunPageTest` под новый UX без режима `source`.
+
 ## [2026-02-24] fix: формат названия урока в странице активности
 - Для записей типа `урок` на странице `Активность` к названию урока добавляется проект: `Урок в проекте «Проект»`.
 - Название собирается из связей `lesson -> project` (c `withTrashed`) с fallback на `Урок #ID`.

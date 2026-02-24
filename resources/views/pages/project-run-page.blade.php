@@ -171,58 +171,23 @@
                         data-run-restart-step>
                     Перезапуск шага
                 </button>
-                <span class="ml-auto isolate inline-flex rounded-lg shadow-xs dark:shadow-none">
-                    <button type="button"
-                            wire:click="setResultViewMode('preview')"
-                            data-result-view="preview"
-                            data-active="{{ $resultViewMode === 'preview' ? 'true' : 'false' }}"
-                            class="relative inline-flex items-center rounded-l-lg px-3 py-2 text-sm font-semibold    focus:z-10  dark:text-white  {{ $resultViewMode === 'preview'
-                                ? 'bg-indigo-600 text-white'
-                                : 'text-gray-700 bg-white  hover:bg-white/70 dark:text-gray-200 dark:bg-white/10 dark:hover:bg-white/20' }}">
-                        Превью
-                    </button>
-                    <button type="button"
-                            wire:click="setResultViewMode('source')"
-                            data-result-view="source"
-                            data-active="{{ $resultViewMode === 'source' ? 'true' : 'false' }}"
-                            class="relative -ml-px inline-flex items-center rounded-r-lg px-3 py-2 text-sm font-semibold  focus:z-10  dark:text-white {{ $resultViewMode === 'source'
-                                ? 'bg-indigo-600 text-white'
-                                : 'text-gray-700 bg-white  hover:bg-white/70 dark:text-gray-200 dark:bg-white/10 dark:hover:bg-white/20' }}">
-                        Исходник
-                    </button>
-                </span>
             </div>
 
             <div class="rounded-lg bg-indigo-50 -mx-4 md:mx-0 px-4 md:px-6 py-4 dark:bg-gray-900/50"
                  @if ($this->shouldPollSelectedStepResult) wire:poll.1s="refreshSelectedStepResult" @endif>
-                @if ($resultViewMode === 'preview')
-                    <div data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
-                         data-selected-step-result
-                         data-result-mode="preview"
-                         class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
-                        @if ($this->selectedStepErrorMessage !== null)
-                            <p data-selected-step-error
-                               class="text-base font-medium text-red-700 dark:text-red-400">
-                                {{ $this->selectedStepErrorMessage }}
-                            </p>
-                        @else
-                            {!! $this->selectedStepResultPreview !!}
-                        @endif
-                    </div>
-                @else
+                <div data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
+                     data-selected-step-result
+                     data-result-mode="preview"
+                     class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
                     @if ($this->selectedStepErrorMessage !== null)
-                        <pre data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
-                             data-selected-step-result
-                             data-selected-step-error
-                             data-result-mode="source"
-                             class="whitespace-pre-wrap text-base font-medium text-red-700 dark:text-red-400">{{ $this->selectedStepErrorMessage }}</pre>
+                        <p data-selected-step-error
+                           class="text-base font-medium text-red-700 dark:text-red-400">
+                            {{ $this->selectedStepErrorMessage }}
+                        </p>
                     @else
-                        <pre data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
-                             data-selected-step-result
-                             data-result-mode="source"
-                             class="whitespace-pre-wrap text-base text-gray-700 dark:text-gray-200">{{ $this->selectedStepResult }}</pre>
+                        {!! $this->selectedStepResultPreview !!}
                     @endif
-                @endif
+                </div>
             </div>
         </section>
 
