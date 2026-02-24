@@ -169,8 +169,39 @@
             @else
                 <div class="overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800 divide-y divide-gray-200 dark:divide-white/10">
                     @foreach ($project->lessons as $lesson)
+                        @php
+                            $singlePipelineRun = $lesson->pipelineRuns->count() === 1
+                                ? $lesson->pipelineRuns->first()
+                                : null;
+                            $singlePipelineRunUrl = $singlePipelineRun === null
+                                ? null
+                                : route('projects.runs.show', ['project' => $project, 'pipelineRun' => $singlePipelineRun]);
+                        @endphp
                         <article wire:key="lesson-row-{{ $lesson->id }}"
-                                 class="px-4 py-3 flex flex-col items-start gap-2 md:gap-3 md:pr-3 md:flex-row">
+                                 x-on:click="
+                                     const runUrl = $el.dataset.singleRunUrl
+
+                                     if (! runUrl) {
+                                         return
+                                     }
+
+                                     if ($event.target.closest('a, button')) {
+                                         return
+                                     }
+
+                                     if (window.Livewire?.navigate) {
+                                         window.Livewire.navigate(runUrl)
+                                         return
+                                     }
+
+                                     window.location.href = runUrl
+                                 "
+                                 data-lesson-single-run="{{ $singlePipelineRun !== null ? 'true' : 'false' }}"
+                                 data-single-run-url="{{ $singlePipelineRunUrl ?? '' }}"
+                                 @class([
+                                     'px-4 py-3 flex flex-col items-start gap-2 md:gap-3 md:pr-3 md:flex-row',
+                                     'cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5' => $singlePipelineRun !== null,
+                                 ])>
                             <div class="w-full flex items-start justify-between gap-3 md:w-2/3">
                                 <span class="text-base font-semibold text-gray-900 dark:text-white">
                                     {{ $lesson->name }}

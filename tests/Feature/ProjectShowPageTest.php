@@ -184,6 +184,74 @@ class ProjectShowPageTest extends TestCase
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runRunning]), false);
     }
 
+    public function test_project_page_lesson_row_is_clickable_for_single_pipeline_run_only(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект с кликабельным уроком',
+            'tags' => null,
+        ]);
+
+        $singleRunLesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок с одним прогоном',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $multipleRunsLesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок с двумя прогонами',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $pipeline = Pipeline::query()->create();
+        $pipelineVersion = $pipeline->versions()->create([
+            'version' => 1,
+            'title' => 'Пайплайн для урока',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        $singleRun = PipelineRun::query()->create([
+            'lesson_id' => $singleRunLesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRun::query()->create([
+            'lesson_id' => $multipleRunsLesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+        PipelineRun::query()->create([
+            'lesson_id' => $multipleRunsLesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'queued',
+            'state' => [],
+        ]);
+
+        $response = $this->get(route('projects.show', $project));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('data-lesson-single-run="true"', false)
+            ->assertSee('data-lesson-single-run="false"', false)
+            ->assertSee('data-single-run-url="'.route('projects.runs.show', ['project' => $project, 'pipelineRun' => $singleRun]).'"', false)
+            ->assertSee("if (\$event.target.closest('a, button')) {", false)
+            ->assertSee('cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5', false);
+    }
+
     public function test_project_page_hides_pipeline_version_in_run_cards_for_zero_access_level_user(): void
     {
         ProjectTag::query()->create([
