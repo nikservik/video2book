@@ -77,13 +77,14 @@ class UsersPageTest extends TestCase
             ->call('openCreateUserModal')
             ->set('userName', 'Новый пользователь')
             ->set('userEmail', 'new-user@example.com')
+            ->call('setUserAccessLevel', User::ACCESS_LEVEL_ADMIN)
             ->call('saveUser')
             ->assertSet('showUserModal', false);
 
         $this->assertDatabaseHas('users', [
             'name' => 'Новый пользователь',
             'email' => 'new-user@example.com',
-            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_level' => User::ACCESS_LEVEL_ADMIN,
         ]);
 
         $newUser = User::query()->where('email', 'new-user@example.com')->firstOrFail();
@@ -101,6 +102,7 @@ class UsersPageTest extends TestCase
             ->call('openEditUserModal', $user->id)
             ->set('userName', 'New Name')
             ->set('userEmail', 'new@example.com')
+            ->call('setUserAccessLevel', User::ACCESS_LEVEL_ADMIN)
             ->call('saveUser')
             ->call('openEditUserModal', $user->id)
             ->call('rotateInviteToken');
@@ -109,6 +111,7 @@ class UsersPageTest extends TestCase
             'id' => $user->id,
             'name' => 'New Name',
             'email' => 'new@example.com',
+            'access_level' => User::ACCESS_LEVEL_ADMIN,
         ]);
 
         $user->refresh();

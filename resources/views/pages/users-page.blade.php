@@ -141,6 +141,33 @@
                             @enderror
                         </div>
 
+                        <div>
+                            <label class="block text-sm/6 font-medium text-gray-900 dark:text-white">Уровень доступа</label>
+                            @if ($this->canEditSelectedUserAccessLevel)
+                                <div class="mt-2 grid grid-cols-1 gap-2 sm:grid-cols-2">
+                                    <button type="button"
+                                            wire:click="setUserAccessLevel({{ \App\Models\User::ACCESS_LEVEL_USER }})"
+                                            class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 {{ $userAccessLevel === \App\Models\User::ACCESS_LEVEL_USER
+                                                ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500'
+                                                : 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500' }}">
+                                        Пользователь
+                                    </button>
+                                    <button type="button"
+                                            wire:click="setUserAccessLevel({{ \App\Models\User::ACCESS_LEVEL_ADMIN }})"
+                                            class="inline-flex items-center justify-center gap-2 rounded-lg px-3 py-2 text-sm font-semibold shadow-xs focus-visible:outline-2 focus-visible:outline-offset-2 {{ $userAccessLevel === \App\Models\User::ACCESS_LEVEL_ADMIN
+                                                ? 'bg-indigo-600 text-white hover:bg-indigo-500 focus-visible:outline-indigo-600 dark:bg-indigo-500 dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500'
+                                                : 'bg-white text-gray-900 inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-gray-600 dark:bg-white/10 dark:text-white dark:inset-ring-white/5 dark:hover:bg-white/20 dark:focus-visible:outline-gray-500' }}">
+                                        Админ
+                                    </button>
+                                </div>
+                            @else
+                                <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">Суперадмин</p>
+                            @endif
+                            @error('userAccessLevel')
+                                <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                            @enderror
+                        </div>
+
                         @if ($editingUserId !== null)
                             <div>
                                 <label for="user-invite-link" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Ссылка с инвайтом</label>

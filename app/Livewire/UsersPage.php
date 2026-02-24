@@ -33,6 +33,8 @@ class UsersPage extends Component
 
     public string $userEmail = '';
 
+    public int $userAccessLevel = User::ACCESS_LEVEL_USER;
+
     public function mount(): void
     {
         $this->authorizeAccessLevel(User::ACCESS_LEVEL_ADMIN);
@@ -44,6 +46,7 @@ class UsersPage extends Component
         $this->editingUserId = null;
         $this->userName = '';
         $this->userEmail = '';
+        $this->userAccessLevel = User::ACCESS_LEVEL_USER;
         $this->showUserModal = true;
     }
 
@@ -60,6 +63,7 @@ class UsersPage extends Component
         $this->editingUserId = $user->id;
         $this->userName = (string) $user->name;
         $this->userEmail = (string) $user->email;
+        $this->userAccessLevel = (int) $user->access_level;
         $this->showUserModal = true;
 
         if (! is_string($user->access_token) || $user->access_token === '') {
@@ -74,9 +78,18 @@ class UsersPage extends Component
 
     public function saveUser(CreateUserAction $createUserAction, UpdateUserAction $updateUserAction): void
     {
+        $editingUser = $this->editingUserId === null
+            ? null
+            : $this->findVisibleUser($this->editingUserId);
+
+        if ($this->editingUserId !== null && $editingUser === null) {
+            return;
+        }
+
         $validated = validator([
             'userName' => trim($this->userName),
             'userEmail' => mb_strtolower(trim($this->userEmail)),
+            'userAccessLevel' => $this->userAccessLevel,
         ], [
             'userName' => ['required', 'string', 'max:255'],
             'userEmail' => [
@@ -85,33 +98,49 @@ class UsersPage extends Component
                 'max:255',
                 Rule::unique('users', 'email')->ignore($this->editingUserId),
             ],
+            'userAccessLevel' => ['required', 'integer', Rule::in($this->editableAccessLevels($editingUser))],
         ], [], [
             'userName' => 'имя пользователя',
             'userEmail' => 'email пользователя',
+            'userAccessLevel' => 'уровень доступа',
         ])->validate();
 
         if ($this->editingUserId === null) {
             $user = $createUserAction->handle(
                 name: $validated['userName'],
                 email: $validated['userEmail'],
+                accessLevel: (int) $validated['userAccessLevel'],
             );
 
             $this->editingUserId = $user->id;
         } else {
-            $user = $this->findVisibleUser($this->editingUserId);
-
-            if ($user === null) {
-                return;
-            }
+            $user = $editingUser;
+            $accessLevel = $user->isSuperAdmin()
+                ? User::ACCESS_LEVEL_SUPERADMIN
+                : (int) $validated['userAccessLevel'];
 
             $updateUserAction->handle(
                 user: $user,
                 name: $validated['userName'],
                 email: $validated['userEmail'],
+                accessLevel: $accessLevel,
             );
         }
 
         $this->closeUserModal();
+    }
+
+    public function setUserAccessLevel(int $accessLevel): void
+    {
+        if (! in_array($accessLevel, [User::ACCESS_LEVEL_USER, User::ACCESS_LEVEL_ADMIN], true)) {
+            return;
+        }
+
+        if (! $this->canEditSelectedUserAccessLevel) {
+            return;
+        }
+
+        $this->userAccessLevel = $accessLevel;
     }
 
     public function openDeleteUserModal(int $userId): void
@@ -220,6 +249,21 @@ class UsersPage extends Component
         return (string) $user->name;
     }
 
+    public function getCanEditSelectedUserAccessLevelProperty(): bool
+    {
+        if ($this->editingUserId === null) {
+            return true;
+        }
+
+        $user = $this->findVisibleUser($this->editingUserId);
+
+        if ($user === null) {
+            return false;
+        }
+
+        return ! $user->isSuperAdmin();
+    }
+
     public function render(): View
     {
         return view('pages.users-page', [
@@ -260,6 +304,23 @@ class UsersPage extends Component
                 }),
                 fn (Builder $query) => $query->where('access_level', '<', User::ACCESS_LEVEL_SUPERADMIN)
             );
+    }
+
+    /**
+     * @return list<int>
+     */
+    private function editableAccessLevels(?User $editingUser): array
+    {
+        $levels = [
+            User::ACCESS_LEVEL_USER,
+            User::ACCESS_LEVEL_ADMIN,
+        ];
+
+        if ($editingUser?->isSuperAdmin()) {
+            $levels[] = User::ACCESS_LEVEL_SUPERADMIN;
+        }
+
+        return $levels;
     }
 
     private function viewer(): User
