@@ -195,7 +195,7 @@
                                      'cursor-pointer transition hover:bg-gray-50 dark:hover:bg-white/5' => $this->lessonHasSinglePipelineRun($lesson),
                                  ])>
                             <div class="w-full flex items-start justify-between gap-3 md:w-2/3">
-                                <span class="text-base font-semibold text-gray-900 dark:text-white">
+                                <span class="text-base text-gray-900 dark:text-white">
                                     {{ $lesson->name }}
                                 </span>
                                 <div class="mt-px flex items-center gap-1">
