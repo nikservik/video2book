@@ -382,9 +382,50 @@ class ProjectsPageTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('Видимая папка')
-            ->assertSee('Видимый проект')
+            ->assertDontSee('Видимый проект')
             ->assertDontSee('Скрытая папка')
             ->assertDontSee('Скрытый проект');
+    }
+
+    public function test_projects_page_keeps_all_folders_closed_by_default_when_more_than_one_visible_folder_exists(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $firstFolder = Folder::query()->create([
+            'name' => 'Первая видимая папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+        $secondFolder = Folder::query()->create([
+            'name' => 'Вторая видимая папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+
+        Project::query()->create([
+            'folder_id' => $firstFolder->id,
+            'name' => 'Проект первой папки',
+            'tags' => null,
+        ]);
+        Project::query()->create([
+            'folder_id' => $secondFolder->id,
+            'name' => 'Проект второй папки',
+            'tags' => null,
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $viewer->access_token)
+            ->get(route('projects.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Первая видимая папка')
+            ->assertSee('Вторая видимая папка')
+            ->assertDontSee('Проект первой папки')
+            ->assertDontSee('Проект второй папки');
     }
 
     private function createProject(Folder $folder, string $name, Carbon $updatedAt, int $lessonsCount): void

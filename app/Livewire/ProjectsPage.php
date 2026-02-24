@@ -77,7 +77,7 @@ class ProjectsPage extends Component
     {
         $this->pipelineVersionOptions = app(GetPipelineVersionOptionsAction::class)->handle();
         $this->hydrateFolderVisibilityOptions();
-        $this->expandedFolderId = $this->firstVisibleFolderId();
+        $this->expandedFolderId = $this->defaultExpandedFolderId();
     }
 
     public function openCreateFolderModal(): void
@@ -416,11 +416,13 @@ class ProjectsPage extends Component
             ->all();
     }
 
-    private function firstVisibleFolderId(): ?int
+    private function defaultExpandedFolderId(): ?int
     {
-        $folderId = $this->visibleFoldersQuery()->value('id');
+        $visibleFolderIds = $this->visibleFolderIds();
 
-        return $folderId === null ? null : (int) $folderId;
+        return count($visibleFolderIds) === 1
+            ? (int) $visibleFolderIds[0]
+            : null;
     }
 
     private function visibleFoldersQuery(): Builder
@@ -499,7 +501,9 @@ class ProjectsPage extends Component
         $visibleFolderIds = $this->visibleFolderIds();
 
         if ($this->expandedFolderId !== null && ! in_array($this->expandedFolderId, $visibleFolderIds, true)) {
-            $this->expandedFolderId = $visibleFolderIds[0] ?? null;
+            $this->expandedFolderId = count($visibleFolderIds) === 1
+                ? (int) $visibleFolderIds[0]
+                : null;
         }
 
         return view('pages.projects-page', [
