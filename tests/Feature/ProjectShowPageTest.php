@@ -608,7 +608,7 @@ class ProjectShowPageTest extends TestCase
             ->call('deleteLesson')
             ->assertSet('show', false);
 
-        $this->assertDatabaseMissing('lessons', ['id' => $lessonToDelete->id]);
+        $this->assertSoftDeleted('lessons', ['id' => $lessonToDelete->id]);
         $this->assertDatabaseHas('lessons', ['id' => $lessonToKeep->id]);
     }
 
@@ -721,7 +721,7 @@ class ProjectShowPageTest extends TestCase
             ->call('deleteRun')
             ->assertSet('show', false);
 
-        $this->assertDatabaseMissing('pipeline_runs', ['id' => $runToDelete->id]);
+        $this->assertSoftDeleted('pipeline_runs', ['id' => $runToDelete->id]);
         $this->assertDatabaseHas('pipeline_runs', ['id' => $runToKeep->id]);
     }
 
@@ -1197,8 +1197,8 @@ class ProjectShowPageTest extends TestCase
             ->call('deleteProject')
             ->assertRedirect(route('projects.index'));
 
-        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
-        $this->assertDatabaseMissing('lessons', ['project_id' => $project->id]);
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+        $this->assertDatabaseHas('lessons', ['project_id' => $project->id]);
     }
 
     public function test_rename_project_modal_can_be_opened_and_closed(): void

@@ -17,16 +17,20 @@ class GenerateTeamInviteCommand extends Command
     {
         $email = (string) config('simple_auth.email', 'team@local');
 
-        $user = User::query()->firstOrCreate(
-            ['email' => $email],
-            [
+        $user = User::withTrashed()->firstWhere('email', $email);
+
+        if ($user === null) {
+            $user = User::query()->create([
                 'name' => 'Team',
+                'email' => $email,
                 'email_verified_at' => now(),
                 'password' => Hash::make(Str::random(64)),
                 'remember_token' => Str::random(10),
                 'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
-            ]
-        );
+            ]);
+        } elseif ($user->trashed()) {
+            $user->restore();
+        }
 
         $token = (string) Str::uuid();
 

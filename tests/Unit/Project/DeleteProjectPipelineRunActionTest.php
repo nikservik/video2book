@@ -53,6 +53,6 @@ class DeleteProjectPipelineRunActionTest extends TestCase
 
         app(DeleteProjectPipelineRunAction::class)->handle($project, $run->id);
 
-        $this->assertDatabaseMissing('pipeline_runs', ['id' => $run->id]);
+        $this->assertSoftDeleted('pipeline_runs', ['id' => $run->id]);
     }
 }

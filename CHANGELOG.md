@@ -4,6 +4,14 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] feat: soft delete для пользователей, проектов, уроков и прогонов
+- Добавлена миграция `2026_02_24_030000_add_soft_deletes_to_users_projects_lessons_pipeline_runs` с полями `deleted_at` для `users`, `projects`, `lessons`, `pipeline_runs`.
+- Модели `User`, `Project`, `Lesson` и `PipelineRun` переведены на `SoftDeletes`.
+- Каскадное удаление не добавлялось: удаление проекта не удаляет связанные уроки/прогоны физически.
+- Адаптированы invite-команды и общий `tests/TestCase` для корректной работы с soft-deleted пользователями (`withTrashed` + `restore` для `team@local`).
+- Обновлены feature/unit-тесты удаления под `assertSoftDeleted`.
+- Обновлены `README.md` и `docs/server.md`.
+
 ## [2026-02-24] feat: логирование действий пользователей через spatie/laravel-activitylog
 - Подключён пакет `spatie/laravel-activitylog`, опубликованы конфиг `config/activitylog.php` и миграции таблицы `activity_log`.
 - Для моделей `Project` и `Lesson` включено логирование событий `created`, `updated`, `deleted` с отдельными `log_name`.

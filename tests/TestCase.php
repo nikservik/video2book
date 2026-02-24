@@ -38,14 +38,18 @@ abstract class TestCase extends BaseTestCase
         $email = (string) config('simple_auth.email', 'team@local');
         $cookieName = (string) config('simple_auth.cookie_name', 'video2book_access_token');
 
-        $user = User::query()->firstOrCreate(
-            ['email' => $email],
-            [
+        $user = User::withTrashed()->firstWhere('email', $email);
+
+        if ($user === null) {
+            $user = User::query()->create([
                 'name' => 'Team',
+                'email' => $email,
                 'password' => Str::random(64),
                 'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
-            ]
-        );
+            ]);
+        } elseif ($user->trashed()) {
+            $user->restore();
+        }
 
         if (! is_string($user->access_token) || $user->access_token === '' || ! $user->isSuperAdmin()) {
             $user->forceFill([

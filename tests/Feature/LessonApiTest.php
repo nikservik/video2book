@@ -106,7 +106,7 @@ class LessonApiTest extends TestCase
         $deleteTagAttempt = $this->delete('/api/project-tags/demo');
         $deleteTagAttempt->assertStatus(422);
 
-        Lesson::query()->delete();
+        Lesson::query()->forceDelete();
         $deleteTagResponse = $this->delete('/api/project-tags/demo');
         $deleteTagResponse->assertNoContent();
     }

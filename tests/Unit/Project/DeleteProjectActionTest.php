@@ -13,7 +13,7 @@ class DeleteProjectActionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_deletes_project_with_related_lessons(): void
+    public function test_it_soft_deletes_project_without_cascade_deleting_lessons(): void
     {
         ProjectTag::query()->create([
             'slug' => 'default',
@@ -25,7 +25,7 @@ class DeleteProjectActionTest extends TestCase
             'tags' => null,
         ]);
 
-        Lesson::query()->create([
+        $lesson = Lesson::query()->create([
             'project_id' => $project->id,
             'name' => 'Урок для удаления action',
             'tag' => 'default',
@@ -35,7 +35,7 @@ class DeleteProjectActionTest extends TestCase
 
         app(DeleteProjectAction::class)->handle($project);
 
-        $this->assertDatabaseMissing('projects', ['id' => $project->id]);
-        $this->assertDatabaseMissing('lessons', ['project_id' => $project->id]);
+        $this->assertSoftDeleted('projects', ['id' => $project->id]);
+        $this->assertDatabaseHas('lessons', ['id' => $lesson->id]);
     }
 }

@@ -152,7 +152,7 @@ class UsersPageTest extends TestCase
             ->call('deleteUser')
             ->assertSet('showDeleteUserModal', false);
 
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertSoftDeleted('users', ['id' => $user->id]);
     }
 
     private function makeUser(string $name, string $email, int $accessLevel): User
