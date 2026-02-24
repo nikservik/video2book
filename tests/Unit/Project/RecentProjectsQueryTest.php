@@ -12,7 +12,7 @@ class RecentProjectsQueryTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_returns_latest_projects_limited_to_six(): void
+    public function test_it_returns_latest_projects_limited_to_five(): void
     {
         $projects = [
             ['name' => 'Архивный проект', 'updated_at' => Carbon::parse('2026-01-01 10:00:00')],
@@ -39,14 +39,13 @@ class RecentProjectsQueryTest extends TestCase
 
         $result = app(RecentProjectsQuery::class)->get();
 
-        $this->assertCount(6, $result);
+        $this->assertCount(5, $result);
         $this->assertSame([
             'Проект Дзета',
             'Проект Эпсилон',
             'Проект Дельта',
             'Проект Гамма',
             'Проект Бета',
-            'Проект Альфа',
         ], $result->pluck('name')->all());
     }
 }

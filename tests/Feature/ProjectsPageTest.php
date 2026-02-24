@@ -16,6 +16,7 @@ use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Queue;
+use Illuminate\Support\Str;
 use Livewire\Livewire;
 use Tests\TestCase;
 
@@ -116,6 +117,75 @@ class ProjectsPageTest extends TestCase
             'id' => $folder->id,
             'name' => 'Курсы обновлённые',
         ]);
+    }
+
+    public function test_projects_page_can_create_hidden_folder_with_locked_users(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_ADMIN,
+        ]);
+        $this->actingAs($viewer);
+
+        $superAdmin = User::query()
+            ->where('access_level', User::ACCESS_LEVEL_SUPERADMIN)
+            ->firstOrFail();
+
+        $visibleUser = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'name' => 'Видимый пользователь',
+        ]);
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openCreateFolderModal')
+            ->set('newFolderName', 'Скрытая папка')
+            ->set('newFolderHidden', true)
+            ->set('newFolderVisibleFor', [$visibleUser->id])
+            ->call('createFolder')
+            ->assertSet('showCreateFolderModal', false)
+            ->assertHasNoErrors();
+
+        $folder = Folder::query()->where('name', 'Скрытая папка')->firstOrFail();
+
+        $this->assertTrue((bool) $folder->hidden);
+        $this->assertEqualsCanonicalizing(
+            [$superAdmin->id, $viewer->id, $visibleUser->id],
+            array_map(static fn (mixed $userId): int => (int) $userId, (array) $folder->visible_for)
+        );
+    }
+
+    public function test_projects_page_edit_hidden_folder_keeps_locked_users_selected(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_ADMIN,
+        ]);
+        $this->actingAs($viewer);
+
+        $superAdmin = User::query()
+            ->where('access_level', User::ACCESS_LEVEL_SUPERADMIN)
+            ->firstOrFail();
+
+        $folder = Folder::query()->create([
+            'name' => 'Закрытая папка',
+            'hidden' => true,
+            'visible_for' => [$viewer->id],
+        ]);
+
+        Livewire::test(ProjectsPage::class)
+            ->call('openRenameFolderModal', $folder->id)
+            ->set('editingFolderName', 'Закрытая папка 2')
+            ->set('editingFolderHidden', true)
+            ->set('editingFolderVisibleFor', [])
+            ->call('renameFolder')
+            ->assertSet('showRenameFolderModal', false)
+            ->assertHasNoErrors();
+
+        $folder->refresh();
+
+        $this->assertTrue((bool) $folder->hidden);
+        $this->assertEqualsCanonicalizing(
+            [$superAdmin->id, $viewer->id],
+            array_map(static fn (mixed $userId): int => (int) $userId, (array) $folder->visible_for)
+        );
     }
 
     public function test_projects_page_create_project_modal_opens_for_selected_folder(): void
@@ -274,6 +344,47 @@ class ProjectsPageTest extends TestCase
             'id' => $project->id,
             'folder_id' => $targetFolder->id,
         ]);
+    }
+
+    public function test_projects_page_hides_hidden_folders_for_user_without_access(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $visibleFolder = Folder::query()->create([
+            'name' => 'Видимая папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+        $hiddenFolder = Folder::query()->create([
+            'name' => 'Скрытая папка',
+            'hidden' => true,
+            'visible_for' => [],
+        ]);
+
+        Project::query()->create([
+            'folder_id' => $visibleFolder->id,
+            'name' => 'Видимый проект',
+            'tags' => null,
+        ]);
+        Project::query()->create([
+            'folder_id' => $hiddenFolder->id,
+            'name' => 'Скрытый проект',
+            'tags' => null,
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $viewer->access_token)
+            ->get(route('projects.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Видимая папка')
+            ->assertSee('Видимый проект')
+            ->assertDontSee('Скрытая папка')
+            ->assertDontSee('Скрытый проект');
     }
 
     private function createProject(Folder $folder, string $name, Carbon $updatedAt, int $lessonsCount): void

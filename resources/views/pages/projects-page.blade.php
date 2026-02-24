@@ -110,6 +110,17 @@
                         <div class="flex-1 flex min-w-0 md:items-center justify-between gap-3">
                             <div class="flex min-w-0 items-center gap-2">
                                 <p class="truncate font-semibold text-gray-900 dark:text-white">{{ $folder->name }}</p>
+                                @if ($folder->hidden)
+                                    <svg xmlns="http://www.w3.org/2000/svg"
+                                         fill="none"
+                                         viewBox="0 0 24 24"
+                                         stroke-width="1.5"
+                                         stroke="currentColor"
+                                         class="size-5 shrink-0 text-gray-500 dark:text-gray-400"
+                                         aria-label="Скрытая папка">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3.98 8.223A10.477 10.477 0 0 0 1.934 12C3.226 16.338 7.244 19.5 12 19.5c.993 0 1.953-.138 2.863-.395M6.228 6.228A10.451 10.451 0 0 1 12 4.5c4.756 0 8.773 3.162 10.065 7.498a10.522 10.522 0 0 1-4.293 5.774M6.228 6.228 3 3m3.228 3.228 3.65 3.65m7.894 7.894L21 21m-3.228-3.228-3.65-3.65m0 0a3 3 0 1 0-4.243-4.243m4.242 4.242L9.88 9.88" />
+                                    </svg>
+                                @endif
                                 <p class="hidden mt-0.5 shrink-0 text-sm text-gray-500 dark:text-gray-400 md:block">Проектов: {{ $folder->projects_count }}</p>
                             </div>
                             @if ($expandedFolderId === $folder->id)
@@ -211,7 +222,7 @@
         <div class="fixed inset-0 z-50 overflow-y-auto" role="dialog" aria-modal="true" data-create-folder-modal>
             <div class="fixed inset-0 bg-gray-500/75 transition-opacity dark:bg-gray-900/50" wire:click="closeCreateFolderModal"></div>
 
-            <div tabindex="0" class="flex min-h-full items-center justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
+            <div tabindex="0" class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
                 <div class="relative w-full max-w-full transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
                      wire:click.stop>
                     <form wire:submit="createFolder" class="space-y-5">
@@ -230,6 +241,14 @@
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        @include('components.folder-visibility-fields', [
+                            'hiddenProperty' => 'newFolderHidden',
+                            'visibleForProperty' => 'newFolderVisibleFor',
+                            'users' => $folderVisibilityUsers,
+                            'lockedUserIds' => $lockedFolderVisibilityUserIds,
+                            'idPrefix' => 'new-folder-visibility',
+                        ])
 
                         <div class="mt-10 sm:flex sm:flex-row-reverse">
                             <button type="submit"
@@ -270,6 +289,14 @@
                                 <p class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                             @enderror
                         </div>
+
+                        @include('components.folder-visibility-fields', [
+                            'hiddenProperty' => 'editingFolderHidden',
+                            'visibleForProperty' => 'editingFolderVisibleFor',
+                            'users' => $folderVisibilityUsers,
+                            'lockedUserIds' => $lockedFolderVisibilityUserIds,
+                            'idPrefix' => 'edit-folder-visibility',
+                        ])
 
                         <div class="mt-10 sm:flex sm:flex-row-reverse">
                             <button type="submit"

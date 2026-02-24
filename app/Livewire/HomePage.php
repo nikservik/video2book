@@ -20,7 +20,7 @@ class HomePage extends Component
     public function render(): View
     {
         return view('pages.home-page', [
-            'recentProjects' => app(RecentProjectsQuery::class)->get(),
+            'recentProjects' => app(RecentProjectsQuery::class)->get(viewer: auth()->user()),
         ])->layout('layouts.app', [
             'title' => 'Главная | '.config('app.name', 'Video2Book'),
             'breadcrumbs' => [],

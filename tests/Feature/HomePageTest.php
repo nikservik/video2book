@@ -2,9 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Models\Folder;
 use App\Models\Project;
+use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 use Tests\TestCase;
 
 class HomePageTest extends TestCase
@@ -90,5 +93,44 @@ class HomePageTest extends TestCase
             ->assertStatus(200)
             ->assertDontSee('data-breadcrumbs', false)
             ->assertDontSee('aria-label="Breadcrumb"', false);
+    }
+
+    public function test_home_page_hides_projects_from_hidden_folders_for_user_without_access(): void
+    {
+        $viewer = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+            'access_token' => (string) Str::uuid(),
+        ]);
+
+        $visibleFolder = Folder::query()->create([
+            'name' => 'Публичная папка',
+            'hidden' => false,
+            'visible_for' => [],
+        ]);
+        $hiddenFolder = Folder::query()->create([
+            'name' => 'Секретная папка',
+            'hidden' => true,
+            'visible_for' => [],
+        ]);
+
+        Project::query()->create([
+            'folder_id' => $visibleFolder->id,
+            'name' => 'Публичный проект',
+            'tags' => null,
+        ]);
+        Project::query()->create([
+            'folder_id' => $hiddenFolder->id,
+            'name' => 'Секретный проект',
+            'tags' => null,
+        ]);
+
+        $response = $this
+            ->withCookie((string) config('simple_auth.cookie_name'), (string) $viewer->access_token)
+            ->get(route('home'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee('Публичный проект')
+            ->assertDontSee('Секретный проект');
     }
 }

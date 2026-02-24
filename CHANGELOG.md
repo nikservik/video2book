@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] feat: скрытие папок по пользователям
+- Для `folders` добавлены поля `hidden` (default `false`) и `visible_for` (json-массив id пользователей).
+- В модалках создания и редактирования папки добавлен UI видимости: чекбокс `Скрыть папку` и список `Кому папка видна`.
+- Список пользователей в этом UI сортируется по `access_level` (убывание), затем по имени.
+- Для `superadmin` и текущего пользователя-редактора чекбоксы видимости принудительно включены и недоступны для снятия.
+- Фильтрация скрытых папок по `visible_for` применена на странице `Проекты` и в блоке `Свежие проекты` на главной.
+- Добавлен переиспользуемый partial `resources/views/pages/projects/partials/folder-visibility-fields.blade.php`.
+- Обновлены feature-тесты `ProjectsPageTest` и `HomePageTest`, а также `README.md`, `docs/server.md`, `docs/done.md`.
+
 ## [2026-02-24] feat: блок свежих проектов на главной в табличном виде
 - На главной странице блок `Свежие проекты` переведён с карточек на таблицу в стиле страницы проектов.
 - Количество элементов сокращено до 5 последних обновлённых проектов.
