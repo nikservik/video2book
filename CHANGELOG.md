@@ -4,6 +4,17 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-24] fix: ошибка download/normalize сохраняется в первый шаг прогона без смены статуса
+- При ошибке в `DownloadLessonAudioJob` и `NormalizeUploadedLessonAudioJob` текст ошибки теперь записывается в `pipeline_run_steps.error` первого шага queued-прогона урока.
+- Статус первого шага не меняется и остаётся `pending` (`В очереди`), как и статус прогона (`queued`).
+- Добавлены проверки в `LessonDownloadTest` для обоих сценариев: падение загрузки и падение нормализации.
+
+## [2026-02-24] fix: показ ошибки failed-шага в основном контенте страницы прогона
+- На странице `projects.runs.show` для выбранного шага со статусом `failed` и пустым `result` в основном блоке результата теперь показывается текст ошибки (`pipeline_run_steps.error`) красным вместо заглушки о том, что результата нет.
+- Поведение применено для обоих режимов просмотра результата: `Превью` и `Исходник`.
+- В `ProjectRunDetailsQuery` исправлена выборка шагов: в `select` добавлено поле `error`, чтобы текст ошибки корректно читался из БД.
+- Добавлен feature-тест `ProjectRunPageTest::test_project_run_page_shows_failed_step_error_in_result_block_when_result_is_missing`.
+
 ## [2026-02-24] fix: скрыт номер версии пайплайна на странице прогона для пользователей уровня 0
 - На странице `projects.runs.show` для пользователя с `access_level=0` в заголовке и breadcrumbs скрыт суффикс версии (`• vN`), отображается только название пайплайна.
 - Для `admin/superadmin` формат `Название • vN` на странице прогона сохранён без изменений.

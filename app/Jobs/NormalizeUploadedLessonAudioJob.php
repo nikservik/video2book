@@ -62,6 +62,7 @@ class NormalizeUploadedLessonAudioJob implements ShouldBeUnique, ShouldQueue
             $pipelineRunService->dispatchQueuedRuns($lesson);
         } catch (Throwable $exception) {
             $lesson = $this->markAsFailed($lesson, $exception->getMessage());
+            $pipelineRunService->setDownloadErrorOnFirstStep($lesson, $exception->getMessage());
             $eventBroadcaster->downloadFailed($lesson, $exception->getMessage());
 
             throw $exception;

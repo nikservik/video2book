@@ -135,7 +135,7 @@ class LessonDownloadTest extends TestCase
             'settings' => ['quality' => 'high'],
         ]);
 
-        app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
 
         $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
         $service->shouldReceive('downloadAndNormalize')
@@ -166,6 +166,11 @@ class LessonDownloadTest extends TestCase
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('failed', data_get($lesson->settings, 'download_status'));
         $this->assertSame('network error', data_get($lesson->settings, 'download_error'));
+
+        $firstRunStep = $run->steps()->orderBy('position')->firstOrFail();
+        $this->assertSame('queued', $run->fresh()->status);
+        $this->assertSame('pending', $firstRunStep->fresh()->status);
+        $this->assertSame('network error', $firstRunStep->fresh()->error);
     }
 
     public function test_normalize_uploaded_audio_job_marks_lesson_complete_and_dispatches_pipeline(): void
@@ -247,7 +252,7 @@ class LessonDownloadTest extends TestCase
             ],
         ]);
 
-        app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
+        $run = app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
         Storage::disk('local')->put('downloader/'.$lesson->id.'/abc/uploaded.wav', 'audio');
 
         $service = Mockery::mock(\App\Services\Lesson\LessonDownloadService::class);
@@ -278,6 +283,11 @@ class LessonDownloadTest extends TestCase
         $this->assertFalse(data_get($lesson->settings, 'downloading'));
         $this->assertSame('failed', data_get($lesson->settings, 'download_status'));
         $this->assertSame('normalize error', data_get($lesson->settings, 'download_error'));
+
+        $firstRunStep = $run->steps()->orderBy('position')->firstOrFail();
+        $this->assertSame('queued', $run->fresh()->status);
+        $this->assertSame('pending', $firstRunStep->fresh()->status);
+        $this->assertSame('normalize error', $firstRunStep->fresh()->error);
     }
 
     /**

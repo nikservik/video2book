@@ -200,13 +200,28 @@
                          data-selected-step-result
                          data-result-mode="preview"
                          class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
-                        {!! $this->selectedStepResultPreview !!}
+                        @if ($this->selectedStepErrorMessage !== null)
+                            <p data-selected-step-error
+                               class="text-base font-medium text-red-700 dark:text-red-400">
+                                {{ $this->selectedStepErrorMessage }}
+                            </p>
+                        @else
+                            {!! $this->selectedStepResultPreview !!}
+                        @endif
                     </div>
                 @else
-                    <pre data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
-                         data-selected-step-result
-                         data-result-mode="source"
-                         class="whitespace-pre-wrap text-base text-gray-700 dark:text-gray-200">{{ $this->selectedStepResult }}</pre>
+                    @if ($this->selectedStepErrorMessage !== null)
+                        <pre data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
+                             data-selected-step-result
+                             data-selected-step-error
+                             data-result-mode="source"
+                             class="whitespace-pre-wrap text-base font-medium text-red-700 dark:text-red-400">{{ $this->selectedStepErrorMessage }}</pre>
+                    @else
+                        <pre data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
+                             data-selected-step-result
+                             data-result-mode="source"
+                             class="whitespace-pre-wrap text-base text-gray-700 dark:text-gray-200">{{ $this->selectedStepResult }}</pre>
+                    @endif
                 @endif
             </div>
         </section>

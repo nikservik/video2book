@@ -22,6 +22,7 @@ class ProjectRunDetailsQuery
                     'step_version_id',
                     'position',
                     'status',
+                    'error',
                     'result',
                     'input_tokens',
                     'output_tokens',

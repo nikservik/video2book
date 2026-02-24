@@ -256,6 +256,37 @@ class ProjectRunPageTest extends TestCase
             ->assertSee('<h2>Заголовок первого шага</h2>', false);
     }
 
+    public function test_project_run_page_shows_failed_step_error_in_result_block_when_result_is_missing(): void
+    {
+        [$project, $pipelineRun, , $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $secondRunStep->update([
+            'status' => 'failed',
+            'result' => null,
+            'error' => 'Ошибка LLM: timeout',
+        ]);
+        $pipelineRun->update(['status' => 'failed']);
+
+        $component = Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]);
+
+        $component
+            ->call('selectStep', $secondRunStep->id)
+            ->assertSee('data-result-mode="preview"', false)
+            ->assertSee('data-selected-step-error', false)
+            ->assertSee('text-red-700', false)
+            ->assertSee('Ошибка LLM: timeout')
+            ->assertDontSee('Результат для выбранного шага пока не сформирован.')
+            ->call('setResultViewMode', 'source')
+            ->assertSee('data-result-mode="source"', false)
+            ->assertSee('data-selected-step-error', false)
+            ->assertSee('Ошибка LLM: timeout');
+
+        $this->assertSame('Ошибка LLM: timeout', $component->instance()->selectedStepErrorMessage);
+    }
+
     public function test_project_run_page_can_download_selected_step_pdf_markdown_and_docx(): void
     {
         [$project, $pipelineRun] = $this->createProjectRunWithSteps();

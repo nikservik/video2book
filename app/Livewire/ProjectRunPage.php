@@ -205,6 +205,21 @@ class ProjectRunPage extends Component
         ]);
     }
 
+    public function getSelectedStepErrorMessageProperty(): ?string
+    {
+        if ($this->selectedStep === null || $this->selectedStep->status !== 'failed') {
+            return null;
+        }
+
+        if (! blank($this->selectedStep->result)) {
+            return null;
+        }
+
+        $error = trim((string) ($this->selectedStep->error ?? ''));
+
+        return $error !== '' ? $error : 'Шаг завершился с ошибкой.';
+    }
+
     public function getPipelineVersionLabelProperty(): string
     {
         $pipelineTitle = $this->pipelineRun->pipelineVersion?->title ?? 'Без названия';

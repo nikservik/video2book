@@ -421,4 +421,32 @@ final class PipelineRunService
                 ProcessPipelineJob::dispatch($run->id)->onQueue(ProcessPipelineJob::QUEUE);
             });
     }
+
+    public function setDownloadErrorOnFirstStep(Lesson $lesson, string $message): void
+    {
+        $errorMessage = trim($message);
+
+        if ($errorMessage === '') {
+            $errorMessage = 'Ошибка загрузки аудио.';
+        }
+
+        PipelineRun::query()
+            ->where('lesson_id', $lesson->id)
+            ->where('status', 'queued')
+            ->with(['steps' => fn ($query) => $query
+                ->orderBy('position')
+                ->orderBy('id')])
+            ->get()
+            ->each(function (PipelineRun $run) use ($errorMessage): void {
+                $firstStep = $run->steps->first();
+
+                if ($firstStep === null) {
+                    return;
+                }
+
+                $firstStep->forceFill([
+                    'error' => $errorMessage,
+                ])->save();
+            });
+    }
 }
