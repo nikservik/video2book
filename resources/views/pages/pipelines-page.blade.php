@@ -1,6 +1,6 @@
 <div class="space-y-6">
     <div class="mx-2 md:mx-6 flex items-center justify-between gap-3">
-        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Пайплайны</h1>
+        <h1 class="text-3xl font-bold tracking-tight text-gray-900 dark:text-white">Шаблоны</h1>
         <button type="button"
                 wire:click="openCreatePipelineModal"
                 data-open-create-pipeline-modal
@@ -8,14 +8,14 @@
             <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-6">
               <path stroke-linecap="round" stroke-linejoin="round" d="m21 7.5-2.25-1.313M21 7.5v2.25m0-2.25-2.25 1.313M3 7.5l2.25-1.313M3 7.5l2.25 1.313M3 7.5v2.25m9 3 2.25-1.313M12 12.75l-2.25-1.313M12 12.75V15m0 6.75 2.25-1.313M12 21.75V19.5m0 2.25-2.25-1.313m0-16.875L12 2.25l2.25 1.313M21 14.25v2.25l-2.25 1.313m-13.5 0L3 16.5v-2.25" />
             </svg>
-            Добавить пайплайн
+            Добавить шаблон
         </button>
     </div>
 
     @if ($pipelines->isEmpty())
         <div class="rounded-lg border border-gray-200 bg-white p-6 shadow-sm dark:border-white/10 dark:bg-gray-800">
             <p class="text-gray-600 dark:text-gray-300">
-                Пока нет пайплайнов.
+                Пока нет шаблонов.
             </p>
         </div>
     @else
@@ -92,7 +92,7 @@
                         class="space-y-5"
                     >
                         <div>
-                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить пайплайн</h3>
+                            <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить шаблон</h3>
                             <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Заполните название, описание и настройте список шагов.</p>
                         </div>
 

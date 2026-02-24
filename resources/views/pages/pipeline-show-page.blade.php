@@ -8,7 +8,7 @@
         <section class="lg:col-span-2">
             @if ($selectedVersion === null)
                 <div class="rounded-lg border border-gray-200 bg-white px-6 py-6 shadow-sm dark:border-white/10 dark:bg-gray-800">
-                    <p class="text-gray-600 dark:text-gray-300">У этого пайплайна пока нет версий.</p>
+                    <p class="text-gray-600 dark:text-gray-300">У этого шаблона пока нет версий.</p>
                 </div>
             @elseif ($selectedVersionSteps === [])
                 <div class="rounded-lg border border-gray-200 bg-white px-6 py-6 shadow-sm dark:border-white/10 dark:bg-gray-800">

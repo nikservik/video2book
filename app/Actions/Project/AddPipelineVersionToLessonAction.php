@@ -26,7 +26,7 @@ class AddPipelineVersionToLessonAction
 
         if ($alreadyAdded) {
             throw ValidationException::withMessages([
-                'pipeline_version_id' => 'Эта версия пайплайна уже добавлена в урок.',
+                'pipeline_version_id' => 'Эта версия шаблона уже добавлена в урок.',
             ]);
         }
 

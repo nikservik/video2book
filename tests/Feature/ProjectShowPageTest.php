@@ -1221,12 +1221,12 @@ class ProjectShowPageTest extends TestCase
             ->assertSet('editableProjectDefaultPipelineVersionId', $pipelineVersion->id)
             ->assertSee('Редактировать проект')
             ->assertSee('Referrer')
-            ->assertSee('Версия пайплайна по умолчанию')
+            ->assertSee('Версия шаблона по умолчанию')
             ->assertSee('Сохранить')
             ->assertSee('Отменить')
             ->call('close')
             ->assertSet('show', false)
-            ->assertDontSee('Версия пайплайна по умолчанию');
+            ->assertDontSee('Версия шаблона по умолчанию');
     }
 
     public function test_save_project_updates_project_and_closes_modal(): void
@@ -1286,7 +1286,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSet('newLessonPipelineVersionId', $pipelineVersion->id)
             ->assertSee('Добавить урок')
             ->assertSee('Ссылка на YouTube')
-            ->assertSee('Версия пайплайна')
+            ->assertSee('Версия шаблона')
             ->call('close')
             ->assertSet('show', false)
             ->assertDontSee('Ссылка на YouTube');
@@ -1310,7 +1310,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Перетащите аудиофайл сюда или нажмите для выбора')
             ->assertSee('Не удалось загрузить файл')
             ->assertSee('Обновить страницу')
-            ->assertSee('Версия пайплайна')
+            ->assertSee('Версия шаблона')
             ->call('close')
             ->assertSet('show', false)
             ->assertDontSee('Перетащите аудиофайл сюда или нажмите для выбора');

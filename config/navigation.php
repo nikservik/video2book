@@ -18,7 +18,7 @@ return [
         ],
         [
             'key' => 'pipelines',
-            'label' => 'Пайплайны',
+            'label' => 'Шаблоны',
             'route' => 'pipelines.index',
             'active' => 'pipelines.*',
             'min_access_level' => 1,

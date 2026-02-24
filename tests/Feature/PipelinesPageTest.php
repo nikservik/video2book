@@ -46,8 +46,8 @@ class PipelinesPageTest extends TestCase
 
         $response
             ->assertStatus(200)
-            ->assertSee('Пайплайны')
-            ->assertSee('Добавить пайплайн')
+            ->assertSee('Шаблоны')
+            ->assertSee('Добавить шаблон')
             ->assertSee('data-open-create-pipeline-modal', false)
             ->assertSee('grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3', false)
             ->assertSee('Пайплайн Альфа')

@@ -20,7 +20,7 @@ final class PipelineRunService
     public function __construct(private readonly PipelineEventBroadcaster $eventBroadcaster) {}
 
     /**
-     * Создаёт новый прогон пайплайна для урока и опционально ставит его в очередь.
+     * Создаёт новый прогон шаблона для урока и опционально ставит его в очередь.
      */
     public function createRun(Lesson $lesson, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
     {
@@ -33,7 +33,7 @@ final class PipelineRunService
     }
 
     /**
-     * Создаёт новый прогон для версии пайплайна и переиспользует результаты
+     * Создаёт новый прогон для версии шаблона и переиспользует результаты
      * неизменённых шагов из последнего завершённого прогона этого же урока.
      */
     public function createRunReusingUnchangedPrefix(Lesson $lesson, PipelineVersion $pipelineVersion, bool $dispatchJob = true): PipelineRun
@@ -61,7 +61,7 @@ final class PipelineRunService
 
         if ($versionSteps->isEmpty()) {
             throw ValidationException::withMessages([
-                'pipeline_version_id' => 'Выбранная версия пайплайна не содержит шагов.',
+                'pipeline_version_id' => 'Выбранная версия шаблона не содержит шагов.',
             ]);
         }
 
@@ -178,7 +178,7 @@ final class PipelineRunService
      */
     public function restartFromStep(PipelineRun $run, PipelineRunStep $startingStep): PipelineRun
     {
-        abort_if($startingStep->pipeline_run_id !== $run->id, 422, 'Шаг не принадлежит указанному прогону пайплайна.');
+        abort_if($startingStep->pipeline_run_id !== $run->id, 422, 'Шаг не принадлежит указанному прогону шаблона.');
 
         DB::transaction(function () use ($run, $startingStep): void {
             $run->steps()

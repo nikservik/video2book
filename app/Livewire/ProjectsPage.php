@@ -67,7 +67,7 @@ class ProjectsPage extends Component
         ], [], [
             'newProjectName' => 'название проекта',
             'newProjectReferer' => 'referer',
-            'newProjectDefaultPipelineVersionId' => 'версия пайплайна по умолчанию',
+            'newProjectDefaultPipelineVersionId' => 'версия шаблона по умолчанию',
             'newProjectLessonsList' => 'список уроков',
         ])->validate();
 

@@ -18,7 +18,7 @@
                             <h3 class="text-base font-semibold text-gray-900 dark:text-white">Удалить шаг «{{ $deletingStepName }}»</h3>
                             <div class="mt-2">
                                 <p class="text-sm text-gray-500 dark:text-gray-400">
-                                    Будет создана новая версия пайплайна без этого шага. Невозвратных изменений не будет.
+                                    Будет создана новая версия шаблона без этого шага. Невозвратных изменений не будет.
                                 </p>
                             </div>
                         </div>

@@ -9,7 +9,7 @@
                     <form wire:submit="create" class="space-y-5">
                         <div>
                             <h3 class="text-base font-semibold text-gray-900 dark:text-white">Создать копию</h3>
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Введите название нового пайплайна, который будет создан как копия выбранной версии.</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Введите название нового шаблона, который будет создан как копия выбранной версии.</p>
                         </div>
 
                         <div>

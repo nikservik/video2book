@@ -22,7 +22,7 @@ class CreateProjectFromLessonsListAction
 
         if ($parsedLessons !== [] && $defaultPipelineVersionId === null) {
             throw ValidationException::withMessages([
-                'newProjectDefaultPipelineVersionId' => 'Выберите версию пайплайна по умолчанию для создания уроков.',
+                'newProjectDefaultPipelineVersionId' => 'Выберите версию шаблона по умолчанию для создания уроков.',
             ]);
         }
 

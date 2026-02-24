@@ -74,7 +74,7 @@ class DuplicatePipelineModal extends Component
         ], [
             'copyPipelineTitle' => ['required', 'string', 'max:255'],
         ], [], [
-            'copyPipelineTitle' => 'название копии пайплайна',
+            'copyPipelineTitle' => 'название копии шаблона',
         ])->validate();
 
         $pipeline = $duplicatePipelineFromVersionAction->handle(

@@ -9,7 +9,7 @@
                     <form wire:submit="saveCreatedStep" class="space-y-5">
                         <div>
                             <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавление шага</h3>
-                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Заполните параметры нового шага для выбранной версии пайплайна.</p>
+                            <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">Заполните параметры нового шага для выбранной версии шаблона.</p>
                         </div>
 
                         <div>

@@ -102,7 +102,7 @@ class AccessLevelAuthorizationTest extends TestCase
         $this->withCookie($cookieName, (string) $admin->access_token)
             ->get(route('pipelines.index'))
             ->assertStatus(200)
-            ->assertSee('Пайплайны');
+            ->assertSee('Шаблоны');
 
         $this->withCookie($cookieName, (string) $admin->access_token)
             ->get(route('pipelines.show', $pipeline))

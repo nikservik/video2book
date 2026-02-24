@@ -8,14 +8,14 @@
                  wire:click.stop>
                 <form wire:submit="addPipelineToLesson" class="space-y-5">
                     <div>
-                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить версию пайплайна</h3>
+                        <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить версию шаблона</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Для урока «{{ $addingPipelineLessonName }}» выберите версию пайплайна.
+                            Для урока «{{ $addingPipelineLessonName }}» выберите версию шаблона.
                         </p>
                     </div>
 
                     <div>
-                        <label for="adding-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия пайплайна</label>
+                        <label for="adding-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия шаблона</label>
                         <div class="mt-2" wire:replace>
                             <x-pipeline-version-select
                                 id="adding-pipeline-version"

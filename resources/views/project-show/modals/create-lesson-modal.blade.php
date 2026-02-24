@@ -10,7 +10,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить урок</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Заполните название, ссылку на YouTube и версию пайплайна.
+                            Заполните название, ссылку на YouTube и версию шаблона.
                         </p>
                     </div>
 
@@ -55,7 +55,7 @@
                     </div>
 
                     <div>
-                        <label for="lesson-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия пайплайна</label>
+                        <label for="lesson-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия шаблона</label>
                         <div class="mt-2" wire:replace>
                             <x-pipeline-version-select
                                 id="lesson-pipeline-version"

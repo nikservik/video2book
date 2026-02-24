@@ -82,7 +82,7 @@ class RenameProjectModal extends Component
         ], [], [
             'editableProjectName' => 'название проекта',
             'editableProjectReferer' => 'referrer',
-            'editableProjectDefaultPipelineVersionId' => 'версия пайплайна по умолчанию',
+            'editableProjectDefaultPipelineVersionId' => 'версия шаблона по умолчанию',
         ])->validate();
 
         $newName = trim($validated['editableProjectName']);

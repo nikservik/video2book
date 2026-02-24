@@ -71,8 +71,8 @@ class PipelinesPage extends Component
             'stepNames' => ['required', 'array', 'min:1'],
             'stepNames.*' => ['required', 'string', 'max:255'],
         ], [], [
-            'createPipelineTitle' => 'название пайплайна',
-            'createPipelineDescription' => 'описание пайплайна',
+            'createPipelineTitle' => 'название шаблона',
+            'createPipelineDescription' => 'описание шаблона',
             'stepNames' => 'список шагов',
             'stepNames.*' => 'название шага',
         ])->validate();
@@ -91,9 +91,9 @@ class PipelinesPage extends Component
         return view('pages.pipelines-page', [
             'pipelines' => app(PaginatedPipelinesQuery::class)->get(self::PER_PAGE),
         ])->layout('layouts.app', [
-            'title' => 'Пайплайны | '.config('app.name', 'Video2Book'),
+            'title' => 'Шаблоны | '.config('app.name', 'Video2Book'),
             'breadcrumbs' => [
-                ['label' => 'Пайплайны', 'current' => true],
+                ['label' => 'Шаблоны', 'current' => true],
             ],
         ]);
     }

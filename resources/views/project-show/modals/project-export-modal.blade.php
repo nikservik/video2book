@@ -10,7 +10,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">{{ $this->projectExportTitle }}</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Выберите версию пайплайна и шаг, для которого хотите скачать результаты.
+                            Выберите версию шаблона и шаг, для которого хотите скачать результаты.
                         </p>
                     </div>
 

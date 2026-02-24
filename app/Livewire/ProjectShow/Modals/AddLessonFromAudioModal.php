@@ -84,7 +84,7 @@ class AddLessonFromAudioModal extends Component
         ], [], [
             'newLessonName' => 'название урока',
             'newLessonAudioFile' => 'аудиофайл',
-            'newLessonPipelineVersionId' => 'версия пайплайна',
+            'newLessonPipelineVersionId' => 'версия шаблона',
         ]);
 
         $action->handle(

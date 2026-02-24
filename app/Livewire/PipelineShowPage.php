@@ -258,9 +258,9 @@ class PipelineShowPage extends Component
             'selectedVersion' => $this->selectedVersion,
             'selectedVersionSteps' => $this->selectedVersionSteps,
         ])->layout('layouts.app', [
-            'title' => 'Пайплайн | '.config('app.name', 'Video2Book'),
+            'title' => 'Шаблон | '.config('app.name', 'Video2Book'),
             'breadcrumbs' => [
-                ['label' => 'Пайплайны', 'url' => route('pipelines.index')],
+                ['label' => 'Шаблоны', 'url' => route('pipelines.index')],
                 ['label' => $this->selectedVersionTitle, 'current' => true],
             ],
         ]);

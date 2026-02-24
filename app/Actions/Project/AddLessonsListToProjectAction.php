@@ -18,7 +18,7 @@ class AddLessonsListToProjectAction
 
         if ($project->default_pipeline_version_id === null) {
             throw ValidationException::withMessages([
-                'newLessonsList' => 'Для проекта не задана версия пайплайна по умолчанию.',
+                'newLessonsList' => 'Для проекта не задана версия шаблона по умолчанию.',
             ]);
         }
 

@@ -98,7 +98,7 @@ class AddPipelineToLessonModal extends Component
         ], [
             'addingPipelineVersionId' => ['required', 'integer', 'exists:pipeline_versions,id', Rule::in($availableVersionIds)],
         ], [], [
-            'addingPipelineVersionId' => 'версия пайплайна',
+            'addingPipelineVersionId' => 'версия шаблона',
         ])->validate();
 
         $action->handle(

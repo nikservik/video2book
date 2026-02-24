@@ -72,7 +72,7 @@ class CreateLessonModal extends Component
         ], [], [
             'newLessonName' => 'название урока',
             'newLessonYoutubeUrl' => 'ссылка на YouTube',
-            'newLessonPipelineVersionId' => 'версия пайплайна',
+            'newLessonPipelineVersionId' => 'версия шаблона',
         ]);
 
         $action->handle(

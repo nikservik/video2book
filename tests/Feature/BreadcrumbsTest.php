@@ -120,7 +120,7 @@ class BreadcrumbsTest extends TestCase
             ->assertStatus(200)
             ->assertSeeInOrder([
                 'aria-label="Breadcrumb"',
-                'Пайплайны',
+                'Шаблоны',
             ], false);
 
         $pipeline = Pipeline::query()->create();
@@ -139,7 +139,7 @@ class BreadcrumbsTest extends TestCase
             ->assertStatus(200)
             ->assertSeeInOrder([
                 'aria-label="Breadcrumb"',
-                'Пайплайны',
+                'Шаблоны',
                 'Пайплайн страницы',
             ], false);
 

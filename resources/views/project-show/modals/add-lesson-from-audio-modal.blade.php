@@ -14,7 +14,7 @@
                     <div>
                         <h3 class="text-base font-semibold text-gray-900 dark:text-white">Добавить урок из аудио</h3>
                         <p class="mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            Укажите название, версию пайплайна и загрузите аудиофайл.
+                            Укажите название, версию шаблона и загрузите аудиофайл.
                         </p>
                     </div>
 
@@ -77,7 +77,7 @@
                     </div>
 
                     <div>
-                        <label for="audio-lesson-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия пайплайна</label>
+                        <label for="audio-lesson-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия шаблона</label>
                         <div class="mt-2" wire:replace>
                             <x-pipeline-version-select
                                 id="audio-lesson-pipeline-version"

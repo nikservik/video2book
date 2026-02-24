@@ -94,7 +94,7 @@
                         </div>
 
                         <div>
-                            <label for="project-default-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия пайплайна по умолчанию</label>
+                            <label for="project-default-pipeline-version" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Версия шаблона по умолчанию</label>
                             <div class="mt-2" wire:replace>
                                 <x-pipeline-version-select
                                     id="project-default-pipeline-version"
