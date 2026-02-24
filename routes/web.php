@@ -7,6 +7,7 @@ use App\Livewire\PipelinesPage;
 use App\Livewire\ProjectRunPage;
 use App\Livewire\ProjectShowPage;
 use App\Livewire\ProjectsPage;
+use App\Livewire\UsersPage;
 use Illuminate\Support\Facades\Route;
 
 Route::get('/invite/{token}', AcceptInviteController::class)->name('invites.accept');
@@ -23,5 +24,9 @@ Route::middleware('team.token')->group(function (): void {
     Route::prefix('pipelines')->name('pipelines.')->group(function (): void {
         Route::get('/', PipelinesPage::class)->name('index');
         Route::get('/{pipeline}', PipelineShowPage::class)->name('show');
+    });
+
+    Route::prefix('users')->name('users.')->group(function (): void {
+        Route::get('/', UsersPage::class)->name('index');
     });
 });

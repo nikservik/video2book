@@ -25,7 +25,9 @@ class InviteAuthTest extends TestCase
 
     public function test_middleware_allows_home_when_cookie_token_is_valid(): void
     {
-        $user = User::query()->where('email', config('simple_auth.email'))->firstOrFail();
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+        ]);
         $token = (string) Str::uuid();
 
         $user->forceFill([
@@ -43,7 +45,9 @@ class InviteAuthTest extends TestCase
 
     public function test_invite_route_sets_cookie_and_redirects_to_home_for_valid_token(): void
     {
-        $user = User::query()->where('email', config('simple_auth.email'))->firstOrFail();
+        $user = User::factory()->create([
+            'access_level' => User::ACCESS_LEVEL_USER,
+        ]);
         $token = (string) Str::uuid();
 
         $user->forceFill([

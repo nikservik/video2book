@@ -3,6 +3,8 @@
 namespace App\Livewire;
 
 use App\Actions\Pipeline\CreatePipelineWithStepsAction;
+use App\Livewire\Concerns\AuthorizesAccessLevel;
+use App\Models\User;
 use App\Services\Pipeline\PaginatedPipelinesQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\ValidationException;
@@ -10,6 +12,8 @@ use Livewire\Component;
 
 class PipelinesPage extends Component
 {
+    use AuthorizesAccessLevel;
+
     private const PER_PAGE = 15;
 
     public bool $showCreatePipelineModal = false;
@@ -22,6 +26,11 @@ class PipelinesPage extends Component
      * @var array<int, string>
      */
     public array $createPipelineStepNames = [];
+
+    public function mount(): void
+    {
+        $this->authorizeAccessLevel(User::ACCESS_LEVEL_ADMIN);
+    }
 
     public function openCreatePipelineModal(): void
     {

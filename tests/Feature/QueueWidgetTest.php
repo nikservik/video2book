@@ -143,7 +143,7 @@ class QueueWidgetTest extends TestCase
         $response
             ->assertStatus(200)
             ->assertSee('Очередь обработки')
-            ->assertSee('mx-2 md:mx-6 text-lg font-semibold text-gray-900 dark:text-white">Очередь обработки</h2>', false)
+            ->assertSee('mx-2 md:mx-4 text-lg font-semibold text-gray-900 dark:text-white">Очередь обработки</h2>', false)
             ->assertSee('wire:poll.2s', false)
             ->assertSee('data-queue-task', false)
             ->assertSee('rounded-lg border border-gray-200 bg-white p-3 dark:border-white/10 dark:bg-gray-800', false)

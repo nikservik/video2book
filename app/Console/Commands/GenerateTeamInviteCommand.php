@@ -24,6 +24,7 @@ class GenerateTeamInviteCommand extends Command
                 'email_verified_at' => now(),
                 'password' => Hash::make(Str::random(64)),
                 'remember_token' => Str::random(10),
+                'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
             ]
         );
 
@@ -31,6 +32,7 @@ class GenerateTeamInviteCommand extends Command
 
         $user->forceFill([
             'access_token' => $token,
+            'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
         ])->save();
 
         $baseUrl = rtrim((string) config('app.url', 'http://localhost'), '/');

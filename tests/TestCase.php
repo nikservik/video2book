@@ -43,15 +43,18 @@ abstract class TestCase extends BaseTestCase
             [
                 'name' => 'Team',
                 'password' => Str::random(64),
+                'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
             ]
         );
 
-        if (! is_string($user->access_token) || $user->access_token === '') {
+        if (! is_string($user->access_token) || $user->access_token === '' || ! $user->isSuperAdmin()) {
             $user->forceFill([
                 'access_token' => (string) Str::uuid(),
+                'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
             ])->save();
         }
 
+        $this->actingAs($user);
         $this->withCookie($cookieName, (string) $user->access_token);
     }
 }

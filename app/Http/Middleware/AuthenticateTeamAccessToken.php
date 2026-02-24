@@ -19,7 +19,6 @@ class AuthenticateTeamAccessToken
         }
 
         $user = User::query()
-            ->where('email', (string) config('simple_auth.email', 'team@local'))
             ->where('access_token', $token)
             ->first();
 

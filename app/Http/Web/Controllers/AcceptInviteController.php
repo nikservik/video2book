@@ -13,7 +13,6 @@ class AcceptInviteController extends Controller
     public function __invoke(string $token): RedirectResponse|Response
     {
         $user = User::query()
-            ->where('email', (string) config('simple_auth.email', 'team@local'))
             ->where('access_token', $token)
             ->first();
 

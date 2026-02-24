@@ -25,6 +25,7 @@ class GenerateInviteCommandTest extends TestCase
 
         $this->assertNotNull($user->access_token);
         $this->assertStringContainsString('-', (string) $user->access_token);
+        $this->assertSame(User::ACCESS_LEVEL_SUPERADMIN, (int) $user->access_level);
     }
 
     public function test_artisan_command_creates_team_user_when_missing_and_prints_invite_link(): void
@@ -39,6 +40,7 @@ class GenerateInviteCommandTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertNotNull($user?->access_token);
+        $this->assertSame(User::ACCESS_LEVEL_SUPERADMIN, (int) $user?->access_level);
     }
 
     public function test_show_invite_command_prints_existing_invite_link_without_token_rotation(): void
@@ -56,6 +58,7 @@ class GenerateInviteCommandTest extends TestCase
 
         $user->refresh();
         $this->assertSame($token, $user->access_token);
+        $this->assertSame(User::ACCESS_LEVEL_SUPERADMIN, (int) $user->access_level);
     }
 
     public function test_show_invite_command_creates_user_and_token_when_missing(): void
@@ -70,5 +73,6 @@ class GenerateInviteCommandTest extends TestCase
 
         $this->assertNotNull($user);
         $this->assertNotNull($user?->access_token);
+        $this->assertSame(User::ACCESS_LEVEL_SUPERADMIN, (int) $user?->access_level);
     }
 }

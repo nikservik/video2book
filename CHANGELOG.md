@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-23] feat: access levels и страница управления пользователями
+- Добавлены уровни доступа пользователей через `users.access_level`: `0=user`, `1=admin`, `2=superadmin`.
+- Добавлена миграция `2026_02_23_120000_add_access_level_to_users_table` с установкой `team@local` как `superadmin`.
+- Обновлён invite-auth flow: `AcceptInviteController` и middleware теперь авторизуют пользователя по `access_token`, без привязки к одному email.
+- `auth:generate-invite` теперь гарантирует создание/обновление `team@local` как superadmin и ротирует его токен.
+- `auth:show-invite` сохраняет прежнее поведение (показывает текущий invite без ротации), но также гарантирует статус superadmin для `team@local`.
+- Добавлена Livewire-страница `Пользователи` (`users.index`) для `admin/superadmin`: список карточек, создание/редактирование/удаление, копирование invite-ссылки, генерация нового токена.
+- Карточка superadmin скрыта от всех, кроме самого superadmin.
+- Добавлена фильтрация пунктов основного меню по уровню доступа (`Главная/Проекты` для `0`, `Пайплайны/Пользователи` для `1+`).
+- Добавлена проверка `access_level` на уровне page-компонентов (`PipelinesPage`, `PipelineShowPage`, `UsersPage`).
+- Добавлены и обновлены feature-тесты для доступа, invite-auth и страницы пользователей.
+- Обновлены `README.md` и `docs/server.md`.
+
+## [2026-02-23] fix: стабильное определение текущего пользователя в UsersPage
+- В `UsersPage` добавлен fallback-резолв пользователя из invite-cookie, если в Livewire-запросе `auth()->user()` отсутствует.
+- При успешном fallback пользователь пробрасывается в guard `web`, что предотвращает падение `TypeError` при открытии модала добавления пользователя.
+
 ## [2026-02-23] fix: блок свежих проектов на главной
 - Блок `Последние измененные проекты` переименован в `Свежие проекты`.
 - У внешнего блока проектов на главной убраны фон и внутренние отступы.

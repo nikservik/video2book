@@ -4,9 +4,11 @@ namespace App\Livewire;
 
 use App\Actions\Pipeline\SetCurrentPipelineVersionAction;
 use App\Actions\Pipeline\TogglePipelineVersionArchiveStatusAction;
+use App\Livewire\Concerns\AuthorizesAccessLevel;
 use App\Models\Pipeline;
 use App\Models\PipelineVersion;
 use App\Models\StepVersion;
+use App\Models\User;
 use App\Services\Pipeline\PipelineDetailsQuery;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Collection;
@@ -15,12 +17,16 @@ use Livewire\Component;
 
 class PipelineShowPage extends Component
 {
+    use AuthorizesAccessLevel;
+
     public Pipeline $pipeline;
 
     public ?int $selectedVersionId = null;
 
     public function mount(Pipeline $pipeline): void
     {
+        $this->authorizeAccessLevel(User::ACCESS_LEVEL_ADMIN);
+
         $this->pipeline = $this->loadPipeline($pipeline);
         $this->selectedVersionId = $this->pipeline->current_version_id ?? $this->pipeline->versions->first()?->id;
     }

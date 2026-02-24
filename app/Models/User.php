@@ -12,6 +12,12 @@ class User extends Authenticatable
     /** @use HasFactory<\Database\Factories\UserFactory> */
     use HasFactory, Notifiable;
 
+    public const ACCESS_LEVEL_USER = 0;
+
+    public const ACCESS_LEVEL_ADMIN = 1;
+
+    public const ACCESS_LEVEL_SUPERADMIN = 2;
+
     /**
      * The attributes that are mass assignable.
      *
@@ -21,6 +27,8 @@ class User extends Authenticatable
         'name',
         'email',
         'password',
+        'access_token',
+        'access_level',
     ];
 
     /**
@@ -44,6 +52,17 @@ class User extends Authenticatable
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'access_level' => 'integer',
         ];
+    }
+
+    public function canAccessLevel(int $requiredAccessLevel): bool
+    {
+        return (int) $this->access_level >= $requiredAccessLevel;
+    }
+
+    public function isSuperAdmin(): bool
+    {
+        return (int) $this->access_level === self::ACCESS_LEVEL_SUPERADMIN;
     }
 }

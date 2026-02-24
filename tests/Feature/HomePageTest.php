@@ -19,7 +19,7 @@ class HomePageTest extends TestCase
             ->assertStatus(200)
             ->assertSee('Главная')
             ->assertSee('Свежие проекты')
-            ->assertSee('mx-2 md:mx-6 text-lg font-semibold text-gray-900 dark:text-white', false)
+            ->assertSee('mx-2 md:mx-4 text-lg font-semibold text-gray-900 dark:text-white', false)
             ->assertSee('Очередь обработки')
             ->assertSee('data-theme-set="light"', false)
             ->assertSee('data-theme-set="dark"', false)

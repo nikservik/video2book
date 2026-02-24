@@ -40,7 +40,7 @@
                         <img src="{{ asset('favicon.png') }}" alt="Video2Book" class="h-8 w-auto">
                     </div>
                     <div class="hidden sm:-my-px sm:ml-6 sm:flex sm:space-x-8">
-                        @foreach (config('navigation.main', []) as $item)
+                        @foreach (collect(config('navigation.main', []))->filter(fn ($item) => auth()->user()?->canAccessLevel((int) data_get($item, 'min_access_level', 0)) ?? false) as $item)
                             <a href="{{ route($item['route']) }}"
                                wire:navigate
                                data-menu-item="{{ $item['key'] }}"
@@ -124,7 +124,7 @@
 
         <div id="mobile-menu" class="hidden sm:hidden">
             <div class="space-y-1 pt-2 pb-3">
-                @foreach (config('navigation.main', []) as $item)
+                @foreach (collect(config('navigation.main', []))->filter(fn ($item) => auth()->user()?->canAccessLevel((int) data_get($item, 'min_access_level', 0)) ?? false) as $item)
                     <a href="{{ route($item['route']) }}"
                        wire:navigate
                        data-menu-item="{{ $item['key'] }}"

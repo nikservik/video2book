@@ -24,12 +24,18 @@ class ShowTeamInviteCommand extends Command
                 'email_verified_at' => now(),
                 'password' => Hash::make(Str::random(64)),
                 'remember_token' => Str::random(10),
+                'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
             ]
         );
 
-        if (! is_string($user->access_token) || $user->access_token === '') {
+        if (! is_string($user->access_token) || $user->access_token === '' || ! $user->isSuperAdmin()) {
+            $token = is_string($user->access_token) && $user->access_token !== ''
+                ? $user->access_token
+                : (string) Str::uuid();
+
             $user->forceFill([
-                'access_token' => (string) Str::uuid(),
+                'access_token' => $token,
+                'access_level' => User::ACCESS_LEVEL_SUPERADMIN,
             ])->save();
         }
 

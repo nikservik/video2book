@@ -49,7 +49,7 @@ class PipelinesPageTest extends TestCase
             ->assertSee('Пайплайны')
             ->assertSee('Добавить пайплайн')
             ->assertSee('data-open-create-pipeline-modal', false)
-            ->assertSee('grid grid-cols-1 gap-6 lg:grid-cols-3', false)
+            ->assertSee('grid grid-cols-1 gap-4 md:gap-6 lg:grid-cols-3', false)
             ->assertSee('Пайплайн Альфа')
             ->assertSee('Пайплайн Бета')
             ->assertSee(route('pipelines.show', $firstPipeline), false)
