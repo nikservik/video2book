@@ -4,6 +4,23 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-25] fix: синхронизация Trix после восстановления шага без перезагрузки
+- Для блока редактора на `ProjectRunPage` добавлена ревизия `selectedStepEditorRevision` в `wire:key`.
+- Ревизия увеличивается только при фактическом изменении `selectedStepEditorHtml`, что принудительно пересоздаёт `trix-editor` под `wire:ignore` и сразу показывает восстановленный текст.
+- Обновлён `ProjectRunPageTest` (проверка увеличения ревизии после восстановления).
+
+## [2026-02-25] fix: отдельный текст активности для восстановления шага
+- Для действия восстановления результата шага добавлено отдельное activity-описание: `{пользователь} восстановил текст в шаге {N} ...`.
+- Добавлен контекст события `pipeline-run-step-result-restored`; в `ActivityPage` он отображается как кастомное описание (без generic `изменил(а) прогон`).
+- Обновлены feature-тесты `ProjectRunPageTest` и `ActivityPageTest`.
+
+## [2026-02-25] feat: восстановление исходного текста шага на странице прогона
+- В `ProjectRunPage` добавлена desktop-кнопка восстановления слева от `Править` (показывается только если у выбранного шага заполнено `pipeline_run_steps.original`).
+- По клику открывается confirm-модал с предупреждением о безвозвратной потере правок и действиями `Отмена` / `Восстановить`.
+- Добавлен `RestorePipelineRunStepOriginalResultAction`: при подтверждении копирует `original` в `result` для текущего шага прогона.
+- В `ProjectRunDetailsQuery` в выборку шагов добавлено поле `original`.
+- Обновлены feature-тесты `ProjectRunPageTest` на видимость кнопки восстановления и сценарий полного восстановления результата.
+
 ## [2026-02-25] fix: после сохранения правки шага превью обновляется без перезагрузки страницы
 - В `ProjectRunPage` синхронизация `selectedStepEditorHtml` переведена на чтение шага напрямую из актуальной коллекции `pipelineRun->steps`, без опоры на вычисляемые свойства в том же Livewire-запросе.
 - Добавлен вспомогательный рендер markdown в безопасный HTML (`html_input=strip`, `allow_unsafe_links=false`) и переиспользован для превью/редактора.

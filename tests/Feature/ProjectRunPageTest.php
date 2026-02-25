@@ -283,6 +283,84 @@ class ProjectRunPageTest extends TestCase
             ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false);
     }
 
+    public function test_project_run_page_shows_restore_button_only_for_step_with_original_text(): void
+    {
+        [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
+
+        $firstRunStep->update([
+            'original' => "## Исходный текст\n\n- Пункт 1",
+        ]);
+        $secondRunStep->update([
+            'original' => null,
+        ]);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->assertSee('data-step-result-restore-open', false)
+            ->call('selectStep', $secondRunStep->id)
+            ->assertDontSee('data-step-result-restore-open', false);
+    }
+
+    public function test_project_run_page_can_restore_selected_step_result_from_original_after_confirmation(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+
+        $originalMarkdown = "## Исходный текст\n\n- Исходный пункт";
+        $firstRunStep->update([
+            'original' => $originalMarkdown,
+            'result' => "## Обновлённый текст\n\n- Изменённый пункт",
+        ]);
+
+        $component = Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]);
+        $initialEditorRevision = $component->instance()->selectedStepEditorRevision;
+
+        $component
+            ->assertSet('isRestoreSelectedStepResultModalOpen', false)
+            ->assertSee('data-step-result-restore-open', false)
+            ->call('openRestoreSelectedStepResultModal')
+            ->assertSet('isRestoreSelectedStepResultModalOpen', true)
+            ->assertSee('data-step-result-restore-modal', false)
+            ->assertSee('Восстановить изначальный текст шага?')
+            ->call('restoreSelectedStepResult')
+            ->assertSet('isRestoreSelectedStepResultModalOpen', false)
+            ->assertSet('isEditingSelectedStepResult', false)
+            ->assertDontSee('data-step-result-restore-modal', false);
+
+        $firstRunStep->refresh();
+
+        $this->assertSame($originalMarkdown, (string) $firstRunStep->result);
+        $this->assertStringContainsString('<h2>Исходный текст</h2>', $component->instance()->selectedStepEditorHtml);
+        $this->assertGreaterThan($initialEditorRevision, $component->instance()->selectedStepEditorRevision);
+
+        $user = User::query()->firstOrFail();
+        $expectedDescription = sprintf(
+            '%s восстановил текст в шаге %d в уроке «%s» проекта «%s»',
+            (string) $user->name,
+            1,
+            'Урок по Laravel',
+            'Проект Ран',
+        );
+
+        $activity = Activity::query()
+            ->where('log_name', 'pipeline-runs')
+            ->where('event', 'updated')
+            ->where('subject_type', PipelineRun::class)
+            ->where('subject_id', $pipelineRun->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($activity);
+        $this->assertSame($expectedDescription, $activity->description);
+        $this->assertSame('pipeline-run-step-result-restored', data_get($activity->properties, 'context'));
+        $this->assertSame($firstRunStep->id, data_get($activity->properties, 'step_id'));
+        $this->assertSame(1, data_get($activity->properties, 'step_number'));
+    }
+
     public function test_project_run_page_can_save_selected_step_result_from_html_to_markdown_and_write_activity_log(): void
     {
         [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();

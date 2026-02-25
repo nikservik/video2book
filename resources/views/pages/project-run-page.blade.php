@@ -196,6 +196,19 @@
                             Сохранить
                         </button>
                     @else
+                        @if ($this->canRestoreSelectedStepResult)
+                            <button type="button"
+                                    wire:click="openRestoreSelectedStepResultModal"
+                                    class="inline-flex size-9 items-center justify-center rounded-lg bg-white text-gray-700 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/10 dark:hover:bg-white/20 dark:focus-visible:outline-indigo-500"
+                                    aria-label="Восстановить исходный текст"
+                                    title="Восстановить исходный текст"
+                                    data-step-result-restore-open>
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                                  <path stroke-linecap="round" stroke-linejoin="round" d="M9 15 3 9m0 0 6-6M3 9h12a6 6 0 0 1 0 12h-3" />
+                                </svg>
+                            </button>
+                        @endif
+
                         <button type="button"
                                 wire:click="startEditingSelectedStepResult"
                                 @disabled(! $this->canEditSelectedStepResult)
@@ -211,7 +224,7 @@
 
             <div class="rounded-lg bg-indigo-50 -mx-4 md:mx-0 px-4 md:px-6 py-4 dark:bg-gray-900/50"
                  @if ($this->shouldPollSelectedStepResult) wire:poll.1s="refreshSelectedStepResult" @endif>
-                <div wire:key="selected-step-editor-{{ $this->selectedStep?->id ?? 'none' }}-{{ $this->isEditingSelectedStepResult ? 'edit' : 'preview' }}">
+                <div wire:key="selected-step-editor-{{ $this->selectedStep?->id ?? 'none' }}-{{ $this->isEditingSelectedStepResult ? 'edit' : 'preview' }}-{{ $this->selectedStepEditorRevision }}">
                     <input type="hidden"
                            id="selected_step_editor_input"
                            value="{{ $selectedStepEditorHtml }}"
@@ -357,4 +370,46 @@
             </div>
         </aside>
     </div>
+
+    @if ($this->isRestoreSelectedStepResultModalOpen)
+        <div class="fixed inset-0 z-50 overflow-y-auto"
+             role="dialog"
+             aria-modal="true"
+             data-step-result-restore-modal>
+            <div class="fixed inset-0 bg-gray-500/75 transition-opacity dark:bg-gray-900/50"
+                 wire:click="closeRestoreSelectedStepResultModal"></div>
+
+            <div tabindex="0"
+                 class="flex min-h-full items-end justify-center p-4 text-center focus:outline-none sm:items-center sm:p-0">
+                <div class="relative w-full max-w-full transform overflow-hidden rounded-lg bg-white px-4 pt-5 pb-4 text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg sm:p-6 dark:bg-gray-800 dark:outline dark:-outline-offset-1 dark:outline-white/10"
+                     wire:click.stop>
+                    <h3 class="text-base font-semibold text-gray-900 dark:text-white">
+                        Восстановить изначальный текст шага?
+                    </h3>
+
+                    <p class="mt-2 text-sm text-gray-600 dark:text-gray-300">
+                        Будет восстановлен изначальный текст шага, и все правки будут безвозвратно утеряны.
+                    </p>
+
+                    <div class="mt-6 sm:flex sm:flex-row-reverse">
+                        <button type="button"
+                                wire:click="restoreSelectedStepResult"
+                                wire:loading.attr="disabled"
+                                wire:target="restoreSelectedStepResult"
+                                class="inline-flex w-full justify-center rounded-md bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 disabled:cursor-not-allowed disabled:opacity-60 sm:ml-3 sm:w-auto dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400"
+                                data-step-result-restore-confirm>
+                            Восстановить
+                        </button>
+
+                        <button type="button"
+                                wire:click="closeRestoreSelectedStepResultModal"
+                                class="mt-3 inline-flex w-full justify-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 sm:mt-0 sm:w-auto dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20"
+                                data-step-result-restore-cancel>
+                            Отмена
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    @endif
 </div>

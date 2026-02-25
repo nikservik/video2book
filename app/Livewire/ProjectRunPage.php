@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Actions\Pipeline\PausePipelineRunAction;
 use App\Actions\Pipeline\RestartPipelineRunFromStepAction;
+use App\Actions\Pipeline\RestorePipelineRunStepOriginalResultAction;
 use App\Actions\Pipeline\SavePipelineRunStepResultAction;
 use App\Actions\Pipeline\StartPipelineRunAction;
 use App\Actions\Pipeline\StopPipelineRunAction;
@@ -31,7 +32,11 @@ class ProjectRunPage extends Component
 
     public bool $isEditingSelectedStepResult = false;
 
+    public bool $isRestoreSelectedStepResultModalOpen = false;
+
     public string $selectedStepEditorHtml = '';
+
+    public int $selectedStepEditorRevision = 0;
 
     public function mount(Project $project, PipelineRun $pipelineRun): void
     {
@@ -57,6 +62,7 @@ class ProjectRunPage extends Component
 
         $this->selectedStepId = $pipelineRunStepId;
         $this->isEditingSelectedStepResult = false;
+        $this->isRestoreSelectedStepResultModalOpen = false;
         $this->syncSelectedStepEditorHtml();
     }
 
@@ -105,6 +111,7 @@ class ProjectRunPage extends Component
     public function refreshRunControls(): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+        $this->syncRestoreSelectedStepResultModalState();
 
         if (! $this->isEditingSelectedStepResult) {
             $this->syncSelectedStepEditorHtml();
@@ -114,6 +121,7 @@ class ProjectRunPage extends Component
     public function refreshRunSteps(): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+        $this->syncRestoreSelectedStepResultModalState();
 
         if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
             if (! $this->isEditingSelectedStepResult) {
@@ -124,6 +132,7 @@ class ProjectRunPage extends Component
         }
 
         $this->isEditingSelectedStepResult = false;
+        $this->isRestoreSelectedStepResultModalOpen = false;
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
         $this->syncSelectedStepEditorHtml();
     }
@@ -131,6 +140,7 @@ class ProjectRunPage extends Component
     public function refreshSelectedStepResult(): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+        $this->syncRestoreSelectedStepResultModalState();
 
         if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
             if (! $this->isEditingSelectedStepResult) {
@@ -141,6 +151,7 @@ class ProjectRunPage extends Component
         }
 
         $this->isEditingSelectedStepResult = false;
+        $this->isRestoreSelectedStepResultModalOpen = false;
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
         $this->syncSelectedStepEditorHtml();
     }
@@ -150,6 +161,7 @@ class ProjectRunPage extends Component
         abort_if($this->selectedStep === null, 422, 'Шаг для редактирования не выбран.');
 
         $this->isEditingSelectedStepResult = true;
+        $this->isRestoreSelectedStepResultModalOpen = false;
         $this->syncSelectedStepEditorHtml();
     }
 
@@ -157,6 +169,19 @@ class ProjectRunPage extends Component
     {
         $this->isEditingSelectedStepResult = false;
         $this->syncSelectedStepEditorHtml();
+    }
+
+    public function openRestoreSelectedStepResultModal(): void
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для восстановления не выбран.');
+        abort_if(blank($this->selectedStep->original), 422, 'Для выбранного шага нет исходного текста.');
+
+        $this->isRestoreSelectedStepResultModalOpen = true;
+    }
+
+    public function closeRestoreSelectedStepResultModal(): void
+    {
+        $this->isRestoreSelectedStepResultModalOpen = false;
     }
 
     public function saveSelectedStepResult(SavePipelineRunStepResultAction $savePipelineRunStepResultAction): void
@@ -179,6 +204,31 @@ class ProjectRunPage extends Component
 
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
         $this->isEditingSelectedStepResult = false;
+        $this->isRestoreSelectedStepResultModalOpen = false;
+
+        if ($this->selectedStepId !== null && ! $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            $this->selectedStepId = $this->resolveInitialSelectedStepId();
+        }
+
+        $this->syncSelectedStepEditorHtml();
+    }
+
+    public function restoreSelectedStepResult(RestorePipelineRunStepOriginalResultAction $restorePipelineRunStepOriginalResultAction): void
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для восстановления не выбран.');
+        abort_if(blank($this->selectedStep->original), 422, 'Для выбранного шага нет исходного текста.');
+        $authUser = auth()->user();
+        abort_unless($authUser instanceof User, 403);
+
+        $restorePipelineRunStepOriginalResultAction->handle(
+            $this->pipelineRun,
+            $this->selectedStep->id,
+            $authUser,
+        );
+
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+        $this->isEditingSelectedStepResult = false;
+        $this->isRestoreSelectedStepResultModalOpen = false;
 
         if ($this->selectedStepId !== null && ! $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
             $this->selectedStepId = $this->resolveInitialSelectedStepId();
@@ -407,6 +457,11 @@ class ProjectRunPage extends Component
         return $this->selectedStep !== null;
     }
 
+    public function getCanRestoreSelectedStepResultProperty(): bool
+    {
+        return $this->selectedStep !== null && ! blank($this->selectedStep->original);
+    }
+
     private function selectedStepForExport(): PipelineRunStep
     {
         abort_if($this->selectedStep === null, 422, 'Шаг для экспорта не выбран.');
@@ -477,25 +532,35 @@ class ProjectRunPage extends Component
         ]);
     }
 
+    private function syncRestoreSelectedStepResultModalState(): void
+    {
+        if (! $this->isRestoreSelectedStepResultModalOpen) {
+            return;
+        }
+
+        if (! $this->canRestoreSelectedStepResult) {
+            $this->isRestoreSelectedStepResultModalOpen = false;
+        }
+    }
+
     private function syncSelectedStepEditorHtml(): void
     {
         $step = $this->resolveSelectedStepFromCurrentRun();
+        $nextEditorHtml = '';
 
         if ($step === null) {
-            $this->selectedStepEditorHtml = '';
+            $nextEditorHtml = '';
+        } else {
+            $markdown = $this->normalizeStepMarkdown((string) ($step->result ?? ''));
+            $nextEditorHtml = $markdown === '' ? '' : $this->renderMarkdownAsSafeHtml($markdown);
+        }
 
+        if ($this->selectedStepEditorHtml === $nextEditorHtml) {
             return;
         }
 
-        $markdown = $this->normalizeStepMarkdown((string) ($step->result ?? ''));
-
-        if ($markdown === '') {
-            $this->selectedStepEditorHtml = '';
-
-            return;
-        }
-
-        $this->selectedStepEditorHtml = $this->renderMarkdownAsSafeHtml($markdown);
+        $this->selectedStepEditorHtml = $nextEditorHtml;
+        $this->selectedStepEditorRevision++;
     }
 
     private function normalizeStepMarkdown(string $markdown): string

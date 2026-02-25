@@ -24,6 +24,7 @@ class ProjectRunDetailsQuery
                     'status',
                     'error',
                     'result',
+                    'original',
                     'input_tokens',
                     'output_tokens',
                     'cost',

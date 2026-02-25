@@ -143,7 +143,7 @@ class ActivityPage extends Component
     {
         $context = (string) data_get($activity->properties, 'context', '');
 
-        if ($context !== 'pipeline-run-step-result-edited') {
+        if (! in_array($context, ['pipeline-run-step-result-edited', 'pipeline-run-step-result-restored'], true)) {
             return null;
         }
 
