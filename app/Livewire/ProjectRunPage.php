@@ -259,17 +259,14 @@ class ProjectRunPage extends Component
     public function getSelectedStepResultPreviewProperty(): string
     {
         if ($this->selectedStep === null) {
-            return Str::markdown('Шаги прогона пока не добавлены.');
+            return $this->renderMarkdownAsSafeHtml('Шаги прогона пока не добавлены.');
         }
 
         if ($this->selectedStepResult === '') {
-            return Str::markdown('Результат для выбранного шага пока не сформирован.');
+            return $this->renderMarkdownAsSafeHtml('Результат для выбранного шага пока не сформирован.');
         }
 
-        return Str::markdown($this->selectedStepResult, [
-            'html_input' => 'strip',
-            'allow_unsafe_links' => false,
-        ]);
+        return $this->renderMarkdownAsSafeHtml($this->selectedStepResult);
     }
 
     public function getSelectedStepResultHtmlProperty(): string
@@ -278,10 +275,7 @@ class ProjectRunPage extends Component
             return '';
         }
 
-        return Str::markdown($this->selectedStepResult, [
-            'html_input' => 'strip',
-            'allow_unsafe_links' => false,
-        ]);
+        return $this->renderMarkdownAsSafeHtml($this->selectedStepResult);
     }
 
     public function getSelectedStepErrorMessageProperty(): ?string
@@ -464,9 +458,44 @@ class ProjectRunPage extends Component
         return $this->pipelineRun->steps->last();
     }
 
+    private function resolveSelectedStepFromCurrentRun(): ?PipelineRunStep
+    {
+        if ($this->selectedStepId === null) {
+            return null;
+        }
+
+        $step = $this->pipelineRun->steps->firstWhere('id', $this->selectedStepId);
+
+        return $step instanceof PipelineRunStep ? $step : null;
+    }
+
+    private function renderMarkdownAsSafeHtml(string $markdown): string
+    {
+        return Str::markdown($markdown, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+    }
+
     private function syncSelectedStepEditorHtml(): void
     {
-        $this->selectedStepEditorHtml = $this->selectedStepResultHtml;
+        $step = $this->resolveSelectedStepFromCurrentRun();
+
+        if ($step === null) {
+            $this->selectedStepEditorHtml = '';
+
+            return;
+        }
+
+        $markdown = $this->normalizeStepMarkdown((string) ($step->result ?? ''));
+
+        if ($markdown === '') {
+            $this->selectedStepEditorHtml = '';
+
+            return;
+        }
+
+        $this->selectedStepEditorHtml = $this->renderMarkdownAsSafeHtml($markdown);
     }
 
     private function normalizeStepMarkdown(string $markdown): string

@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-02-25] fix: после сохранения правки шага превью обновляется без перезагрузки страницы
+- В `ProjectRunPage` синхронизация `selectedStepEditorHtml` переведена на чтение шага напрямую из актуальной коллекции `pipelineRun->steps`, без опоры на вычисляемые свойства в том же Livewire-запросе.
+- Добавлен вспомогательный рендер markdown в безопасный HTML (`html_input=strip`, `allow_unsafe_links=false`) и переиспользован для превью/редактора.
+- Добавлена регрессионная проверка в `ProjectRunPageTest`: после `saveSelectedStepResult` компонент сразу содержит обновлённый HTML результата, без ручного refresh страницы.
+
 ## [2026-02-25] feat: редактирование результата шага прогона через Trix
 - На странице прогона (`projects.runs.show`) добавлен режим редактирования результата выбранного шага с кнопками `Редактировать`, `Назад` и `Сохранить`.
 - Для редактора `Trix` оставлены только разрешённые форматы: заголовки `h1-h3`, `bold`, `italic`, нумерованные/маркированные списки и вложенность списков.

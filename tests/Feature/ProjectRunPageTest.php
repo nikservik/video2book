@@ -300,15 +300,20 @@ HTML;
 
         $expectedMarkdown = $this->convertHtmlToExpectedMarkdown($editedHtml);
 
-        Livewire::test(ProjectRunPage::class, [
+        $component = Livewire::test(ProjectRunPage::class, [
             'project' => $project,
             'pipelineRun' => $pipelineRun,
-        ])
+        ]);
+
+        $component
             ->call('startEditingSelectedStepResult')
             ->set('selectedStepEditorHtml', $editedHtml)
             ->call('saveSelectedStepResult')
             ->assertSet('isEditingSelectedStepResult', false)
             ->assertSee('data-result-mode="preview"', false);
+
+        $this->assertStringContainsString('<h1>Обновлённый заголовок</h1>', $component->instance()->selectedStepEditorHtml);
+        $this->assertStringNotContainsString('Заголовок первого шага', $component->instance()->selectedStepEditorHtml);
 
         $firstRunStep->refresh();
 
