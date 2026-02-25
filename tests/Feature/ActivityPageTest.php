@@ -212,6 +212,68 @@ class ActivityPageTest extends TestCase
         );
     }
 
+    public function test_activity_page_shows_custom_description_for_pipeline_run_step_result_edit(): void
+    {
+        $admin = $this->makeAdmin('Редактор', 'admin-step-edit@local');
+        $cookieName = (string) config('simple_auth.cookie_name');
+
+        $this->actingAs($admin);
+
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект Б',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок Б1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        $pipeline = Pipeline::query()->create();
+        $pipelineVersion = $pipeline->versions()->create([
+            'version' => 1,
+            'title' => 'Шаблон Б',
+            'description' => null,
+            'changelog' => null,
+            'status' => 'active',
+        ]);
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'queued',
+            'state' => [],
+        ]);
+
+        Activity::query()->delete();
+
+        $description = 'Редактор изменил текст в шаге 2 в уроке «Урок Б1» проекта «Проект Б»';
+
+        activity('pipeline-runs')
+            ->performedOn($run)
+            ->causedBy($admin)
+            ->event('updated')
+            ->withProperties(['context' => 'pipeline-run-step-result-edited'])
+            ->log($description);
+
+        $response = $this
+            ->withCookie($cookieName, (string) $admin->access_token)
+            ->get(route('activity.index'));
+
+        $response
+            ->assertStatus(200)
+            ->assertSee($description)
+            ->assertDontSee('изменил(а) прогон');
+    }
+
     private function makeAdmin(string $name, string $email): User
     {
         return User::factory()->create([

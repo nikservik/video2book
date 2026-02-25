@@ -14,11 +14,15 @@
             <ul class="divide-y divide-gray-200 dark:divide-white/10">
                 @foreach ($activities as $activity)
                     <li class="px-4 py-3 text-sm text-gray-900 dark:text-gray-100 md:px-6">
-                        {{ $activity['dateTime'] }}
-                        — {{ $activity['userName'] }}
-                        — {{ $activity['action'] }}
-                        {{ $activity['subjectTypeLabel'] }}
-                        «{{ $activity['subjectName'] }}»
+                        @if ($activity['customDescription'] !== null)
+                            {{ $activity['dateTime'] }} — {{ $activity['customDescription'] }}
+                        @else
+                            {{ $activity['dateTime'] }}
+                            — {{ $activity['userName'] }}
+                            — {{ $activity['action'] }}
+                            {{ $activity['subjectTypeLabel'] }}
+                            «{{ $activity['subjectName'] }}»
+                        @endif
                     </li>
                 @endforeach
             </ul>

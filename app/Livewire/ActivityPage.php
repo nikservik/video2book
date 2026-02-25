@@ -96,6 +96,7 @@ class ActivityPage extends Component
                 return [
                     'id' => (int) $activity->id,
                     'dateTime' => $activity->created_at?->format('d.m.Y H:i') ?? '—',
+                    'customDescription' => $this->resolveCustomDescription($activity),
                     'userName' => $this->resolveCauserName($activity, $causerNamesById),
                     'action' => $this->resolveActionLabel($activity->event),
                     'subjectTypeLabel' => $this->resolveSubjectTypeLabel($activity->subject_type),
@@ -136,6 +137,19 @@ class ActivityPage extends Component
             'deleted' => 'удалил(а)',
             default => 'действие',
         };
+    }
+
+    private function resolveCustomDescription(Activity $activity): ?string
+    {
+        $context = (string) data_get($activity->properties, 'context', '');
+
+        if ($context !== 'pipeline-run-step-result-edited') {
+            return null;
+        }
+
+        $description = trim((string) $activity->description);
+
+        return $description !== '' ? $description : null;
     }
 
     private function resolveSubjectTypeLabel(?string $subjectType): string

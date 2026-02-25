@@ -137,56 +137,178 @@
     <div class="grid grid-cols-1 gap-6 md:grid-cols-3">
         <section class="rounded-lg border border-gray-200 bg-white px-4 py-6 shadow-sm md:col-span-2 dark:border-white/10 dark:bg-gray-800">
             <div class="mb-6 flex flex-wrap items-center gap-3">
-                <button type="button"
-                        wire:click="downloadSelectedStepPdf"
-                        @disabled(! $this->canExportSelectedStep)
-                        class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    PDF
-                </button>
-                <button type="button"
-                        wire:click="downloadSelectedStepMarkdown"
-                        @disabled(! $this->canExportSelectedStep)
-                        class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    MD
-                </button>
-                <button type="button"
-                        wire:click="downloadSelectedStepDocx"
-                        @disabled(! $this->canExportSelectedStep)
-                        class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
-                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
-                      <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
-                    </svg>
-                    DOCX
-                </button>
-                <button type="button"
-                        wire:click="restartSelectedStep"
-                        @disabled(! $this->canRestartSelectedStep)
-                        class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500 dark:shadow-none dark:hover:bg-amber-400 dark:focus-visible:outline-amber-500"
-                        data-run-restart-step>
-                    Перезапуск шага
-                </button>
+                <div class="flex flex-wrap items-center gap-3">
+                    <button type="button"
+                            wire:click="downloadSelectedStepPdf"
+                            @disabled(! $this->canExportSelectedStep)
+                            class="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        PDF
+                    </button>
+                    <button type="button"
+                            wire:click="downloadSelectedStepMarkdown"
+                            @disabled(! $this->canExportSelectedStep)
+                            class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        MD
+                    </button>
+                    <button type="button"
+                            wire:click="downloadSelectedStepDocx"
+                            @disabled(! $this->canExportSelectedStep)
+                            class="inline-flex items-center gap-2 rounded-lg bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m.75 12 3 3m0 0 3-3m-3 3v-6m-1.5-9H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+                        </svg>
+                        DOCX
+                    </button>
+                    <button type="button"
+                            wire:click="restartSelectedStep"
+                            @disabled(! $this->canRestartSelectedStep)
+                            class="inline-flex items-center gap-2 rounded-lg bg-amber-500 px-3 py-2 text-sm font-semibold text-white shadow-xs hover:bg-amber-400 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-amber-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-amber-500 dark:shadow-none dark:hover:bg-amber-400 dark:focus-visible:outline-amber-500"
+                            data-run-restart-step>
+                        Перезапуск шага
+                    </button>
+                </div>
+
+                <div class="hidden ml-auto md:flex items-center gap-2">
+                    @if ($this->isEditingSelectedStepResult)
+                        <button type="button"
+                                wire:click="cancelEditingSelectedStepResult"
+                                class="inline-flex size-9 items-center justify-center rounded-lg bg-white text-gray-700 shadow-xs inset-ring inset-ring-gray-300 hover:bg-gray-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/10 dark:hover:bg-white/20 dark:focus-visible:outline-indigo-500"
+                                aria-label="Назад"
+                                title="Назад"
+                                data-step-result-edit-cancel>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+                            </svg>
+                        </button>
+
+                        <button type="button"
+                                wire:click="saveSelectedStepResult"
+                                wire:loading.attr="disabled"
+                                wire:target="saveSelectedStepResult"
+                                class="inline-flex size-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-60 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500"
+                                aria-label="Сохранить"
+                                title="Сохранить"
+                                data-step-result-edit-save>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="m4.5 12.75 6 6 9-13.5" />
+                            </svg>
+                        </button>
+                    @else
+                        <button type="button"
+                                wire:click="startEditingSelectedStepResult"
+                                @disabled(! $this->canEditSelectedStepResult)
+                                class="inline-flex size-9 items-center justify-center rounded-lg bg-indigo-600 text-white shadow-xs hover:bg-indigo-500 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-indigo-600 disabled:cursor-not-allowed disabled:opacity-50 dark:bg-indigo-500 dark:shadow-none dark:hover:bg-indigo-400 dark:focus-visible:outline-indigo-500"
+                                aria-label="Редактировать"
+                                title="Редактировать"
+                                data-step-result-edit-open>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="size-5">
+                              <path stroke-linecap="round" stroke-linejoin="round" d="m16.862 4.487 1.687-1.688a1.875 1.875 0 1 1 2.652 2.652L10.582 16.07a4.5 4.5 0 0 1-1.897 1.13L6 18l.8-2.685a4.5 4.5 0 0 1 1.13-1.897l8.932-8.931Zm0 0L19.5 7.125M18 14v4.75A2.25 2.25 0 0 1 15.75 21H5.25A2.25 2.25 0 0 1 3 18.75V8.25A2.25 2.25 0 0 1 5.25 6H10" />
+                            </svg>
+                        </button>
+                    @endif
+                </div>
             </div>
 
             <div class="rounded-lg bg-indigo-50 -mx-4 md:mx-0 px-4 md:px-6 py-4 dark:bg-gray-900/50"
                  @if ($this->shouldPollSelectedStepResult) wire:poll.1s="refreshSelectedStepResult" @endif>
-                <div data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
-                     data-selected-step-result
-                     data-result-mode="preview"
-                     class="text-gray-700 dark:text-gray-200 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6">
-                    @if ($this->selectedStepErrorMessage !== null)
+                <div wire:key="selected-step-editor-{{ $this->selectedStep?->id ?? 'none' }}-{{ $this->isEditingSelectedStepResult ? 'edit' : 'preview' }}">
+                    <input type="hidden"
+                           id="selected_step_editor_input"
+                           value="{{ $selectedStepEditorHtml }}"
+                           wire:model.defer="selectedStepEditorHtml">
+
+                    @if ($this->selectedStepErrorMessage !== null && ! $this->isEditingSelectedStepResult)
                         <p data-selected-step-error
-                           class="text-base font-medium text-red-700 dark:text-red-400">
+                           class="mb-4 text-base font-medium text-red-700 dark:text-red-400">
                             {{ $this->selectedStepErrorMessage }}
                         </p>
-                    @else
-                        {!! $this->selectedStepResultPreview !!}
                     @endif
+
+                    <div wire:ignore>
+                        <trix-toolbar id="selected_step_editor_toolbar"
+                                      data-step-result-toolbar
+                                      @class(['hidden' => ! $this->isEditingSelectedStepResult])>
+                            <div class="trix-button-row">
+                                <span class="trix-button-group trix-button-group--header-tools" data-trix-button-group="header-tools">
+                                    <button type="button"
+                                            class="trix-button trix-button-h1"
+                                            data-trix-attribute="heading1"
+                                            title="H1"
+                                            tabindex="-1">H1</button>
+
+                                    <button type="button"
+                                            class="trix-button trix-button-h2"
+                                            data-trix-attribute="heading2"
+                                            title="H2"
+                                            tabindex="-1">H2</button>
+
+                                    <button type="button"
+                                            class="trix-button"
+                                            data-trix-attribute="heading3"
+                                            title="H3"
+                                            tabindex="-1">H3</button>
+                                </span>
+
+                                <span class="trix-button-group trix-button-group--text-tools" data-trix-button-group="text-tools">
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-bold"
+                                            data-trix-attribute="bold"
+                                            data-trix-key="b"
+                                            title="Bold"
+                                            tabindex="-1">Bold</button>
+
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-italic"
+                                            data-trix-attribute="italic"
+                                            data-trix-key="i"
+                                            title="Italic"
+                                            tabindex="-1">Italic</button>
+                                </span>
+
+                                <span class="trix-button-group trix-button-group--block-tools" data-trix-button-group="block-tools">
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-bullet-list"
+                                            data-trix-attribute="bullet"
+                                            title="Bullets"
+                                            tabindex="-1">Bullets</button>
+
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-number-list"
+                                            data-trix-attribute="number"
+                                            title="Numbers"
+                                            tabindex="-1">Numbers</button>
+
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-decrease-nesting-level"
+                                            data-trix-action="decreaseNestingLevel"
+                                            title="Outdent"
+                                            tabindex="-1">Outdent</button>
+
+                                    <button type="button"
+                                            class="trix-button trix-button--icon trix-button--icon-increase-nesting-level"
+                                            data-trix-action="increaseNestingLevel"
+                                            title="Indent"
+                                            tabindex="-1">Indent</button>
+                                </span>
+                            </div>
+                        </trix-toolbar>
+
+                        <trix-editor input="selected_step_editor_input"
+                                     toolbar="selected_step_editor_toolbar"
+                                     @disabled(! $this->isEditingSelectedStepResult)
+                                     class="focus:outline-0 border-0 min-h-48 text-gray-900 dark:text-gray-100 [&_h1]:mb-3 [&_h1]:text-2xl [&_h1]:md:text-4xl [&_h1]:font-semibold [&_h2]:mt-8 [&_h2]:mb-2 [&_h2]:text-lg [&_h2]:md:text-2xl [&_h2]:font-semibold [&_h3]:mb-2 [&_h3]:text-xl [&_h3]:font-semibold [&_ol]:my-3 [&_ol_ol]:my-1 [&_ol_ul]:my-1 [&_ol]:list-decimal [&_ol]:pl-6 [&_p]:my-2 [&_ul]:my-3 [&_ul_ul]:my-1 [&_ul]:list-disc [&_ul]:pl-6 [&_div]:my-3"
+                                     data-selected-step-id="{{ $this->selectedStep?->id ?? '' }}"
+                                     data-selected-step-result
+                                     data-result-mode="{{ $this->isEditingSelectedStepResult ? 'edit' : 'preview' }}"
+                                     data-step-result-editor
+                                     data-editor-state="{{ $this->isEditingSelectedStepResult ? 'enabled' : 'disabled' }}"></trix-editor>
+                    </div>
                 </div>
             </div>
         </section>

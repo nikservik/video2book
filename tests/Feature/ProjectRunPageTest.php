@@ -13,10 +13,13 @@ use App\Models\ProjectTag;
 use App\Models\Step;
 use App\Models\StepVersion;
 use App\Models\User;
+use App\Support\StepResultHtmlToMarkdownConverter;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Queue;
 use Illuminate\Support\Str;
 use Livewire\Livewire;
+use Mews\Purifier\Facades\Purifier;
+use Spatie\Activitylog\Models\Activity;
 use Tests\TestCase;
 
 class ProjectRunPageTest extends TestCase
@@ -49,8 +52,7 @@ class ProjectRunPageTest extends TestCase
             ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false)
             ->assertSee('Транскрибация')
             ->assertSee('Саммаризация')
-            ->assertSee('<h2>Заголовок первого шага</h2>', false)
-            ->assertSee('<li>Пункт 1</li>', false)
+            ->assertSee('data-editor-state="disabled"', false)
             ->assertSee('Готово')
             ->assertSee('Обработка')
             ->assertSee('DOCX')
@@ -137,17 +139,22 @@ class ProjectRunPageTest extends TestCase
     {
         [$project, $pipelineRun, $firstRunStep, $secondRunStep] = $this->createProjectRunWithSteps();
 
-        Livewire::test(ProjectRunPage::class, [
+        $component = Livewire::test(ProjectRunPage::class, [
             'project' => $project,
             'pipelineRun' => $pipelineRun,
-        ])
+        ]);
+
+        $initialEditorHtml = $component->instance()->selectedStepEditorHtml;
+
+        $component
             ->assertSet('selectedStepId', $firstRunStep->id)
-            ->assertSee('<h2>Заголовок первого шага</h2>', false)
             ->assertSee('data-selected-step-id="'.$firstRunStep->id.'"', false)
             ->call('selectStep', $secondRunStep->id)
             ->assertSet('selectedStepId', $secondRunStep->id)
-            ->assertSee('<h3>Заголовок второго шага</h3>', false)
             ->assertSee('data-selected-step-id="'.$secondRunStep->id.'"', false);
+
+        $this->assertStringContainsString('<h2>Заголовок первого шага</h2>', $initialEditorHtml);
+        $this->assertStringContainsString('<h3>Заголовок второго шага</h3>', $component->instance()->selectedStepEditorHtml);
     }
 
     public function test_project_run_page_selects_last_done_step_on_initial_load(): void
@@ -243,13 +250,211 @@ class ProjectRunPageTest extends TestCase
             'pipelineRun' => $pipelineRun,
         ])
             ->assertSee('data-result-mode="preview"', false)
-            ->assertSee('<h2>Заголовок первого шага</h2>', false)
-            ->assertSee('<li>Пункт 1</li>', false)
+            ->assertSee('data-editor-state="disabled"', false)
             ->assertDontSee('data-result-view="preview"', false)
             ->assertDontSee('data-result-view="source"', false)
             ->assertDontSee('data-result-mode="source"', false)
             ->assertDontSee('Исходник')
             ->assertDontSee('Превью');
+    }
+
+    public function test_project_run_page_can_switch_result_block_into_edit_mode_with_trix_toolbar(): void
+    {
+        [$project, $pipelineRun, , $secondRunStep] = $this->createProjectRunWithSteps();
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->call('selectStep', $secondRunStep->id)
+            ->assertSee('wire:poll.1s="refreshSelectedStepResult"', false)
+            ->assertSet('isEditingSelectedStepResult', false)
+            ->assertSee('data-step-result-edit-open', false)
+            ->assertSee('data-editor-state="disabled"', false)
+            ->assertSee('data-step-result-toolbar', false)
+            ->call('startEditingSelectedStepResult')
+            ->assertSet('isEditingSelectedStepResult', true)
+            ->assertSee('data-step-result-edit-save', false)
+            ->assertSee('data-step-result-edit-cancel', false)
+            ->assertSee('data-step-result-editor', false)
+            ->assertSee('data-result-mode="edit"', false)
+            ->assertSee('data-editor-state="enabled"', false)
+            ->assertSee('data-step-result-toolbar', false)
+            ->assertDontSee('wire:poll.1s="refreshSelectedStepResult"', false);
+    }
+
+    public function test_project_run_page_can_save_selected_step_result_from_html_to_markdown_and_write_activity_log(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+        $initialResult = (string) $firstRunStep->result;
+
+        $editedHtml = <<<'HTML'
+<h1>Обновлённый заголовок</h1>
+<div><strong>Жирный</strong> и <em>наклонный</em> текст</div>
+<ul>
+  <li>Пункт 1</li>
+  <li>Пункт 2<ul><li>Вложенный</li></ul></li>
+</ul>
+<script>alert('xss')</script>
+HTML;
+
+        $expectedMarkdown = $this->convertHtmlToExpectedMarkdown($editedHtml);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->call('startEditingSelectedStepResult')
+            ->set('selectedStepEditorHtml', $editedHtml)
+            ->call('saveSelectedStepResult')
+            ->assertSet('isEditingSelectedStepResult', false)
+            ->assertSee('data-result-mode="preview"', false);
+
+        $firstRunStep->refresh();
+
+        $this->assertSame($expectedMarkdown, (string) $firstRunStep->result);
+        $this->assertSame($initialResult, (string) $firstRunStep->original);
+        $this->assertStringNotContainsString('<script>', (string) $firstRunStep->result);
+
+        $user = User::query()->firstOrFail();
+        $expectedDescription = sprintf(
+            '%s изменил текст в шаге %d в уроке «%s» проекта «%s»',
+            (string) $user->name,
+            1,
+            'Урок по Laravel',
+            'Проект Ран',
+        );
+
+        $activity = Activity::query()
+            ->where('log_name', 'pipeline-runs')
+            ->where('event', 'updated')
+            ->where('subject_type', PipelineRun::class)
+            ->where('subject_id', $pipelineRun->id)
+            ->latest('id')
+            ->first();
+
+        $this->assertNotNull($activity);
+        $this->assertSame($expectedDescription, $activity->description);
+        $this->assertSame('pipeline-run-step-result-edited', data_get($activity->properties, 'context'));
+        $this->assertSame($firstRunStep->id, data_get($activity->properties, 'step_id'));
+        $this->assertSame(1, data_get($activity->properties, 'step_number'));
+    }
+
+    public function test_project_run_page_preserves_original_result_after_repeated_edits(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+        $initialResult = (string) $firstRunStep->result;
+
+        $firstEditedHtml = '<h2>Первая правка</h2><div><strong>Текст</strong></div>';
+        $secondEditedHtml = '<h3>Вторая правка</h3><ol><li>Первый</li><li>Второй</li></ol>';
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->call('startEditingSelectedStepResult')
+            ->set('selectedStepEditorHtml', $firstEditedHtml)
+            ->call('saveSelectedStepResult')
+            ->call('startEditingSelectedStepResult')
+            ->set('selectedStepEditorHtml', $secondEditedHtml)
+            ->call('saveSelectedStepResult');
+
+        $firstRunStep->refresh();
+
+        $this->assertSame($initialResult, (string) $firstRunStep->original);
+        $this->assertSame(
+            $this->convertHtmlToExpectedMarkdown($secondEditedHtml),
+            (string) $firstRunStep->result
+        );
+    }
+
+    public function test_project_run_page_does_not_merge_lists_with_previous_div_blocks_after_saving(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+
+        $editedHtml = <<<'HTML'
+<h2>Проверка структуры</h2>
+<div>Текст перед маркированным списком.</div>
+<ul>
+  <li>Пункт 1</li>
+  <li>Пункт 2</li>
+</ul>
+<div><strong>Важные факты:</strong></div>
+<ul>
+  <li>Факт 1</li>
+</ul>
+<div>Темы для изучения:</div>
+<ol>
+  <li>Тема 1</li>
+  <li>Тема 2</li>
+</ol>
+HTML;
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun,
+        ])
+            ->call('startEditingSelectedStepResult')
+            ->set('selectedStepEditorHtml', $editedHtml)
+            ->call('saveSelectedStepResult');
+
+        $firstRunStep->refresh();
+        $markdown = (string) $firstRunStep->result;
+
+        $this->assertStringContainsString("Текст перед маркированным списком.\n\n- Пункт 1", $markdown);
+        $this->assertStringContainsString("**Важные факты:**\n\n- Факт 1", $markdown);
+        $this->assertStringContainsString("Темы для изучения:\n\n1. Тема 1", $markdown);
+
+        $this->assertStringNotContainsString('Текст перед маркированным списком. - Пункт 1', $markdown);
+        $this->assertStringNotContainsString('**Важные факты:**- Факт 1', $markdown);
+        $this->assertStringNotContainsString('Темы для изучения:1. Тема 1', $markdown);
+    }
+
+    public function test_project_run_page_renders_markdown_when_result_contains_literal_newline_sequences(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+
+        $firstRunStep->update([
+            'result' => '**Классификация Титхи:**\n1. **Амавасья:** Первый пункт\n2. **Цикл:** Второй пункт',
+        ]);
+
+        $component = Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]);
+
+        $this->assertStringContainsString('<ol>', $component->instance()->selectedStepEditorHtml);
+        $this->assertStringContainsString('<li><strong>Амавасья:</strong> Первый пункт</li>', $component->instance()->selectedStepEditorHtml);
+        $this->assertStringContainsString('<li><strong>Цикл:</strong> Второй пункт</li>', $component->instance()->selectedStepEditorHtml);
+    }
+
+    public function test_project_run_page_keeps_nested_unordered_list_inside_ordered_item_when_markdown_is_valid(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+
+        $firstRunStep->update([
+            'result' => <<<'MD'
+**Классификация Титхи:**
+1.  **Амавасья:** Момент, когда Луна и Солнце находятся в одной точке (соединение). Это самая темная ночь, когда Луны не видно.
+2.  **Цикл:** Каждый раз, когда Луна отдаляется от Солнца на 12 градусов — наступает новый Титхи (новый вид отношений).
+3.  **Количество:**
+    *   15 Титхи на растущую Луну (Шукла Пакша).
+    *   15 Титхи на убывающую Луну (Кришна Пакша).
+    *   Итого существует **30 типов отношений** между Божественными Отцом и Матерью.
+MD,
+        ]);
+
+        $component = Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ]);
+
+        $html = $component->instance()->selectedStepEditorHtml;
+
+        $this->assertStringContainsString('<ol>', $html);
+        $this->assertStringContainsString('<li><strong>Количество:</strong>', $html);
+        $this->assertStringContainsString('<ul>', $html);
+        $this->assertStringNotContainsString('</ol><ul>', str_replace(["\n", ' '], '', $html));
     }
 
     public function test_project_run_page_shows_failed_step_error_in_result_block_when_result_is_missing(): void
@@ -572,6 +777,14 @@ class ProjectRunPageTest extends TestCase
         ]);
 
         return [$project, $pipelineRun, $firstRunStep, $secondRunStep];
+    }
+
+    private function convertHtmlToExpectedMarkdown(string $html): string
+    {
+        $sanitizedHtml = (string) Purifier::clean($html, 'default');
+        $converter = app(StepResultHtmlToMarkdownConverter::class);
+
+        return trim($converter->convert($sanitizedHtml));
     }
 
     /**

@@ -13,6 +13,7 @@
         "laravel/tinker": "^2.10.1",
         "league/commonmark": "^2.8",
         "livewire/livewire": "^4.1",
+        "mews/purifier": "^3.4",
         "norkunas/youtube-dl-php": "^2.13",
         "pbmedia/laravel-ffmpeg": "^8.7",
         "phpoffice/phpword": "^1.3",

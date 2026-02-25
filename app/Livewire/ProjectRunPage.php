@@ -4,6 +4,7 @@ namespace App\Livewire;
 
 use App\Actions\Pipeline\PausePipelineRunAction;
 use App\Actions\Pipeline\RestartPipelineRunFromStepAction;
+use App\Actions\Pipeline\SavePipelineRunStepResultAction;
 use App\Actions\Pipeline\StartPipelineRunAction;
 use App\Actions\Pipeline\StopPipelineRunAction;
 use App\Models\PipelineRun;
@@ -28,6 +29,10 @@ class ProjectRunPage extends Component
 
     public bool $isZeroAccessLevelUser = false;
 
+    public bool $isEditingSelectedStepResult = false;
+
+    public string $selectedStepEditorHtml = '';
+
     public function mount(Project $project, PipelineRun $pipelineRun): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($pipelineRun);
@@ -43,6 +48,7 @@ class ProjectRunPage extends Component
         $this->isZeroAccessLevelUser = $authUser instanceof User
             && (int) $authUser->access_level === User::ACCESS_LEVEL_USER;
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
+        $this->syncSelectedStepEditorHtml();
     }
 
     public function selectStep(int $pipelineRunStepId): void
@@ -50,6 +56,8 @@ class ProjectRunPage extends Component
         abort_unless($this->pipelineRun->steps->contains('id', $pipelineRunStepId), 404);
 
         $this->selectedStepId = $pipelineRunStepId;
+        $this->isEditingSelectedStepResult = false;
+        $this->syncSelectedStepEditorHtml();
     }
 
     public function startRun(StartPipelineRunAction $startPipelineRunAction): void
@@ -57,6 +65,9 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
             $startPipelineRunAction->handle($this->pipelineRun)
         );
+        if (! $this->isEditingSelectedStepResult) {
+            $this->syncSelectedStepEditorHtml();
+        }
     }
 
     public function pauseRun(PausePipelineRunAction $pausePipelineRunAction): void
@@ -64,6 +75,9 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
             $pausePipelineRunAction->handle($this->pipelineRun)
         );
+        if (! $this->isEditingSelectedStepResult) {
+            $this->syncSelectedStepEditorHtml();
+        }
     }
 
     public function stopRun(StopPipelineRunAction $stopPipelineRunAction): void
@@ -71,6 +85,9 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
             $stopPipelineRunAction->handle($this->pipelineRun)
         );
+        if (! $this->isEditingSelectedStepResult) {
+            $this->syncSelectedStepEditorHtml();
+        }
     }
 
     public function restartSelectedStep(RestartPipelineRunFromStepAction $restartPipelineRunFromStepAction): void
@@ -80,11 +97,18 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get(
             $restartPipelineRunFromStepAction->handle($this->pipelineRun, $this->selectedStep)
         );
+        if (! $this->isEditingSelectedStepResult) {
+            $this->syncSelectedStepEditorHtml();
+        }
     }
 
     public function refreshRunControls(): void
     {
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+
+        if (! $this->isEditingSelectedStepResult) {
+            $this->syncSelectedStepEditorHtml();
+        }
     }
 
     public function refreshRunSteps(): void
@@ -92,10 +116,16 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
 
         if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            if (! $this->isEditingSelectedStepResult) {
+                $this->syncSelectedStepEditorHtml();
+            }
+
             return;
         }
 
+        $this->isEditingSelectedStepResult = false;
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
+        $this->syncSelectedStepEditorHtml();
     }
 
     public function refreshSelectedStepResult(): void
@@ -103,10 +133,58 @@ class ProjectRunPage extends Component
         $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
 
         if ($this->selectedStepId !== null && $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            if (! $this->isEditingSelectedStepResult) {
+                $this->syncSelectedStepEditorHtml();
+            }
+
             return;
         }
 
+        $this->isEditingSelectedStepResult = false;
         $this->selectedStepId = $this->resolveInitialSelectedStepId();
+        $this->syncSelectedStepEditorHtml();
+    }
+
+    public function startEditingSelectedStepResult(): void
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для редактирования не выбран.');
+
+        $this->isEditingSelectedStepResult = true;
+        $this->syncSelectedStepEditorHtml();
+    }
+
+    public function cancelEditingSelectedStepResult(): void
+    {
+        $this->isEditingSelectedStepResult = false;
+        $this->syncSelectedStepEditorHtml();
+    }
+
+    public function saveSelectedStepResult(SavePipelineRunStepResultAction $savePipelineRunStepResultAction): void
+    {
+        abort_if($this->selectedStep === null, 422, 'Шаг для сохранения не выбран.');
+
+        $authUser = auth()->user();
+        abort_unless($authUser instanceof User, 403);
+
+        $this->validate([
+            'selectedStepEditorHtml' => ['string'],
+        ]);
+
+        $savePipelineRunStepResultAction->handle(
+            $this->pipelineRun,
+            $this->selectedStep->id,
+            $this->selectedStepEditorHtml,
+            $authUser
+        );
+
+        $this->pipelineRun = app(ProjectRunDetailsQuery::class)->get($this->pipelineRun->fresh());
+        $this->isEditingSelectedStepResult = false;
+
+        if ($this->selectedStepId !== null && ! $this->pipelineRun->steps->contains('id', $this->selectedStepId)) {
+            $this->selectedStepId = $this->resolveInitialSelectedStepId();
+        }
+
+        $this->syncSelectedStepEditorHtml();
     }
 
     public function downloadSelectedStepPdf(PipelineStepPdfExporter $exporter): StreamedResponse
@@ -175,7 +253,7 @@ class ProjectRunPage extends Component
             return 'Шаги прогона пока не добавлены.';
         }
 
-        return (string) ($this->selectedStep->result ?? '');
+        return $this->normalizeStepMarkdown((string) ($this->selectedStep->result ?? ''));
     }
 
     public function getSelectedStepResultPreviewProperty(): string
@@ -186,6 +264,18 @@ class ProjectRunPage extends Component
 
         if ($this->selectedStepResult === '') {
             return Str::markdown('Результат для выбранного шага пока не сформирован.');
+        }
+
+        return Str::markdown($this->selectedStepResult, [
+            'html_input' => 'strip',
+            'allow_unsafe_links' => false,
+        ]);
+    }
+
+    public function getSelectedStepResultHtmlProperty(): string
+    {
+        if ($this->selectedStep === null || $this->selectedStepResult === '') {
+            return '';
         }
 
         return Str::markdown($this->selectedStepResult, [
@@ -285,7 +375,7 @@ class ProjectRunPage extends Component
 
     public function getShouldPollSelectedStepResultProperty(): bool
     {
-        return $this->selectedStep?->status === 'running';
+        return ! $this->isEditingSelectedStepResult && $this->selectedStep?->status === 'running';
     }
 
     public function tokenMetricsBadgeClass(): string
@@ -314,6 +404,11 @@ class ProjectRunPage extends Component
     }
 
     public function getCanRestartSelectedStepProperty(): bool
+    {
+        return $this->selectedStep !== null;
+    }
+
+    public function getCanEditSelectedStepResultProperty(): bool
     {
         return $this->selectedStep !== null;
     }
@@ -367,6 +462,22 @@ class ProjectRunPage extends Component
         }
 
         return $this->pipelineRun->steps->last();
+    }
+
+    private function syncSelectedStepEditorHtml(): void
+    {
+        $this->selectedStepEditorHtml = $this->selectedStepResultHtml;
+    }
+
+    private function normalizeStepMarkdown(string $markdown): string
+    {
+        $normalized = str_replace(["\r\n", "\r"], "\n", $markdown);
+
+        if (str_contains($normalized, '\n')) {
+            $normalized = str_replace('\n', "\n", $normalized);
+        }
+
+        return $normalized;
     }
 
     public function render(): View

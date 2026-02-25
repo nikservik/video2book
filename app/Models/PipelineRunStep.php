@@ -21,6 +21,7 @@ class PipelineRunStep extends Model
         'end_time',
         'error',
         'result',
+        'original',
         'status',
         'input_tokens',
         'output_tokens',
