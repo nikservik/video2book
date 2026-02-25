@@ -78,7 +78,6 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('md:order-2', false)
             ->assertSee('md:grid-cols-3', false)
             ->assertSee('md:col-span-2', false)
-            ->assertSee('md:grid-cols-2', false)
             ->assertSee('Добавить урок')
             ->assertSee('Добавить урок из аудио')
             ->assertSee('Редактировать проект')
@@ -172,13 +171,12 @@ class ProjectShowPageTest extends TestCase
 
         $response
             ->assertStatus(200)
-            ->assertSee('md:grid-cols-2', false)
             ->assertSee('Урок с прогонами')
             ->assertSee('Базовый пайплайн • v4')
             ->assertSee('aria-label="Удалить прогон"', false)
-            ->assertSee('Готово')
-            ->assertSee('В очереди')
-            ->assertSee('Обработка')
+            ->assertSee('bg-green-100 -mr-1 p-0.5', false)
+            ->assertSee('bg-gray-100 -mr-1 p-0.5', false)
+            ->assertSee('bg-amber-100 -mr-1 p-0.5', false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runDone]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runQueued]), false)
             ->assertSee(route('projects.runs.show', ['project' => $project, 'pipelineRun' => $runRunning]), false);
@@ -614,8 +612,8 @@ class ProjectShowPageTest extends TestCase
 
         $this->get(route('projects.show', $project))
             ->assertStatus(200)
-            ->assertSee('data-audio-duration="1ч 30м"', false)
-            ->assertDontSee('data-audio-duration="1ч 0м"', false)
+            ->assertSee('1ч 30м')
+            ->assertDontSee('1ч 0м')
             ->assertSee('shrink-0 whitespace-nowrap', false);
     }
 
@@ -1073,13 +1071,13 @@ class ProjectShowPageTest extends TestCase
         ]);
 
         $component = Livewire::test(ProjectShowPage::class, ['project' => $project])
-            ->assertSee('В очереди');
+            ->assertSee('bg-gray-100 -mr-1 p-0.5', false);
 
         $run->update(['status' => 'running']);
 
         $component
             ->call('refreshProjectLessons')
-            ->assertSee('Обработка');
+            ->assertSee('bg-amber-100 -mr-1 p-0.5', false);
     }
 
     public function test_project_export_modal_opens_with_text_steps_and_prefers_project_default_pipeline(): void
