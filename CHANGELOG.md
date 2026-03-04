@@ -4,6 +4,15 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-04] fix: жёсткая фиксация тестовой БД на SQLite in-memory
+- В `phpunit.xml` для `APP_ENV`, `DB_CONNECTION`, `DB_DATABASE` и `DB_URL` добавлен `force="true"`, чтобы тестовый раннер всегда переопределял внешние переменные окружения.
+- В `tests/CreatesApplication.php` добавлен fail-fast guard: тесты аварийно завершаются, если активное подключение не `sqlite` или база не `:memory:`.
+- Добавлен feature-тест `TestingDatabaseConfigurationTest` с проверками тестовой конфигурации БД.
+
+## [2026-03-04] fix: подсветка ошибки для обязательного описания изменения шага
+- В модале редактирования шага (`PipelineShowPage`) поле `Описание изменения` теперь получает красную подсветку и текст ошибки при попытке сохранить новую версию с пустым значением.
+- Добавлен feature-тест `PipelineShowPageTest::test_step_edit_modal_highlights_changelog_field_when_new_version_changelog_is_missing`.
+
 ## [2026-02-25] fix: синхронизация Trix после восстановления шага без перезагрузки
 - Для блока редактора на `ProjectRunPage` добавлена ревизия `selectedStepEditorRevision` в `wire:key`.
 - Ревизия увеличивается только при фактическом изменении `selectedStepEditorHtml`, что принудительно пересоздаёт `trix-editor` под `wire:ignore` и сразу показывает восстановленный текст.

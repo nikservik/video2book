@@ -163,8 +163,18 @@
                         @unless ($this->editingStepIsDraft)
                             <div>
                                 <label for="edit-step-changelog" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Описание изменения (Обязательно для новой версии)</label>
-                                <textarea id="edit-step-changelog" rows="2" wire:model="editStepChangelogEntry"
-                                          class="mt-2 block w-full rounded-md bg-white px-3 py-1.5 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500"></textarea>
+                                <textarea id="edit-step-changelog"
+                                          rows="2"
+                                          wire:model="editStepChangelogEntry"
+                                          data-edit-step-changelog-invalid="{{ $errors->has('editStepChangelogEntry') ? 'true' : 'false' }}"
+                                          @class([
+                                              'mt-2 block w-full rounded-md bg-white px-3 py-1.5 outline-1 -outline-offset-1 focus:outline-2 focus:-outline-offset-2 dark:bg-white/5',
+                                              'text-gray-900 outline-gray-300 placeholder:text-gray-400 focus:outline-indigo-600 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500' => ! $errors->has('editStepChangelogEntry'),
+                                              'text-red-900 outline-red-300 placeholder:text-red-300 focus:outline-red-600 dark:text-red-400 dark:outline-red-500/50 dark:placeholder:text-red-400/70 dark:focus:outline-red-400' => $errors->has('editStepChangelogEntry'),
+                                          ])></textarea>
+                                @error('editStepChangelogEntry')
+                                    <p id="edit-step-changelog-error" data-edit-step-changelog-error class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
+                                @enderror
                             </div>
                         @endunless
 

@@ -184,6 +184,28 @@ class PipelineShowPageTest extends TestCase
         ]);
     }
 
+    public function test_step_edit_modal_highlights_changelog_field_when_new_version_changelog_is_missing(): void
+    {
+        [$pipeline] = $this->createPipelineWithTwoVersions();
+
+        $textStepVersion = StepVersion::query()
+            ->where('name', 'Сводка v2')
+            ->where('version', 2)
+            ->firstOrFail();
+
+        Livewire::test(StepEditModal::class, [
+            'pipelineId' => $pipeline->id,
+            'selectedVersionId' => $pipeline->current_version_id,
+        ])
+            ->call('open', $textStepVersion->id)
+            ->assertSee('data-edit-step-changelog-invalid="false"', false)
+            ->call('saveStepAsNewVersion')
+            ->assertHasErrors(['editStepChangelogEntry' => 'required'])
+            ->assertSet('show', true)
+            ->assertSee('data-edit-step-changelog-invalid="true"', false)
+            ->assertSee('data-edit-step-changelog-error', false);
+    }
+
     public function test_step_create_modal_can_be_opened_and_closed_with_default_source(): void
     {
         [$pipeline] = $this->createPipelineWithTwoVersions();
