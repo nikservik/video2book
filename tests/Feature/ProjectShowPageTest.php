@@ -1411,10 +1411,66 @@ class ProjectShowPageTest extends TestCase
             ->assertSet('newLessonPipelineVersionId', $pipelineVersion->id)
             ->assertSee('Добавить урок')
             ->assertSee('Ссылка на YouTube')
+            ->assertSee('wire:model.live="newLessonYoutubeUrl"', false)
             ->assertSee('Версия шаблона')
             ->call('close')
             ->assertSet('show', false)
             ->assertDontSee('Ссылка на YouTube');
+    }
+
+    public function test_create_lesson_modal_shows_warning_when_youtube_url_matches_existing_link_without_query_string(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Текущий проект',
+            'tags' => null,
+        ]);
+        $existingProject = Project::query()->create([
+            'name' => 'Проект с дубликатом',
+            'tags' => null,
+        ]);
+
+        Lesson::query()->create([
+            'project_id' => $existingProject->id,
+            'name' => 'Уже добавленный урок',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [
+                'url' => 'https://youtu.be/duplicate123?si=abcd1234&t=14',
+            ],
+        ]);
+
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonPipelineVersionId', $pipelineVersion->id)
+            ->assertDontSee('data-youtube-duplicate-warning', false)
+            ->set('newLessonYoutubeUrl', 'https://youtu.be/duplicate123?feature=shared')
+            ->assertSee('data-youtube-duplicate-warning="true"', false)
+            ->assertSee('Урок с таким видео уже есть:')
+            ->assertSee('Проект с дубликатом - Уже добавленный урок')
+            ->assertSee('href="'.route('projects.show', ['project' => $existingProject]).'"', false);
+    }
+
+    public function test_create_lesson_modal_hides_warning_when_youtube_url_is_unique(): void
+    {
+        $project = Project::query()->create([
+            'name' => 'Проект без дублей',
+            'tags' => null,
+        ]);
+        [, $pipelineVersion] = $this->createPipelineWithSteps();
+
+        Livewire::test(CreateLessonModal::class, ['projectId' => $project->id])
+            ->call('open')
+            ->set('newLessonPipelineVersionId', $pipelineVersion->id)
+            ->set('newLessonYoutubeUrl', 'https://www.youtube.com/watch?v=unique456')
+            ->assertDontSee('data-youtube-duplicate-warning', false)
+            ->assertDontSee('Урок с таким видео уже есть:');
     }
 
     public function test_add_lesson_from_audio_modal_can_be_opened_and_closed(): void

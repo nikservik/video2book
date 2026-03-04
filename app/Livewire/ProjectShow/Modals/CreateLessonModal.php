@@ -4,6 +4,7 @@ namespace App\Livewire\ProjectShow\Modals;
 
 use App\Actions\Pipeline\GetPipelineVersionOptionsAction;
 use App\Actions\Project\CreateProjectLessonFromYoutubeAction;
+use App\Models\Lesson;
 use App\Models\Project;
 use Illuminate\Contracts\View\View;
 use Illuminate\Validation\Rule;
@@ -98,6 +99,68 @@ class CreateLessonModal extends Component
             'label',
             'Выберите версию'
         );
+    }
+
+    /**
+     * @return array{project_name:string,lesson_name:string,project_url:string}|null
+     */
+    public function getYoutubeDuplicateLessonProperty(): ?array
+    {
+        $normalizedYoutubeUrl = $this->normalizeUrlWithoutQueryString($this->newLessonYoutubeUrl);
+
+        if ($normalizedYoutubeUrl === null) {
+            return null;
+        }
+
+        $duplicateLesson = Lesson::query()
+            ->with(['project:id,name'])
+            ->whereNotNull('settings->url')
+            ->get()
+            ->first(function (Lesson $lesson) use ($normalizedYoutubeUrl): bool {
+                $existingUrl = data_get($lesson->settings, 'url');
+                $normalizedExistingUrl = is_string($existingUrl)
+                    ? $this->normalizeUrlWithoutQueryString($existingUrl)
+                    : null;
+
+                return $normalizedExistingUrl !== null && $normalizedExistingUrl === $normalizedYoutubeUrl;
+            });
+
+        if (! $duplicateLesson instanceof Lesson || ! $duplicateLesson->project instanceof Project) {
+            return null;
+        }
+
+        return [
+            'project_name' => (string) $duplicateLesson->project->name,
+            'lesson_name' => (string) $duplicateLesson->name,
+            'project_url' => route('projects.show', ['project' => $duplicateLesson->project]),
+        ];
+    }
+
+    private function normalizeUrlWithoutQueryString(string $url): ?string
+    {
+        $trimmedUrl = trim($url);
+
+        if ($trimmedUrl === '' || filter_var($trimmedUrl, FILTER_VALIDATE_URL) === false) {
+            return null;
+        }
+
+        $parts = parse_url($trimmedUrl);
+
+        if (! is_array($parts) || ! isset($parts['scheme'], $parts['host'])) {
+            return null;
+        }
+
+        $scheme = strtolower((string) $parts['scheme']);
+        $host = strtolower((string) $parts['host']);
+        $port = isset($parts['port']) ? ':'.$parts['port'] : '';
+        $path = (string) ($parts['path'] ?? '/');
+        $normalizedPath = '/'.ltrim($path, '/');
+
+        if ($normalizedPath !== '/' && str_ends_with($normalizedPath, '/')) {
+            $normalizedPath = rtrim($normalizedPath, '/');
+        }
+
+        return $scheme.'://'.$host.$port.$normalizedPath;
     }
 
     /**

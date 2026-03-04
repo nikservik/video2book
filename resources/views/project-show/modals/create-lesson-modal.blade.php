@@ -38,20 +38,28 @@
                         <label for="lesson-youtube-url" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Ссылка на YouTube</label>
                         <div class="mt-2 grid grid-cols-1">
                             @error('newLessonYoutubeUrl')
-                                <input id="lesson-youtube-url" type="url" name="lesson_youtube_url" wire:model="newLessonYoutubeUrl" aria-invalid="true" aria-describedby="lesson-youtube-url-error"
+                                <input id="lesson-youtube-url" type="url" name="lesson_youtube_url" wire:model.live="newLessonYoutubeUrl" aria-invalid="true" aria-describedby="lesson-youtube-url-error"
                                        class="col-start-1 row-start-1 block w-full rounded-md bg-white py-1.5 pr-10 pl-3 text-red-900 outline-1 -outline-offset-1 outline-red-300 placeholder:text-red-300 focus:outline-2 focus:-outline-offset-2 focus:outline-red-600 sm:pr-9 sm:text-sm/6 dark:bg-white/5 dark:text-red-400 dark:outline-red-500/50 dark:placeholder:text-red-400/70 dark:focus:outline-red-400">
                                 <svg viewBox="0 0 16 16" fill="currentColor" aria-hidden="true"
                                      class="pointer-events-none col-start-1 row-start-1 mr-3 size-5 self-center justify-self-end text-red-500 sm:size-4 dark:text-red-400">
                                     <path d="M8 15A7 7 0 1 0 8 1a7 7 0 0 0 0 14ZM8 4a.75.75 0 0 1 .75.75v3a.75.75 0 0 1-1.5 0v-3A.75.75 0 0 1 8 4Zm0 8a1 1 0 1 0 0-2 1 1 0 0 0 0 2Z" clip-rule="evenodd" fill-rule="evenodd"/>
                                 </svg>
                             @else
-                                <input id="lesson-youtube-url" type="url" name="lesson_youtube_url" wire:model="newLessonYoutubeUrl"
+                                <input id="lesson-youtube-url" type="url" name="lesson_youtube_url" wire:model.live="newLessonYoutubeUrl"
                                        class="col-start-1 row-start-1 block w-full rounded-md bg-white py-1.5 pr-3 pl-3 text-gray-900 outline-1 -outline-offset-1 outline-gray-300 placeholder:text-gray-400 focus:outline-2 focus:-outline-offset-2 focus:outline-indigo-600 sm:text-sm/6 dark:bg-white/5 dark:text-white dark:outline-white/10 dark:placeholder:text-gray-500 dark:focus:outline-indigo-500">
                             @enderror
                         </div>
                         @error('newLessonYoutubeUrl')
                             <p id="lesson-youtube-url-error" class="mt-2 text-sm text-red-600 dark:text-red-400">{{ $message }}</p>
                         @enderror
+                        @if ($this->youtubeDuplicateLesson !== null)
+                            <p data-youtube-duplicate-warning="true" class="mt-2 text-sm text-amber-700 dark:text-amber-400">
+                                Урок с таким видео уже есть:
+                                <a href="{{ $this->youtubeDuplicateLesson['project_url'] }}" wire:navigate data-youtube-duplicate-link class="font-semibold underline decoration-amber-500/70 underline-offset-2 hover:text-amber-600 dark:hover:text-amber-300">
+                                    {{ $this->youtubeDuplicateLesson['project_name'] }} - {{ $this->youtubeDuplicateLesson['lesson_name'] }}
+                                </a>
+                            </p>
+                        @endif
                     </div>
 
                     <div>

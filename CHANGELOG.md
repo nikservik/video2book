@@ -4,6 +4,12 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-04] feat: предупреждение о дубле YouTube-ссылки в модале добавления урока
+- В `CreateLessonModal` добавлена проверка существующего урока по `lessons.settings.url` при вводе ссылки на YouTube с нормализацией URL без query string.
+- Под полем `Ссылка на YouTube` показывается предупреждение `Урок с таким видео уже есть: {Проект} - {Урок}` с кликабельной ссылкой на страницу проекта.
+- Проверка дубля срабатывает сразу при изменении поля ссылки (`wire:model.live`), без нажатия `Сохранить`.
+- Добавлены feature-тесты `ProjectShowPageTest` на показ и скрытие предупреждения для дублирующейся/уникальной ссылки.
+
 ## [2026-03-04] fix: жёсткая фиксация тестовой БД на SQLite in-memory
 - В `phpunit.xml` для `APP_ENV`, `DB_CONNECTION`, `DB_DATABASE` и `DB_URL` добавлен `force="true"`, чтобы тестовый раннер всегда переопределял внешние переменные окружения.
 - В `tests/CreatesApplication.php` добавлен fail-fast guard: тесты аварийно завершаются, если активное подключение не `sqlite` или база не `:memory:`.
