@@ -96,6 +96,10 @@ return [
             'prefix_indexes' => true,
             'search_path' => 'public',
             'sslmode' => 'prefer',
+            'dump' => [
+                'useSingleTransaction' => true,
+                'add_extra_option' => '--format=c',
+            ],
         ],
 
         'sqlsrv' => [
