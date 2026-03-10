@@ -64,14 +64,12 @@ class FoldersToolsTest extends TestCase
                         'name' => 'Видимая папка',
                         'hidden' => false,
                         'projects_count' => 2,
-                        'visible_for_user_ids' => [],
                     ],
                     [
                         'id' => $defaultFolder?->id,
                         'name' => 'Проекты',
                         'hidden' => false,
                         'projects_count' => 0,
-                        'visible_for_user_ids' => [],
                     ],
                 ],
             ]);

@@ -18,18 +18,23 @@ class McpPresenter
         private readonly QueueWidgetDataProvider $queueWidgetDataProvider,
     ) {}
 
-    public function folder(Folder $folder): array
+    public function folder(Folder $folder, bool $includeVisibility = true): array
     {
-        return [
+        $payload = [
             'id' => $folder->id,
             'name' => $folder->name,
             'hidden' => (bool) $folder->hidden,
             'projects_count' => (int) ($folder->projects_count ?? $folder->projects()->count()),
-            'visible_for_user_ids' => collect($folder->visible_for ?? [])
+        ];
+
+        if ($includeVisibility) {
+            $payload['visible_for_user_ids'] = collect($folder->visible_for ?? [])
                 ->map(static fn (mixed $id): int => (int) $id)
                 ->values()
-                ->all(),
-        ];
+                ->all();
+        }
+
+        return $payload;
     }
 
     public function project(Project $project): array

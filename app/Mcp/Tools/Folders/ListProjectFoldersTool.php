@@ -34,7 +34,7 @@ class ListProjectFoldersTool extends Tool
 
         return Response::structured([
             'folders' => $folders
-                ->map(fn ($folder): array => $this->mcpPresenter->folder($folder))
+                ->map(fn ($folder): array => $this->mcpPresenter->folder($folder, includeVisibility: false))
                 ->values()
                 ->all(),
         ]);

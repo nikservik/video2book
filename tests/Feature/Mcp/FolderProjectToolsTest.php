@@ -77,7 +77,7 @@ class FolderProjectToolsTest extends TestCase
             ->assertAuthenticatedAs($viewer)
             ->assertStructuredContent([
                 'folders' => app(\App\Services\Project\ProjectFoldersQuery::class)->get($viewer)
-                    ->map(fn ($folder): array => app(McpPresenter::class)->folder($folder))
+                    ->map(fn ($folder): array => app(McpPresenter::class)->folder($folder, includeVisibility: false))
                     ->values()
                     ->all(),
             ]);

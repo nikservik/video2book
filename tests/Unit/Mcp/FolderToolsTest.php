@@ -71,14 +71,12 @@ class FolderToolsTest extends TestCase
                 'name' => 'Alpha',
                 'hidden' => false,
                 'projects_count' => 1,
-                'visible_for_user_ids' => [],
             ],
             [
                 'id' => $hiddenVisibleFolder->id,
                 'name' => 'Beta',
                 'hidden' => true,
                 'projects_count' => 2,
-                'visible_for_user_ids' => [$viewer->id],
             ],
         ], $folders);
     }

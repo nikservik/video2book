@@ -9,6 +9,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - Добавлены MCP tools для папок, проектов, уроков, прогонов и очереди задач; MCP-слой переиспользует существующие actions, queries и services без изменения legacy API.
 - Добавлены MCP resources для экспорта результата шага в Markdown/PDF/DOCX и для zip-экспорта проекта по выбранной версии шаблона, шагу и формату.
 - В `bootstrap/app.php` добавлена санитизация MCP URL в exception context, чтобы токен не попадал в логи и error reporting в открытом виде.
+- `list-project-folders` возвращает только публичные поля папки без `visible_for_user_ids`.
 - Добавлены feature/unit-тесты для MCP route, auth middleware, tools, resources и redactor; обновлены `README.md` и `docs/mcp.md`.
 
 ## [2026-03-04] feat: предупреждение о дубле YouTube-ссылки в модале добавления урока
