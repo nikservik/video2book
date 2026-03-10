@@ -313,13 +313,21 @@ php artisan make:mcp-resource ProjectExportArchiveResource --no-interaction
 
 `ListPipelineTemplatesTool`
 
-- Источник данных: `App\Actions\Pipeline\GetPipelineVersionOptionsAction`
+- Источник данных: `App\Actions\Pipeline\GetPipelineTemplatesCatalogAction`
 - Аннотации: `#[IsReadOnly]`, `#[IsIdempotent]`
 - Input: нет
 - Output:
   - `id`
+  - `name`
   - `label`
   - `description`
+  - `version`
+  - `steps`
+  - для каждого шага:
+    - `id`
+    - `position`
+    - `name`
+    - `description`
 
 `ListRunStepsTool`
 

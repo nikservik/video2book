@@ -222,6 +222,13 @@ class LessonsRunsQueueToolsTest extends TestCase
         ]);
 
         $pipelineVersion = $this->createPipelineVersion();
+        $pipelineVersion->update([
+            'description' => 'Описание шаблона',
+        ]);
+        $stepVersionId = (int) $pipelineVersion->versionSteps()->value('step_version_id');
+        StepVersion::query()->whereKey($stepVersionId)->update([
+            'description' => 'Описание шага',
+        ]);
 
         Video2BookServer::actingAs($viewer)
             ->tool(ListPipelineTemplatesTool::class)
@@ -230,8 +237,18 @@ class LessonsRunsQueueToolsTest extends TestCase
                 'pipeline_versions' => [
                     [
                         'id' => $pipelineVersion->id,
+                        'name' => 'Pipeline title',
                         'label' => 'Pipeline title • v1',
-                        'description' => null,
+                        'description' => 'Описание шаблона',
+                        'version' => 1,
+                        'steps' => [
+                            [
+                                'id' => $stepVersionId,
+                                'position' => 1,
+                                'name' => 'Шаг 1',
+                                'description' => 'Описание шага',
+                            ],
+                        ],
                     ],
                 ],
             ]);

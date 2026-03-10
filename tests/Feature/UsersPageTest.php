@@ -119,6 +119,22 @@ class UsersPageTest extends TestCase
         $this->assertNotSame($oldToken, (string) $user->access_token);
     }
 
+    public function test_edit_user_modal_shows_mcp_and_invite_links(): void
+    {
+        config()->set('app.url', 'https://video2book.test');
+
+        $admin = $this->makeUser('Admin', 'admin@local', User::ACCESS_LEVEL_ADMIN);
+        $user = $this->makeUser('Student', 'student@local', User::ACCESS_LEVEL_USER);
+
+        Livewire::actingAs($admin)
+            ->test(UsersPage::class)
+            ->call('openEditUserModal', $user->id)
+            ->assertSee('Ссылка на MCP')
+            ->assertSee("https://video2book.test/mcp/video2book/{$user->access_token}")
+            ->assertSee('Ссылка с инвайтом')
+            ->assertSee("https://video2book.test/invite/{$user->access_token}");
+    }
+
     public function test_rotating_own_token_queues_auth_cookie_with_new_value(): void
     {
         $admin = $this->makeUser('Admin', 'admin@local', User::ACCESS_LEVEL_ADMIN);

@@ -5,23 +5,23 @@
             this.copied = true;
             setTimeout(() => this.copied = false, 1200);
         },
-        copyInvite(link) {
-            if (!link) {
+        copyText(text) {
+            if (!text) {
                 return;
             }
 
             if (navigator.clipboard && window.isSecureContext) {
-                navigator.clipboard.writeText(link)
+                navigator.clipboard.writeText(text)
                     .then(() => this.showCopied())
-                    .catch(() => this.copyInviteFallback(link));
+                    .catch(() => this.copyTextFallback(text));
                 return;
             }
 
-            this.copyInviteFallback(link);
+            this.copyTextFallback(text);
         },
-        copyInviteFallback(link) {
+        copyTextFallback(text) {
             const textarea = document.createElement('textarea');
-            textarea.value = link;
+            textarea.value = text;
             textarea.setAttribute('readonly', '');
             textarea.style.position = 'fixed';
             textarea.style.left = '-9999px';
@@ -170,6 +170,23 @@
 
                         @if ($editingUserId !== null)
                             <div>
+                                <label for="user-mcp-link" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Ссылка на MCP</label>
+                                <div class="mt-2 flex items-center gap-2">
+                                    <input id="user-mcp-link"
+                                           x-ref="userMcpLink"
+                                           type="text"
+                                           readonly
+                                           value="{{ $this->editingUserMcpLink }}"
+                                           class="block w-full rounded-md bg-gray-50 py-1.5 pr-3 pl-3 text-gray-700 outline-1 -outline-offset-1 outline-gray-300 sm:text-sm/6 dark:bg-white/5 dark:text-gray-200 dark:outline-white/10">
+                                    <button type="button"
+                                            x-on:click.prevent="copyText($refs.userMcpLink?.value)"
+                                            class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
+                                        Копировать
+                                    </button>
+                                </div>
+                            </div>
+
+                            <div>
                                 <label for="user-invite-link" class="block text-sm/6 font-medium text-gray-900 dark:text-white">Ссылка с инвайтом</label>
                                 <div class="mt-2 flex items-center gap-2">
                                     <input id="user-invite-link"
@@ -179,7 +196,7 @@
                                            value="{{ $this->editingUserInviteLink }}"
                                            class="block w-full rounded-md bg-gray-50 py-1.5 pr-3 pl-3 text-gray-700 outline-1 -outline-offset-1 outline-gray-300 sm:text-sm/6 dark:bg-white/5 dark:text-gray-200 dark:outline-white/10">
                                     <button type="button"
-                                            x-on:click.prevent="copyInvite($refs.userInviteLink?.value)"
+                                            x-on:click.prevent="copyText($refs.userInviteLink?.value)"
                                             class="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-semibold text-gray-900 shadow-xs inset-ring-1 inset-ring-gray-300 hover:bg-gray-50 dark:bg-white/10 dark:text-white dark:shadow-none dark:inset-ring-white/5 dark:hover:bg-white/20">
                                         Копировать
                                     </button>

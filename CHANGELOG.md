@@ -10,6 +10,8 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - Добавлены MCP resources для экспорта результата шага в Markdown/PDF/DOCX и для zip-экспорта проекта по выбранной версии шаблона, шагу и формату.
 - В `bootstrap/app.php` добавлена санитизация MCP URL в exception context, чтобы токен не попадал в логи и error reporting в открытом виде.
 - `list-project-folders` возвращает только публичные поля папки без `visible_for_user_ids`.
+- В модалке пользователя добавлено поле `Ссылка на MCP` с кнопкой `Копировать`; поле выводится перед invite-ссылкой и использует тот же `users.access_token`.
+- `list-pipeline-templates` теперь возвращает расширенный каталог шаблонов: название, описание, номер версии и упорядоченный список шагов с их названиями и описаниями; для этого добавлен отдельный action `GetPipelineTemplatesCatalogAction`, а существующий `GetPipelineVersionOptionsAction` оставлен без изменений для UI.
 - Добавлены feature/unit-тесты для MCP route, auth middleware, tools, resources и redactor; обновлены `README.md` и `docs/mcp.md`.
 
 ## [2026-03-04] feat: предупреждение о дубле YouTube-ссылки в модале добавления урока

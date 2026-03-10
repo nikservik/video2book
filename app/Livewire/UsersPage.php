@@ -253,6 +253,21 @@ class UsersPage extends Component
         return $this->inviteLink($user);
     }
 
+    public function getEditingUserMcpLinkProperty(): ?string
+    {
+        if ($this->editingUserId === null) {
+            return null;
+        }
+
+        $user = $this->findVisibleUser($this->editingUserId);
+
+        if ($user === null) {
+            return null;
+        }
+
+        return $this->mcpLink($user);
+    }
+
     public function getDeletingUserNameProperty(): string
     {
         if ($this->deletingUserId === null) {
@@ -300,6 +315,13 @@ class UsersPage extends Component
         $baseUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
 
         return "{$baseUrl}/invite/{$user->access_token}";
+    }
+
+    private function mcpLink(User $user): string
+    {
+        $baseUrl = rtrim((string) config('app.url', 'http://localhost'), '/');
+
+        return "{$baseUrl}/mcp/video2book/{$user->access_token}";
     }
 
     private function findVisibleUser(int $userId): ?User

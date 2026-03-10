@@ -48,7 +48,13 @@ class RunsToolsTest extends TestCase
     public function test_list_pipeline_templates_tool_returns_available_versions(): void
     {
         $viewer = $this->makeUser();
-        [, $pipelineVersion] = $this->createPipelineVersionWithTextStep();
+        [, $pipelineVersion, $stepVersion] = $this->createPipelineVersionWithTextStep();
+        $pipelineVersion->update([
+            'description' => 'Описание шаблона',
+        ]);
+        $stepVersion->update([
+            'description' => 'Описание шага',
+        ]);
 
         Video2BookServer::actingAs($viewer)
             ->tool(ListPipelineTemplatesTool::class)
@@ -57,8 +63,18 @@ class RunsToolsTest extends TestCase
                 'pipeline_versions' => [
                     [
                         'id' => $pipelineVersion->id,
+                        'name' => 'Pipeline',
                         'label' => 'Pipeline • v1',
-                        'description' => null,
+                        'description' => 'Описание шаблона',
+                        'version' => 1,
+                        'steps' => [
+                            [
+                                'id' => $stepVersion->id,
+                                'position' => 1,
+                                'name' => 'Summary',
+                                'description' => 'Описание шага',
+                            ],
+                        ],
                     ],
                 ],
             ]);
