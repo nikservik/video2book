@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-10] feat: MCP сервер для проектов, уроков и прогонов
+- Подключён Laravel MCP сервер `Video2Book` с HTTP endpoint `/mcp/video2book/{access_token}` и авторизацией по `users.access_token` через middleware `AuthenticateMcpUrlToken`.
+- Добавлены MCP tools для папок, проектов, уроков, прогонов и очереди задач; MCP-слой переиспользует существующие actions, queries и services без изменения legacy API.
+- Добавлены MCP resources для экспорта результата шага в Markdown/PDF/DOCX и для zip-экспорта проекта по выбранной версии шаблона, шагу и формату.
+- В `bootstrap/app.php` добавлена санитизация MCP URL в exception context, чтобы токен не попадал в логи и error reporting в открытом виде.
+- Добавлены feature/unit-тесты для MCP route, auth middleware, tools, resources и redactor; обновлены `README.md` и `docs/mcp.md`.
+
 ## [2026-03-04] feat: предупреждение о дубле YouTube-ссылки в модале добавления урока
 - В `CreateLessonModal` добавлена проверка существующего урока по `lessons.settings.url` при вводе ссылки на YouTube с нормализацией URL без query string.
 - Под полем `Ссылка на YouTube` показывается предупреждение `Урок с таким видео уже есть: {Проект} - {Урок}` с кликабельной ссылкой на страницу проекта.

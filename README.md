@@ -102,6 +102,19 @@ php artisan auth:show-invite
 - После перехода по ссылке браузер получает постоянный cookie и редиректится на главную.
 - Проверка invite-cookie выполняется middleware `AuthenticateTeamAccessToken` в `web` group, поэтому авторизация стабильно действует и на Livewire update-запросах.
 
+### 5. MCP-сервер
+
+- В проекте включён MCP endpoint `/mcp/video2book/{access_token}`.
+- Для MCP используется тот же `users.access_token`, что и в invite/web-auth flow; токен передаётся прямо в URL.
+- Через MCP доступны папки, проекты, уроки, прогоны, очередь и экспорты результатов без отдельного API-слоя.
+- Для ручной проверки сервера можно открыть инспектор:
+
+```bash
+php artisan mcp:inspector /mcp/video2book/{access_token}
+```
+
+- Детальный контракт сервера, список tools/resources и URI templates описаны в `docs/mcp.md`.
+
 ## Архитектура репозитория
 
 - `app/Http/Controllers` — API-контроллеры.
