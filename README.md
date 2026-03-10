@@ -107,6 +107,7 @@ php artisan auth:show-invite
 - В проекте включён MCP endpoint `/mcp/video2book/{access_token}`.
 - Для MCP используется тот же `users.access_token`, что и в invite/web-auth flow; токен передаётся прямо в URL.
 - Через MCP доступны папки, проекты, уроки, прогоны, очередь и экспорты результатов без отдельного API-слоя.
+- При подключении агент получает русскоязычные server instructions и prompt `knowledge-base-search-guide` для подробной инструкции по поиску по внутренней базе знаний.
 - Для ручной проверки сервера можно открыть инспектор:
 
 ```bash

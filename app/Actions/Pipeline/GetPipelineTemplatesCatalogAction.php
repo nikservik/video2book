@@ -21,7 +21,8 @@ class GetPipelineTemplatesCatalogAction
      *         id:int,
      *         position:int,
      *         name:string,
-     *         description:string|null
+     *         description:string|null,
+     *         is_default:bool
      *     }>
      * }>
      */
@@ -39,7 +40,7 @@ class GetPipelineTemplatesCatalogAction
                     ->select(['id', 'pipeline_version_id', 'step_version_id', 'position'])
                     ->orderBy('position'),
                 'currentVersion.versionSteps.stepVersion' => fn ($query) => $query
-                    ->select(['id', 'step_id', 'input_step_id', 'name', 'description']),
+                    ->select(['id', 'step_id', 'input_step_id', 'name', 'description', 'settings']),
             ])
             ->orderBy('id')
             ->get()
@@ -73,6 +74,7 @@ class GetPipelineTemplatesCatalogAction
                                 'position' => (int) $versionStep->position,
                                 'name' => $this->normalizeName($stepVersion->name),
                                 'description' => $this->normalizeDescription($stepVersion->description),
+                                'is_default' => (bool) data_get($stepVersion->settings, 'is_default', false),
                             ];
                         })
                         ->filter()

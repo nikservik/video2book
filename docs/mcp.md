@@ -12,12 +12,13 @@
 - Сервер: `App\Mcp\Servers\Video2BookServer`
 - Tools: папки, проекты, уроки, прогоны, очередь
 - Resources: markdown/pdf/docx экспорт шага и zip-экспорт проекта
+- Prompts: `knowledge-base-search-guide`
 - Бинарные загрузки: шаги отдаются как `text/markdown`, `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`; экспорт проекта отдается как `application/zip`
 
 Основные проверки реализации:
 
 - `php artisan test --compact tests/Feature/Mcp tests/Unit/Mcp`
-- `php artisan mcp:inspector mcp/video2book/{access_token}`
+- `php artisan mcp:inspector /mcp/video2book/{access_token}`
 
 ## Реализованный состав сервера
 
@@ -25,6 +26,7 @@
 
 - tools: `list-project-folders`, `create-project-folder`, `list-folder-projects`, `create-project`, `update-project`, `recalculate-project-lessons-duration`, `list-project-export-options`, `list-project-lessons`, `create-project-lesson-from-url`, `create-project-lesson-from-audio`, `add-project-lessons-from-list`, `list-lesson-runs`, `list-pipeline-templates`, `list-run-steps`, `get-run-step-result`, `restart-run-step`, `list-queue-tasks`
 - resources: `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/markdown`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/pdf`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/docx`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/{format}/{archive_file_naming}`
+- prompts: `knowledge-base-search-guide`
 
 ## Исходный план реализации
 
@@ -328,6 +330,7 @@ php artisan make:mcp-resource ProjectExportArchiveResource --no-interaction
     - `position`
     - `name`
     - `description`
+    - `is_default`
 
 `ListRunStepsTool`
 

@@ -35,7 +35,7 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
         ]);
         $pipelineWithHistory->update(['current_version_id' => $currentVersion->id]);
         $firstStepVersion = $this->attachStep($pipelineWithHistory, $currentVersion, 1, 'Транскрибация', 'Описание транскрибации');
-        $secondStepVersion = $this->attachStep($pipelineWithHistory, $currentVersion, 2, 'Конспект', 'Описание конспекта');
+        $secondStepVersion = $this->attachStep($pipelineWithHistory, $currentVersion, 2, 'Конспект', 'Описание конспекта', true);
 
         $pipelineWithArchivedCurrent = Pipeline::query()->create();
         $archivedCurrentVersion = $pipelineWithArchivedCurrent->versions()->create([
@@ -71,12 +71,14 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
                         'position' => 1,
                         'name' => 'Транскрибация',
                         'description' => 'Описание транскрибации',
+                        'is_default' => false,
                     ],
                     [
                         'id' => $secondStepVersion->id,
                         'position' => 2,
                         'name' => 'Конспект',
                         'description' => 'Описание конспекта',
+                        'is_default' => true,
                     ],
                 ],
             ],
@@ -94,7 +96,7 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
             'status' => 'active',
         ]);
         $pipeline->update(['current_version_id' => $currentVersion->id]);
-        $stepVersion = $this->attachStep($pipeline, $currentVersion, 1, 'Шаг 1', 'Описание шага');
+        $stepVersion = $this->attachStep($pipeline, $currentVersion, 1, 'Шаг 1', 'Описание шага', true);
 
         $user = User::factory()->create([
             'access_level' => User::ACCESS_LEVEL_USER,
@@ -115,6 +117,7 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
                         'position' => 1,
                         'name' => 'Шаг 1',
                         'description' => 'Описание шага',
+                        'is_default' => true,
                     ],
                 ],
             ],
@@ -127,6 +130,7 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
         int $position,
         string $name,
         ?string $description,
+        bool $isDefault = false,
     ): StepVersion {
         $step = Step::query()->create([
             'pipeline_id' => $pipeline->id,
@@ -144,6 +148,7 @@ class GetPipelineTemplatesCatalogActionTest extends TestCase
             'settings' => [
                 'provider' => 'openai',
                 'model' => 'gpt-4o-mini',
+                'is_default' => $isDefault,
             ],
             'status' => 'active',
         ]);

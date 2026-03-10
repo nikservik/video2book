@@ -54,6 +54,10 @@ class RunsToolsTest extends TestCase
         ]);
         $stepVersion->update([
             'description' => 'Описание шага',
+            'settings' => [
+                ...((array) $stepVersion->settings),
+                'is_default' => true,
+            ],
         ]);
 
         Video2BookServer::actingAs($viewer)
@@ -73,6 +77,7 @@ class RunsToolsTest extends TestCase
                                 'position' => 1,
                                 'name' => 'Summary',
                                 'description' => 'Описание шага',
+                                'is_default' => true,
                             ],
                         ],
                     ],

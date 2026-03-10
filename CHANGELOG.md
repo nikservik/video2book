@@ -12,6 +12,7 @@ The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 - `list-project-folders` возвращает только публичные поля папки без `visible_for_user_ids`.
 - В модалке пользователя добавлено поле `Ссылка на MCP` с кнопкой `Копировать`; поле выводится перед invite-ссылкой и использует тот же `users.access_token`.
 - `list-pipeline-templates` теперь возвращает расширенный каталог шаблонов: название, описание, номер версии и упорядоченный список шагов с их названиями и описаниями; для этого добавлен отдельный action `GetPipelineTemplatesCatalogAction`, а существующий `GetPipelineVersionOptionsAction` оставлен без изменений для UI.
+- В `list-pipeline-templates` у шагов добавлен флаг `is_default`, а в MCP-сервер добавлены развёрнутые русскоязычные `Instructions` и prompt `knowledge-base-search-guide` для агентов, которые ищут знания во внутренней базе.
 - Добавлены feature/unit-тесты для MCP route, auth middleware, tools, resources и redactor; обновлены `README.md` и `docs/mcp.md`.
 
 ## [2026-03-04] feat: предупреждение о дубле YouTube-ссылки в модале добавления урока
