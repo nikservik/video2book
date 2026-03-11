@@ -2,7 +2,7 @@
 
 namespace Tests\Unit\Project;
 
-use App\Actions\Project\BuildProjectStepResultsArchiveAction;
+use App\Actions\Project\BuildProjectStepResultsSingleFileAction;
 use App\Models\Lesson;
 use App\Models\Pipeline;
 use App\Models\PipelineRun;
@@ -16,13 +16,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Validation\ValidationException;
 use Tests\TestCase;
-use ZipArchive;
 
-class BuildProjectStepResultsArchiveActionTest extends TestCase
+class BuildProjectStepResultsSingleFileActionTest extends TestCase
 {
     use RefreshDatabase;
 
-    public function test_it_builds_markdown_zip_and_skips_unprocessed_lessons(): void
+    public function test_it_builds_single_markdown_file_with_lesson_headings_and_shifted_step_headings(): void
     {
         ProjectTag::query()->create([
             'slug' => 'default',
@@ -30,7 +29,7 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         ]);
 
         $project = Project::query()->create([
-            'name' => 'Проект Архив',
+            'name' => 'Большой конспект',
             'tags' => null,
         ]);
 
@@ -82,14 +81,14 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
             'step_version_id' => $textStepVersion->id,
             'position' => 1,
             'status' => 'done',
-            'result' => '# Урок 1',
+            'result' => "# Заголовок\n\nТекст урока 1\n\n```md\n# Не менять\n```",
         ]);
         PipelineRunStep::query()->create([
             'pipeline_run_id' => $runTwo->id,
             'step_version_id' => $textStepVersion->id,
             'position' => 1,
             'status' => 'done',
-            'result' => '# Урок 2',
+            'result' => "## Подзаголовок\n\n- Пункт 1",
         ]);
         PipelineRunStep::query()->create([
             'pipeline_run_id' => $runThree->id,
@@ -99,33 +98,25 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
             'result' => null,
         ]);
 
-        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
+        $download = app(BuildProjectStepResultsSingleFileAction::class)->handle(
             project: $project,
             pipelineVersionId: $pipelineVersion->id,
             stepVersionId: $textStepVersion->id,
             format: 'md',
         );
 
-        $this->assertFileExists($archive['archive_path']);
+        $this->assertSame('Большой конспект.md', $download['download_filename']);
+        $this->assertSame('text/markdown; charset=UTF-8', $download['content_type']);
+        $this->assertFileExists($download['file_path']);
+        $this->assertStringContainsString("# Урок 1\n\n## Заголовок", (string) file_get_contents($download['file_path']));
+        $this->assertStringContainsString("# Урок 2\n\n### Подзаголовок", (string) file_get_contents($download['file_path']));
+        $this->assertStringContainsString("```md\n# Не менять\n```", (string) file_get_contents($download['file_path']));
+        $this->assertStringNotContainsString('# Урок 3', (string) file_get_contents($download['file_path']));
 
-        $zip = new ZipArchive;
-        $zip->open($archive['archive_path']);
-
-        $expectedFileOne = $lessonOne->name.' - '.$textStepVersion->name.'.md';
-        $expectedFileTwo = $lessonTwo->name.' - '.$textStepVersion->name.'.md';
-
-        $this->assertSame(2, $zip->numFiles);
-        $this->assertNotFalse($zip->locateName($expectedFileOne));
-        $this->assertNotFalse($zip->locateName($expectedFileTwo));
-        $this->assertSame('# Урок 1', $zip->getFromName($expectedFileOne));
-        $this->assertSame('# Урок 2', $zip->getFromName($expectedFileTwo));
-        $this->assertSame($project->name.'.zip', $archive['download_filename']);
-
-        $zip->close();
-        File::deleteDirectory($archive['cleanup_dir']);
+        File::deleteDirectory($download['cleanup_dir']);
     }
 
-    public function test_it_builds_docx_zip(): void
+    public function test_it_builds_single_pdf_file(): void
     {
         ProjectTag::query()->create([
             'slug' => 'default',
@@ -133,7 +124,7 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         ]);
 
         $project = Project::query()->create([
-            'name' => 'Проект DOCX',
+            'name' => 'Общий PDF',
             'tags' => null,
         ]);
 
@@ -159,135 +150,75 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
             'step_version_id' => $textStepVersion->id,
             'position' => 1,
             'status' => 'done',
-            'result' => "# Урок 1\n\n- Пункт",
+            'result' => "# Заголовок\n\nТекст",
         ]);
 
-        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
+        $download = app(BuildProjectStepResultsSingleFileAction::class)->handle(
+            project: $project,
+            pipelineVersionId: $pipelineVersion->id,
+            stepVersionId: $textStepVersion->id,
+            format: 'pdf',
+        );
+
+        $this->assertSame('Общий PDF.pdf', $download['download_filename']);
+        $this->assertSame('application/pdf', $download['content_type']);
+        $this->assertStringStartsWith('%PDF', (string) file_get_contents($download['file_path']));
+
+        File::deleteDirectory($download['cleanup_dir']);
+    }
+
+    public function test_it_builds_single_docx_file(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Общий DOCX',
+            'tags' => null,
+        ]);
+
+        $lesson = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
+
+        $run = PipelineRun::query()->create([
+            'lesson_id' => $lesson->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $run->id,
+            'step_version_id' => $textStepVersion->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => "# Заголовок\n\nТекст",
+        ]);
+
+        $download = app(BuildProjectStepResultsSingleFileAction::class)->handle(
             project: $project,
             pipelineVersionId: $pipelineVersion->id,
             stepVersionId: $textStepVersion->id,
             format: 'docx',
         );
 
-        $this->assertFileExists($archive['archive_path']);
-
-        $zip = new ZipArchive;
-        $zip->open($archive['archive_path']);
-
-        $expectedFile = $lesson->name.' - '.$textStepVersion->name.'.docx';
-
-        $this->assertSame(1, $zip->numFiles);
-        $this->assertNotFalse($zip->locateName($expectedFile));
-        $this->assertStringStartsWith('PK', (string) $zip->getFromName($expectedFile));
-        $this->assertSame($project->name.'.zip', $archive['download_filename']);
-
-        $zip->close();
-        File::deleteDirectory($archive['cleanup_dir']);
-    }
-
-    public function test_it_builds_markdown_zip_with_lesson_only_file_naming(): void
-    {
-        ProjectTag::query()->create([
-            'slug' => 'default',
-            'description' => null,
-        ]);
-
-        $project = Project::query()->create([
-            'name' => 'Проект Только урок',
-            'tags' => null,
-        ]);
-
-        $lesson = Lesson::query()->create([
-            'project_id' => $project->id,
-            'name' => 'Урок 1',
-            'tag' => 'default',
-            'source_filename' => null,
-            'settings' => [],
-        ]);
-
-        [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
-
-        $run = PipelineRun::query()->create([
-            'lesson_id' => $lesson->id,
-            'pipeline_version_id' => $pipelineVersion->id,
-            'status' => 'done',
-            'state' => [],
-        ]);
-
-        PipelineRunStep::query()->create([
-            'pipeline_run_id' => $run->id,
-            'step_version_id' => $textStepVersion->id,
-            'position' => 1,
-            'status' => 'done',
-            'result' => '# Урок 1',
-        ]);
-
-        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
-            project: $project,
-            pipelineVersionId: $pipelineVersion->id,
-            stepVersionId: $textStepVersion->id,
-            format: 'md',
-            archiveFileNaming: 'lesson',
+        $this->assertSame('Общий DOCX.docx', $download['download_filename']);
+        $this->assertSame(
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            $download['content_type']
         );
+        $this->assertStringStartsWith('PK', (string) file_get_contents($download['file_path']));
 
-        $zip = new ZipArchive;
-        $zip->open($archive['archive_path']);
-
-        $this->assertNotFalse($zip->locateName($lesson->name.'.md'));
-        $this->assertFalse($zip->locateName($lesson->name.' - '.$textStepVersion->name.'.md'));
-        $this->assertSame('# Урок 1', $zip->getFromName($lesson->name.'.md'));
-
-        $zip->close();
-        File::deleteDirectory($archive['cleanup_dir']);
-    }
-
-    public function test_it_sanitizes_project_download_filename_without_slugging_utf_name(): void
-    {
-        ProjectTag::query()->create([
-            'slug' => 'default',
-            'description' => null,
-        ]);
-
-        $project = Project::query()->create([
-            'name' => 'Проект: "Большой" / Архив?',
-            'tags' => null,
-        ]);
-
-        $lesson = Lesson::query()->create([
-            'project_id' => $project->id,
-            'name' => 'Урок 1',
-            'tag' => 'default',
-            'source_filename' => null,
-            'settings' => [],
-        ]);
-
-        [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
-
-        $run = PipelineRun::query()->create([
-            'lesson_id' => $lesson->id,
-            'pipeline_version_id' => $pipelineVersion->id,
-            'status' => 'done',
-            'state' => [],
-        ]);
-
-        PipelineRunStep::query()->create([
-            'pipeline_run_id' => $run->id,
-            'step_version_id' => $textStepVersion->id,
-            'position' => 1,
-            'status' => 'done',
-            'result' => '# Урок 1',
-        ]);
-
-        $archive = app(BuildProjectStepResultsArchiveAction::class)->handle(
-            project: $project,
-            pipelineVersionId: $pipelineVersion->id,
-            stepVersionId: $textStepVersion->id,
-            format: 'md',
-        );
-
-        $this->assertSame('Проект Большой Архив.zip', $archive['download_filename']);
-
-        File::deleteDirectory($archive['cleanup_dir']);
+        File::deleteDirectory($download['cleanup_dir']);
     }
 
     public function test_it_throws_validation_exception_when_no_processed_results_found(): void
@@ -300,13 +231,13 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         ]);
 
         $project = Project::query()->create([
-            'name' => 'Пустой экспорт',
+            'name' => 'Пустой проект',
             'tags' => null,
         ]);
 
         $lesson = Lesson::query()->create([
             'project_id' => $project->id,
-            'name' => 'Урок',
+            'name' => 'Урок 1',
             'tag' => 'default',
             'source_filename' => null,
             'settings' => [],
@@ -314,22 +245,14 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
 
         [, $pipelineVersion, $textStepVersion] = $this->createPipelineWithTextStep();
 
-        $run = PipelineRun::query()->create([
+        PipelineRun::query()->create([
             'lesson_id' => $lesson->id,
             'pipeline_version_id' => $pipelineVersion->id,
             'status' => 'done',
             'state' => [],
         ]);
 
-        PipelineRunStep::query()->create([
-            'pipeline_run_id' => $run->id,
-            'step_version_id' => $textStepVersion->id,
-            'position' => 1,
-            'status' => 'pending',
-            'result' => null,
-        ]);
-
-        app(BuildProjectStepResultsArchiveAction::class)->handle(
+        app(BuildProjectStepResultsSingleFileAction::class)->handle(
             project: $project,
             pipelineVersionId: $pipelineVersion->id,
             stepVersionId: $textStepVersion->id,
@@ -343,14 +266,14 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
     private function createPipelineWithTextStep(): array
     {
         $pipeline = Pipeline::query()->create();
-        $version = $pipeline->versions()->create([
+        $pipelineVersion = $pipeline->versions()->create([
             'version' => 1,
             'title' => 'Пайплайн',
             'description' => null,
             'changelog' => null,
             'status' => 'active',
         ]);
-        $pipeline->update(['current_version_id' => $version->id]);
+        $pipeline->update(['current_version_id' => $pipelineVersion->id]);
 
         $step = Step::query()->create([
             'pipeline_id' => $pipeline->id,
@@ -360,7 +283,7 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
         $stepVersion = StepVersion::query()->create([
             'step_id' => $step->id,
             'input_step_id' => null,
-            'name' => 'Текстовый шаг',
+            'name' => 'Текстовый экспорт',
             'type' => 'text',
             'version' => 1,
             'description' => null,
@@ -371,14 +294,15 @@ class BuildProjectStepResultsArchiveActionTest extends TestCase
             ],
             'status' => 'active',
         ]);
+
         $step->update(['current_version_id' => $stepVersion->id]);
 
         PipelineVersionStep::query()->create([
-            'pipeline_version_id' => $version->id,
+            'pipeline_version_id' => $pipelineVersion->id,
             'step_version_id' => $stepVersion->id,
             'position' => 1,
         ]);
 
-        return [$pipeline, $version, $stepVersion];
+        return [$pipeline, $pipelineVersion, $stepVersion];
     }
 }

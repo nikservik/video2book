@@ -16,8 +16,18 @@ class PipelineStepPdfExporter
      */
     public function export(PipelineRun $run, PipelineRunStep $step): string
     {
-        $title = $run->lesson?->name ?? 'Урок';
-        $body = $this->markdown->convert($step->result ?? '')->getContent();
+        return $this->exportMarkdown(
+            $run->lesson?->name ?? 'Урок',
+            (string) ($step->result ?? '')
+        );
+    }
+
+    /**
+     * @return string binary PDF content
+     */
+    public function exportMarkdown(string $title, string $markdown): string
+    {
+        $body = $this->markdown->convert($markdown)->getContent();
 
         return Pdf::loadView('pdf.pipeline-step', [
             'title' => $title,

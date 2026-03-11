@@ -38,6 +38,7 @@ class ListProjectExportOptionsTool extends Tool
 
         return Response::structured([
             'project' => $this->mcpPresenter->project($project),
+            'download_modes' => $this->downloadModes(),
             'pipeline_versions' => $this->getProjectExportPipelineStepOptionsAction->handle($project),
         ]);
     }
@@ -48,6 +49,81 @@ class ListProjectExportOptionsTool extends Tool
             'project_id' => $schema->integer()
                 ->required()
                 ->description('ID проекта, для которого нужно показать опции экспорта.'),
+        ];
+    }
+
+    /**
+     * @return array<int, array{
+     *     id:string,
+     *     label:string,
+     *     default:bool,
+     *     description:string,
+     *     formats:array<int, array{id:string,resource_uri_template:string}>
+     * }>
+     */
+    private function downloadModes(): array
+    {
+        return [
+            [
+                'id' => 'single_file',
+                'label' => 'Одним файлом',
+                'default' => true,
+                'description' => 'Объединяет результаты всех подходящих уроков проекта в один файл. Перед каждым уроком добавляется заголовок первого уровня, внутренние заголовки шага сдвигаются на один уровень глубже.',
+                'formats' => [
+                    [
+                        'id' => 'md',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/markdown',
+                    ],
+                    [
+                        'id' => 'pdf',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/pdf',
+                    ],
+                    [
+                        'id' => 'docx',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/docx',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'lesson',
+                'label' => 'Урок',
+                'default' => false,
+                'description' => 'Возвращает ZIP-архив, где для каждого урока создаётся отдельный файл.',
+                'formats' => [
+                    [
+                        'id' => 'md',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/md/lesson',
+                    ],
+                    [
+                        'id' => 'pdf',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/pdf/lesson',
+                    ],
+                    [
+                        'id' => 'docx',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/docx/lesson',
+                    ],
+                ],
+            ],
+            [
+                'id' => 'lesson_step',
+                'label' => 'Урок - шаг',
+                'default' => false,
+                'description' => 'Возвращает ZIP-архив, где для каждого урока создаётся отдельный файл с названием урока и шага.',
+                'formats' => [
+                    [
+                        'id' => 'md',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/md/lesson_step',
+                    ],
+                    [
+                        'id' => 'pdf',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/pdf/lesson_step',
+                    ],
+                    [
+                        'id' => 'docx',
+                        'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/docx/lesson_step',
+                    ],
+                ],
+            ],
         ];
     }
 }

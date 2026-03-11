@@ -29,6 +29,7 @@ class KnowledgeBaseSearchGuidePromptTest extends TestCase
             ->assertSee([
                 'внутренняя корпоративная база знаний',
                 'is_default=true',
+                'single_file',
                 'Timeline',
                 'русскоязычной базы',
             ]);

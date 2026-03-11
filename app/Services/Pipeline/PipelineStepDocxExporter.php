@@ -73,6 +73,14 @@ class PipelineStepDocxExporter
      */
     public function export(PipelineRun $run, PipelineRunStep $step): string
     {
+        return $this->exportMarkdown((string) ($step->result ?? ''));
+    }
+
+    /**
+     * @return string binary DOCX content
+     */
+    public function exportMarkdown(string $markdown): string
+    {
         $phpWord = new PhpWord;
         $phpWord->setDefaultFontName(self::FONT_NAME);
         $phpWord->setDefaultFontSize(12);
@@ -86,7 +94,7 @@ class PipelineStepDocxExporter
             'marginLeft' => 1000,
         ]);
 
-        $document = $this->markdownParser->parse((string) ($step->result ?? ''));
+        $document = $this->markdownParser->parse($markdown);
 
         if ($document instanceof Document) {
             foreach ($document->children() as $blockNode) {

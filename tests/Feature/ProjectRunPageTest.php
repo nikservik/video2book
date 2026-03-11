@@ -572,9 +572,9 @@ MD,
     {
         [$project, $pipelineRun] = $this->createProjectRunWithSteps();
 
-        $pdfFilename = Str::slug('Урок по Laravel-Транскрибация', '_').'.pdf';
-        $markdownFilename = Str::slug('Урок по Laravel-Саммаризация', '_').'.md';
-        $docxFilename = Str::slug('Урок по Laravel-Транскрибация', '_').'.docx';
+        $pdfFilename = 'Урок по Laravel - Транскрибация.pdf';
+        $markdownFilename = 'Урок по Laravel - Саммаризация.md';
+        $docxFilename = 'Урок по Laravel - Транскрибация.docx';
 
         Livewire::test(ProjectRunPage::class, [
             'project' => $project,
@@ -587,6 +587,29 @@ MD,
             ->call('selectStep', $pipelineRun->steps()->where('position', 2)->firstOrFail()->id)
             ->call('downloadSelectedStepMarkdown')
             ->assertFileDownloaded($markdownFilename, contentType: 'text/markdown; charset=UTF-8');
+    }
+
+    public function test_project_run_page_download_sanitizes_invalid_filename_characters_without_slugging_utf_name(): void
+    {
+        [$project, $pipelineRun, $firstRunStep] = $this->createProjectRunWithSteps();
+
+        $pipelineRun->lesson()->update([
+            'name' => 'Урок: "Laravel" / Введение?',
+        ]);
+
+        $firstRunStep->stepVersion()->update([
+            'name' => 'Шаг 1: Что такое MVC / Livewire*',
+        ]);
+
+        Livewire::test(ProjectRunPage::class, [
+            'project' => $project,
+            'pipelineRun' => $pipelineRun->fresh(),
+        ])
+            ->call('downloadSelectedStepPdf')
+            ->assertFileDownloaded(
+                'Урок Laravel Введение - Шаг 1 Что такое MVC Livewire.pdf',
+                contentType: 'application/pdf'
+            );
     }
 
     public function test_project_run_page_can_restart_from_selected_step(): void

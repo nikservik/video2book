@@ -15,6 +15,7 @@ use App\Models\User;
 use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
 use App\Services\Project\ProjectRunDetailsQuery;
+use App\Support\DownloadFilenameSanitizer;
 use Illuminate\Contracts\View\View;
 use Illuminate\Support\Str;
 use Livewire\Component;
@@ -473,10 +474,12 @@ class ProjectRunPage extends Component
 
     private function selectedStepExportFilename(PipelineRunStep $step, string $extension): string
     {
-        $lessonName = $this->pipelineRun->lesson?->name ?? 'lesson';
-        $stepName = $step->stepVersion?->name ?? 'step';
+        $baseName = app(DownloadFilenameSanitizer::class)->join([
+            $this->pipelineRun->lesson?->name ?? 'lesson',
+            $step->stepVersion?->name ?? 'step',
+        ], ' - ');
 
-        return Str::slug($lessonName.'-'.$stepName, '_').'.'.$extension;
+        return $baseName.'.'.$extension;
     }
 
     private function resolveInitialSelectedStepId(): ?int

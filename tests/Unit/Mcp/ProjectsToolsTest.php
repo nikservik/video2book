@@ -304,6 +304,7 @@ class ProjectsToolsTest extends TestCase
                     'referer' => null,
                     'updated_at' => $project->fresh()->updated_at?->toISOString(),
                 ],
+                'download_modes' => $this->expectedExportDownloadModes(),
                 'pipeline_versions' => [
                     [
                         'id' => $doneVersion->id,
@@ -326,6 +327,48 @@ class ProjectsToolsTest extends TestCase
         ], [
             'description' => null,
         ]);
+    }
+
+    /**
+     * @return array<int, array<string, mixed>>
+     */
+    private function expectedExportDownloadModes(): array
+    {
+        return [
+            [
+                'id' => 'single_file',
+                'label' => 'Одним файлом',
+                'default' => true,
+                'description' => 'Объединяет результаты всех подходящих уроков проекта в один файл. Перед каждым уроком добавляется заголовок первого уровня, внутренние заголовки шага сдвигаются на один уровень глубже.',
+                'formats' => [
+                    ['id' => 'md', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/markdown'],
+                    ['id' => 'pdf', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/pdf'],
+                    ['id' => 'docx', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/docx'],
+                ],
+            ],
+            [
+                'id' => 'lesson',
+                'label' => 'Урок',
+                'default' => false,
+                'description' => 'Возвращает ZIP-архив, где для каждого урока создаётся отдельный файл.',
+                'formats' => [
+                    ['id' => 'md', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/md/lesson'],
+                    ['id' => 'pdf', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/pdf/lesson'],
+                    ['id' => 'docx', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/docx/lesson'],
+                ],
+            ],
+            [
+                'id' => 'lesson_step',
+                'label' => 'Урок - шаг',
+                'default' => false,
+                'description' => 'Возвращает ZIP-архив, где для каждого урока создаётся отдельный файл с названием урока и шага.',
+                'formats' => [
+                    ['id' => 'md', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/md/lesson_step'],
+                    ['id' => 'pdf', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/pdf/lesson_step'],
+                    ['id' => 'docx', 'resource_uri_template' => 'video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/docx/lesson_step'],
+                ],
+            ],
+        ];
     }
 
     private function createPipelineVersion(): PipelineVersion

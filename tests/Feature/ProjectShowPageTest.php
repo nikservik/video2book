@@ -1160,16 +1160,18 @@ class ProjectShowPageTest extends TestCase
             ->call('open', 'pdf')
             ->assertSet('show', true)
             ->assertSet('projectExportFormat', 'pdf')
-            ->assertSet('projectExportArchiveFileNaming', 'lesson_step')
+            ->assertSet('projectExportDownloadMode', 'single_file')
             ->assertSet('projectExportSelection', $pipelineVersionB->id.':'.$stepVersionsB['text']->id)
             ->assertSee('Скачивание проекта в PDF')
-            ->assertSee('Именование файлов в архиве')
+            ->assertSee('Способ скачивания')
+            ->assertSee('Одним файлом')
             ->assertSee('Урок.pdf')
             ->assertSee('Урок - шаг.pdf')
             ->assertSee('Текстовый шаг A')
             ->assertSee('Текстовый шаг B')
             ->assertDontSee('Транскрибация')
             ->assertDontSee('Глоссарий')
+            ->assertDontSee('Шагов:')
             ->call('open', 'docx')
             ->assertSet('projectExportFormat', 'docx')
             ->assertSee('Урок.docx')
@@ -1177,7 +1179,7 @@ class ProjectShowPageTest extends TestCase
             ->assertSee('Скачивание проекта в DOCX');
     }
 
-    public function test_project_export_download_creates_zip_for_selected_step_and_skips_unprocessed_lessons(): void
+    public function test_project_export_download_creates_single_markdown_file_by_default_and_skips_unprocessed_lessons(): void
     {
         ProjectTag::query()->create([
             'slug' => 'default',
@@ -1237,11 +1239,61 @@ class ProjectShowPageTest extends TestCase
             'result' => null,
         ]);
 
-        $expectedFilename = Str::slug($project->name, '_').'.zip';
+        $expectedFilename = $project->name.'.md';
 
         Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
             ->call('open', 'md')
             ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
+            ->call('downloadProjectResults')
+            ->assertSet('show', false)
+            ->assertFileDownloaded($expectedFilename, contentType: 'text/markdown; charset=UTF-8');
+    }
+
+    public function test_project_export_download_creates_zip_when_archive_mode_is_selected(): void
+    {
+        ProjectTag::query()->create([
+            'slug' => 'default',
+            'description' => null,
+        ]);
+
+        $project = Project::query()->create([
+            'name' => 'Проект Архив',
+            'tags' => null,
+        ]);
+
+        $lessonWithResult = Lesson::query()->create([
+            'project_id' => $project->id,
+            'name' => 'Урок 1',
+            'tag' => 'default',
+            'source_filename' => null,
+            'settings' => [],
+        ]);
+
+        [, $pipelineVersion, $stepVersions] = $this->createPipelineWithCustomSteps([
+            ['name' => 'Текстовый экспорт', 'type' => 'text'],
+        ]);
+
+        $runWithResult = PipelineRun::query()->create([
+            'lesson_id' => $lessonWithResult->id,
+            'pipeline_version_id' => $pipelineVersion->id,
+            'status' => 'done',
+            'state' => [],
+        ]);
+
+        PipelineRunStep::query()->create([
+            'pipeline_run_id' => $runWithResult->id,
+            'step_version_id' => $stepVersions['text']->id,
+            'position' => 1,
+            'status' => 'done',
+            'result' => '# Результат урока 1',
+        ]);
+
+        $expectedFilename = $project->name.'.zip';
+
+        Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
+            ->call('open', 'md')
+            ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
+            ->call('setProjectExportDownloadMode', 'lesson_step')
             ->call('downloadProjectResults')
             ->assertSet('show', false)
             ->assertFileDownloaded($expectedFilename, contentType: 'application/zip');
@@ -1286,11 +1338,12 @@ class ProjectShowPageTest extends TestCase
             'result' => "# Результат урока 1\n\n- **Пункт**",
         ]);
 
-        $expectedFilename = Str::slug($project->name, '_').'.zip';
+        $expectedFilename = $project->name.'.zip';
 
         Livewire::test(ProjectExportModal::class, ['projectId' => $project->id])
             ->call('open', 'docx')
             ->set('projectExportSelection', $pipelineVersion->id.':'.$stepVersions['text']->id)
+            ->call('setProjectExportDownloadMode', 'lesson_step')
             ->call('downloadProjectResults')
             ->assertSet('show', false)
             ->assertFileDownloaded($expectedFilename, contentType: 'application/zip');

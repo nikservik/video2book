@@ -11,9 +11,9 @@
 - Санитизация логов: URL MCP в exception context редактируется до `/mcp/video2book/[redacted]`
 - Сервер: `App\Mcp\Servers\Video2BookServer`
 - Tools: папки, проекты, уроки, прогоны, очередь
-- Resources: markdown/pdf/docx экспорт шага и zip-экспорт проекта
+- Resources: markdown/pdf/docx экспорт шага, single-file экспорт проекта и zip-экспорт проекта
 - Prompts: `knowledge-base-search-guide`
-- Бинарные загрузки: шаги отдаются как `text/markdown`, `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`; экспорт проекта отдается как `application/zip`
+- Бинарные загрузки: шаги отдаются как `text/markdown`, `application/pdf`, `application/vnd.openxmlformats-officedocument.wordprocessingml.document`; экспорт проекта отдается либо как единый `text/markdown` / `application/pdf` / `application/vnd.openxmlformats-officedocument.wordprocessingml.document`, либо как `application/zip`
 
 Основные проверки реализации:
 
@@ -25,7 +25,7 @@
 `Video2BookServer` регистрирует:
 
 - tools: `list-project-folders`, `create-project-folder`, `list-folder-projects`, `create-project`, `update-project`, `recalculate-project-lessons-duration`, `list-project-export-options`, `list-project-lessons`, `create-project-lesson-from-url`, `create-project-lesson-from-audio`, `add-project-lessons-from-list`, `list-lesson-runs`, `list-pipeline-templates`, `list-run-steps`, `get-run-step-result`, `restart-run-step`, `list-queue-tasks`
-- resources: `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/markdown`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/pdf`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/docx`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/{format}/{archive_file_naming}`
+- resources: `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/markdown`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/pdf`, `video2book://pipeline-runs/{run_id}/steps/{step_id}/export/docx`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/markdown`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/pdf`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/single-file/docx`, `video2book://projects/{project_id}/exports/{pipeline_version_id}/{step_version_id}/{format}/{archive_file_naming}`
 - prompts: `knowledge-base-search-guide`
 
 ## Исходный план реализации
@@ -244,6 +244,7 @@ php artisan make:mcp-resource ProjectExportArchiveResource --no-interaction
 - Input:
   - `project_id`
 - Output:
+  - `download_modes`
   - pipeline versions со списком text steps
 
 ### Уроки
@@ -428,6 +429,30 @@ php artisan make:mcp-resource ProjectExportArchiveResource --no-interaction
 - Поддерживаемые значения:
   - `format`: `pdf`, `md`, `docx`
   - `archiveNaming`: `lesson`, `lesson_step`
+
+`ProjectSingleFileMarkdownExportResource`
+
+- Реализация: resource template
+- URI template: `video2book://projects/{projectId}/exports/{pipelineVersionId}/{stepVersionId}/single-file/markdown`
+- Источник данных: `App\Actions\Project\BuildProjectStepResultsSingleFileAction`
+- MIME: `text/markdown`
+- Response: `Response::text($markdown)`
+
+`ProjectSingleFilePdfExportResource`
+
+- Реализация: resource template
+- URI template: `video2book://projects/{projectId}/exports/{pipelineVersionId}/{stepVersionId}/single-file/pdf`
+- Источник данных: `App\Actions\Project\BuildProjectStepResultsSingleFileAction`
+- MIME: `application/pdf`
+- Response: `Response::blob($pdfBinary)`
+
+`ProjectSingleFileDocxExportResource`
+
+- Реализация: resource template
+- URI template: `video2book://projects/{projectId}/exports/{pipelineVersionId}/{stepVersionId}/single-file/docx`
+- Источник данных: `App\Actions\Project\BuildProjectStepResultsSingleFileAction`
+- MIME: `application/vnd.openxmlformats-officedocument.wordprocessingml.document`
+- Response: `Response::blob($docxBinary)`
 
 ## Пошаговый план реализации
 

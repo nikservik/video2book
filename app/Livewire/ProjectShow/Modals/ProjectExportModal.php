@@ -3,6 +3,7 @@
 namespace App\Livewire\ProjectShow\Modals;
 
 use App\Actions\Project\BuildProjectStepResultsArchiveAction;
+use App\Actions\Project\BuildProjectStepResultsSingleFileAction;
 use App\Actions\Project\GetProjectExportPipelineStepOptionsAction;
 use App\Models\Project;
 use Illuminate\Contracts\View\View;
@@ -15,6 +16,8 @@ use Livewire\Component;
 
 class ProjectExportModal extends Component
 {
+    private const DOWNLOAD_MODE_SINGLE_FILE = 'single_file';
+
     private const ARCHIVE_FILE_NAMING_LESSON = 'lesson';
 
     private const ARCHIVE_FILE_NAMING_LESSON_STEP = 'lesson_step';
@@ -27,7 +30,7 @@ class ProjectExportModal extends Component
 
     public ?string $projectExportSelection = null;
 
-    public string $projectExportArchiveFileNaming = self::ARCHIVE_FILE_NAMING_LESSON_STEP;
+    public string $projectExportDownloadMode = self::DOWNLOAD_MODE_SINGLE_FILE;
 
     /**
      * @var array<int, array{id:int,label:string,steps:array<int, array{id:int,name:string}>}>
@@ -49,6 +52,7 @@ class ProjectExportModal extends Component
         $this->resetErrorBag();
 
         $this->projectExportFormat = $format;
+        $this->projectExportDownloadMode = self::DOWNLOAD_MODE_SINGLE_FILE;
         $this->projectExportPipelineOptions = app(GetProjectExportPipelineStepOptionsAction::class)->handle($this->project());
         $this->projectExportSelection = $this->resolvePreferredProjectExportSelection($this->projectExportPipelineOptions);
 
@@ -73,28 +77,34 @@ class ProjectExportModal extends Component
         $this->dispatch('project-show:modal-closed');
     }
 
-    public function setProjectExportArchiveFileNaming(string $value): void
+    public function setProjectExportDownloadMode(string $value): void
     {
-        if (! in_array($value, [self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP], true)) {
+        if (! in_array($value, [self::DOWNLOAD_MODE_SINGLE_FILE, self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP], true)) {
             return;
         }
 
-        $this->projectExportArchiveFileNaming = $value;
+        $this->projectExportDownloadMode = $value;
     }
 
-    public function downloadProjectResults(BuildProjectStepResultsArchiveAction $buildProjectStepResultsArchiveAction)
-    {
+    public function downloadProjectResults(
+        BuildProjectStepResultsArchiveAction $buildProjectStepResultsArchiveAction,
+        BuildProjectStepResultsSingleFileAction $buildProjectStepResultsSingleFileAction,
+    ) {
         $availableSelections = $this->availableProjectExportSelections();
 
         $validated = validator([
             'projectExportSelection' => $this->projectExportSelection,
-            'projectExportArchiveFileNaming' => $this->projectExportArchiveFileNaming,
+            'projectExportDownloadMode' => $this->projectExportDownloadMode,
         ], [
             'projectExportSelection' => ['required', 'string', Rule::in($availableSelections)],
-            'projectExportArchiveFileNaming' => ['required', 'string', Rule::in([self::ARCHIVE_FILE_NAMING_LESSON, self::ARCHIVE_FILE_NAMING_LESSON_STEP])],
+            'projectExportDownloadMode' => ['required', 'string', Rule::in([
+                self::DOWNLOAD_MODE_SINGLE_FILE,
+                self::ARCHIVE_FILE_NAMING_LESSON,
+                self::ARCHIVE_FILE_NAMING_LESSON_STEP,
+            ])],
         ], [], [
             'projectExportSelection' => 'шаг для скачивания',
-            'projectExportArchiveFileNaming' => 'именование файлов в архиве',
+            'projectExportDownloadMode' => 'способ скачивания',
         ])->validate();
 
         [$pipelineVersionId, $stepVersionId] = $this->parseProjectExportSelection($validated['projectExportSelection']);
@@ -102,13 +112,20 @@ class ProjectExportModal extends Component
         abort_if($pipelineVersionId === null || $stepVersionId === null, 422, 'Невалидный выбор шага для скачивания.');
 
         try {
-            $archive = $buildProjectStepResultsArchiveAction->handle(
-                project: $this->project(),
-                pipelineVersionId: $pipelineVersionId,
-                stepVersionId: $stepVersionId,
-                format: $this->projectExportFormat,
-                archiveFileNaming: $validated['projectExportArchiveFileNaming'],
-            );
+            $download = $validated['projectExportDownloadMode'] === self::DOWNLOAD_MODE_SINGLE_FILE
+                ? $buildProjectStepResultsSingleFileAction->handle(
+                    project: $this->project(),
+                    pipelineVersionId: $pipelineVersionId,
+                    stepVersionId: $stepVersionId,
+                    format: $this->projectExportFormat,
+                )
+                : $buildProjectStepResultsArchiveAction->handle(
+                    project: $this->project(),
+                    pipelineVersionId: $pipelineVersionId,
+                    stepVersionId: $stepVersionId,
+                    format: $this->projectExportFormat,
+                    archiveFileNaming: $validated['projectExportDownloadMode'],
+                );
         } catch (ValidationException $exception) {
             $this->addError(
                 'projectExportSelection',
@@ -120,17 +137,19 @@ class ProjectExportModal extends Component
 
         $this->close();
 
-        return response()->streamDownload(function () use ($archive): void {
-            $stream = fopen($archive['archive_path'], 'rb');
+        $downloadPath = $download['file_path'] ?? $download['archive_path'];
+
+        return response()->streamDownload(function () use ($download, $downloadPath): void {
+            $stream = fopen($downloadPath, 'rb');
 
             if ($stream !== false) {
                 fpassthru($stream);
                 fclose($stream);
             }
 
-            File::deleteDirectory($archive['cleanup_dir']);
-        }, $archive['download_filename'], [
-            'Content-Type' => $archive['content_type'],
+            File::deleteDirectory($download['cleanup_dir']);
+        }, $download['download_filename'], [
+            'Content-Type' => $download['content_type'],
         ]);
     }
 

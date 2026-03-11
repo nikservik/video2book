@@ -4,6 +4,9 @@ namespace App\Mcp\Servers;
 
 use App\Mcp\Prompts\KnowledgeBaseSearchGuidePrompt;
 use App\Mcp\Resources\ProjectExportArchiveResource;
+use App\Mcp\Resources\ProjectSingleFileDocxExportResource;
+use App\Mcp\Resources\ProjectSingleFileMarkdownExportResource;
+use App\Mcp\Resources\ProjectSingleFilePdfExportResource;
 use App\Mcp\Resources\RunStepDocxExportResource;
 use App\Mcp\Resources\RunStepMarkdownExportResource;
 use App\Mcp\Resources\RunStepPdfExportResource;
@@ -46,6 +49,8 @@ use Laravel\Mcp\Server\Attributes\Version;
     "- Для поиска по смыслу, тезисам, определениям и выводам сначала смотри шаг с is_default=true.\n".
     "- Чаще всего именно шаг по умолчанию содержит структурированный конспект и является лучшим источником ответа.\n".
     "- Если у урока есть несколько прогонов, сначала выбирай завершённые прогоны.\n".
+    "- Если нужно собрать знания сразу по нескольким урокам проекта, используй экспорт проекта в режиме Одним файлом.\n".
+    "- Экспорт проекта Одним файлом объединяет результаты всех подходящих уроков в один документ: перед каждым уроком ставится заголовок первого уровня, а внутренние заголовки результата сдвигаются на уровень глубже.\n".
     "- Шаблон Timeline и похожие на него шаблоны полезны для навигации по темам, но обычно не являются главным источником полного ответа.\n\n".
     "Рекомендуемый порядок работы:\n".
     "1. Найди подходящие папки.\n".
@@ -54,7 +59,8 @@ use Laravel\Mcp\Server\Attributes\Version;
     "4. Просмотри прогоны урока.\n".
     "5. Посмотри структуру шаблона и список шагов.\n".
     "6. Сначала читай результат шага с is_default=true.\n".
-    "7. При необходимости переходи к другим шагам или шаблонам.\n\n".
+    "7. Если нужен обзор сразу по нескольким урокам проекта, используй single_file экспорт проекта.\n".
+    "8. При необходимости переходи к другим шагам или шаблонам.\n\n".
     'Все материалы и лекции в системе русскоязычные. Используй русские термины и ориентируйся на поиск знаний во внутренней базе.'
 )]
 class Video2BookServer extends Server
@@ -83,6 +89,9 @@ class Video2BookServer extends Server
         RunStepMarkdownExportResource::class,
         RunStepPdfExportResource::class,
         RunStepDocxExportResource::class,
+        ProjectSingleFileMarkdownExportResource::class,
+        ProjectSingleFilePdfExportResource::class,
+        ProjectSingleFileDocxExportResource::class,
         ProjectExportArchiveResource::class,
     ];
 

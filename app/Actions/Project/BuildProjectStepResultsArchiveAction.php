@@ -7,9 +7,9 @@ use App\Models\PipelineRunStep;
 use App\Models\Project;
 use App\Services\Pipeline\PipelineStepDocxExporter;
 use App\Services\Pipeline\PipelineStepPdfExporter;
+use App\Support\DownloadFilenameSanitizer;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Str;
-use Illuminate\Validation\ValidationException;
 use RuntimeException;
 use ZipArchive;
 
@@ -22,6 +22,8 @@ class BuildProjectStepResultsArchiveAction
     public function __construct(
         private readonly PipelineStepPdfExporter $pipelineStepPdfExporter,
         private readonly PipelineStepDocxExporter $pipelineStepDocxExporter,
+        private readonly DownloadFilenameSanitizer $downloadFilenameSanitizer,
+        private readonly GetProjectStepResultEntriesAction $getProjectStepResultEntriesAction,
     ) {}
 
     /**
@@ -41,61 +43,11 @@ class BuildProjectStepResultsArchiveAction
             throw new RuntimeException('Неподдерживаемый формат именования файлов в архиве.');
         }
 
-        $lessons = $project->lessons()
-            ->orderBy('created_at')
-            ->orderBy('id')
-            ->get(['id', 'name']);
-
-        $lessonIds = $lessons->pluck('id')->all();
-
-        $latestRunsByLesson = PipelineRun::query()
-            ->whereIn('lesson_id', $lessonIds)
-            ->where('pipeline_version_id', $pipelineVersionId)
-            ->where('status', 'done')
-            ->with([
-                'lesson:id,name',
-                'steps' => fn ($query) => $query
-                    ->where('step_version_id', $stepVersionId)
-                    ->where('status', 'done')
-                    ->whereNotNull('result')
-                    ->with('stepVersion:id,name,type')
-                    ->orderBy('position')
-                    ->orderBy('id'),
-            ])
-            ->orderByDesc('id')
-            ->get()
-            ->groupBy('lesson_id')
-            ->map(fn ($runs) => $runs->first());
-
-        $entries = $lessons
-            ->map(function ($lesson) use ($latestRunsByLesson): ?array {
-                $run = $latestRunsByLesson->get($lesson->id);
-
-                if ($run === null) {
-                    return null;
-                }
-
-                /** @var PipelineRunStep|null $step */
-                $step = $run->steps->first();
-
-                if ($step === null || blank($step->result)) {
-                    return null;
-                }
-
-                return [
-                    'lesson_name' => $run->lesson?->name ?? $lesson->name,
-                    'run' => $run,
-                    'step' => $step,
-                ];
-            })
-            ->filter()
-            ->values();
-
-        if ($entries->isEmpty()) {
-            throw ValidationException::withMessages([
-                'projectExportSelection' => 'Для выбранного шага пока нет обработанных результатов в уроках проекта.',
-            ]);
-        }
+        $entries = $this->getProjectStepResultEntriesAction->handle(
+            project: $project,
+            pipelineVersionId: $pipelineVersionId,
+            stepVersionId: $stepVersionId,
+        );
 
         $stepName = $entries->first()['step']->stepVersion?->name ?? 'step';
         $tmpDir = storage_path('app/tmp/project-exports/'.Str::uuid());
@@ -146,11 +98,7 @@ class BuildProjectStepResultsArchiveAction
 
         $zip->close();
 
-        $downloadBaseName = Str::slug($project->name, '_');
-
-        if ($downloadBaseName === '') {
-            $downloadBaseName = 'project-export';
-        }
+        $downloadBaseName = $this->downloadFilenameSanitizer->sanitize($project->name, 'project-export');
 
         return [
             'archive_path' => $zipPath,
@@ -178,16 +126,6 @@ class BuildProjectStepResultsArchiveAction
         return $candidate;
     }
 
-    private function normalizeArchiveBaseName(string $value): string
-    {
-        $normalized = preg_replace('/[\/\\\\:*?"<>|]+/u', ' ', $value) ?? '';
-        $normalized = preg_replace('/[\x00-\x1F\x7F]+/u', ' ', $normalized) ?? '';
-        $normalized = preg_replace('/\s+/u', ' ', $normalized) ?? '';
-        $normalized = trim($normalized, " .\t\n\r\0\x0B");
-
-        return $normalized;
-    }
-
     private function resolveArchiveBaseName(
         string $lessonName,
         string $stepName,
@@ -195,12 +133,10 @@ class BuildProjectStepResultsArchiveAction
         PipelineRunStep $step,
         string $archiveFileNaming,
     ): string {
-        $candidate = match ($archiveFileNaming) {
-            self::ARCHIVE_FILE_NAMING_LESSON => $lessonName,
-            default => $lessonName.' - '.$stepName,
+        $baseName = match ($archiveFileNaming) {
+            self::ARCHIVE_FILE_NAMING_LESSON => $this->downloadFilenameSanitizer->sanitize($lessonName, ''),
+            default => $this->downloadFilenameSanitizer->join([$lessonName, $stepName], ' - ', ''),
         };
-
-        $baseName = $this->normalizeArchiveBaseName($candidate);
 
         if ($baseName !== '') {
             return $baseName;

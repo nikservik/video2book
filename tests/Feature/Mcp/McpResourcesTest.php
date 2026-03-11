@@ -117,6 +117,78 @@ class McpResourcesTest extends TestCase
         );
     }
 
+    public function test_it_reads_project_single_file_markdown_resource(): void
+    {
+        $user = $this->makeUser();
+        [$project, $pipelineVersion, , , $stepVersion] = $this->createProjectRunWithResult();
+
+        $response = $this->readResource(
+            $user,
+            sprintf(
+                'video2book://projects/%d/exports/%d/%d/single-file/markdown',
+                $project->id,
+                $pipelineVersion->id,
+                $stepVersion->id,
+            ),
+        );
+
+        $response
+            ->assertStatus(200)
+            ->assertJsonPath('result.contents.0.mimeType', 'text/markdown')
+            ->assertJsonPath('result.contents.0.text', "# Lesson\n\n## Result");
+    }
+
+    public function test_it_reads_project_single_file_pdf_resource(): void
+    {
+        $user = $this->makeUser();
+        [$project, $pipelineVersion, , , $stepVersion] = $this->createProjectRunWithResult();
+
+        $response = $this->readResource(
+            $user,
+            sprintf(
+                'video2book://projects/%d/exports/%d/%d/single-file/pdf',
+                $project->id,
+                $pipelineVersion->id,
+                $stepVersion->id,
+            ),
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath('result.contents.0.mimeType', 'application/pdf');
+
+        $this->assertStringStartsWith(
+            '%PDF',
+            (string) base64_decode((string) $response->json('result.contents.0.blob'))
+        );
+    }
+
+    public function test_it_reads_project_single_file_docx_resource(): void
+    {
+        $user = $this->makeUser();
+        [$project, $pipelineVersion, , , $stepVersion] = $this->createProjectRunWithResult();
+
+        $response = $this->readResource(
+            $user,
+            sprintf(
+                'video2book://projects/%d/exports/%d/%d/single-file/docx',
+                $project->id,
+                $pipelineVersion->id,
+                $stepVersion->id,
+            ),
+        );
+
+        $response->assertStatus(200)
+            ->assertJsonPath(
+                'result.contents.0.mimeType',
+                'application/vnd.openxmlformats-officedocument.wordprocessingml.document'
+            );
+
+        $this->assertStringStartsWith(
+            'PK',
+            (string) base64_decode((string) $response->json('result.contents.0.blob'))
+        );
+    }
+
     private function readResource(User $user, string $uri)
     {
         return $this->postJson('/mcp/video2book/'.$user->access_token, [
