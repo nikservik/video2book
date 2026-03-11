@@ -47,6 +47,21 @@
                     </div>
                 </div>
             @endif
+
+            <div class="mt-6 overflow-hidden rounded-lg border border-gray-200 bg-white shadow-sm dark:border-white/10 dark:bg-gray-800">
+                <div class="border-b border-gray-200 px-4 py-3 dark:border-white/10">
+                    <h2 class="text-lg font-semibold text-gray-900 dark:text-white">Последние обновления</h2>
+                </div>
+
+                <div class="px-4 py-4">
+                    <h3 class="text-sm font-semibold text-gray-900 dark:text-white">11 марта 2026</h3>
+
+                    <ul class="mt-2 list-disc space-y-1 pl-5 text-sm leading-6 text-gray-700 dark:text-gray-300">
+                        <li>Проект теперь можно скачивать одним большим файлом</li>
+                        <li>Тестовый режим MCP сервера, чтобы можно было работать из Gemini</li>
+                    </ul>
+                </div>
+            </div>
         </section>
 
         <aside class="lg:col-span-1">

@@ -4,6 +4,10 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-11] feat: блок последних обновлений на главной
+- На главной странице под блоком `Свежие проекты` добавлен статический блок `Последние обновления` с заголовком внутри карточки, датой `11 марта 2026` и ручным списком продуктовых изменений.
+- Обновлён feature-тест `HomePageTest`, а также документация в `README.md` и `docs/server.md`.
+
 ## [2026-03-10] feat: MCP сервер для проектов, уроков и прогонов
 - Подключён Laravel MCP сервер `Video2Book` с HTTP endpoint `/mcp/video2book/{access_token}` и авторизацией по `users.access_token` через middleware `AuthenticateMcpUrlToken`.
 - Добавлены MCP tools для папок, проектов, уроков, прогонов и очереди задач; MCP-слой переиспользует существующие actions, queries и services без изменения legacy API.
