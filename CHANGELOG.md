@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-18] docs: инструкция для Electron + Vue клиента по точному повторению текущего UI
+- Добавлен документ `docs/client.md` с детальной спецификацией урезанного desktop-клиента на Vue.
+- В документ вынесены готовые copy-paste фрагменты для shell, header, breadcrumbs, страницы проектов, страницы проекта, theme toggle, dropdown сортировки и всех нужных SVG-иконок.
+- В инструкцию добавлены все 3 modal-варианта добавления уроков на странице проекта: YouTube-урок, урок из аудио и список уроков.
+- Текст инструкции сделан автономным для переноса в отдельный репозиторий клиента, без привязки к путям и структуре текущего серверного проекта.
+- Зафиксированы обязательные ограничения по интерфейсу: только 2 view, без top-menu, без drag and drop, без действий редактирования/удаления и без страницы прогона.
+
 ## [2026-03-18] refactor: сузили legacy API до read-only навигации и загрузки аудио
 - В `routes/api.php` оставлены только три endpoint'а: `GET /api/folders`, `GET /api/projects/{project}/lessons` и `POST /api/projects/{project}/lessons`.
 - Для HTTP API добавлен bearer-token middleware `AuthenticateApiAccessToken`, который использует тот же `users.access_token`, что и web invite/MCP flow.

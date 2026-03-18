@@ -1,0 +1,533 @@
+openapi: 3.0.3
+info:
+  title: Video2Book Client API
+  version: 1.0.0
+  description: >
+    Узкий HTTP API для внешнего клиента Video2Book. API поддерживает только
+    read-only навигацию по папкам и проектам, получение уроков проекта и
+    добавление урока через загрузку аудиофайла.
+servers:
+  - url: /
+    description: Current application host
+tags:
+  - name: Folders
+    description: Навигация по папкам и проектам
+  - name: Lessons
+    description: Получение уроков проекта и загрузка нового урока через аудио
+security:
+  - bearerAuth: []
+paths:
+  /api/folders:
+    get:
+      tags:
+        - Folders
+      summary: Получить список доступных папок с вложенными проектами
+      operationId: listFolders
+      responses:
+        '200':
+          description: Список папок и проектов, доступных авторизованному пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FoldersResponse'
+              examples:
+                default:
+                  summary: Пример дерева папок и проектов
+                  value:
+                    data:
+                      - id: 12
+                        name: Курсы
+                        hidden: false
+                        projects_count: 2
+                        projects:
+                          - id: 101
+                            folder_id: 12
+                            name: История кино
+                            lessons_count: 8
+                            duration_seconds: 14400
+                            duration_label: 4ч 0м
+                            default_pipeline_version_id: 7
+                            referer: https://example.com/course
+                            updated_at: '2026-03-18T09:15:00+00:00'
+                          - id: 102
+                            folder_id: 12
+                            name: Теория монтажа
+                            lessons_count: 3
+                            duration_seconds: null
+                            duration_label: null
+                            default_pipeline_version_id: null
+                            referer: null
+                            updated_at: '2026-03-17T20:40:00+00:00'
+        '401':
+          description: Отсутствует или неверен bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+              example:
+                message: Unauthorized.
+  /api/projects/{project}/lessons:
+    get:
+      tags:
+        - Lessons
+      summary: Получить список уроков проекта
+      operationId: listProjectLessons
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      responses:
+        '200':
+          description: Проект и его уроки
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectLessonsResponse'
+              examples:
+                default:
+                  summary: Пример списка уроков проекта
+                  value:
+                    data:
+                      project:
+                        id: 101
+                        folder_id: 12
+                        name: История кино
+                        lessons_count: 2
+                        duration_seconds: 5400
+                        duration_label: 1ч 30м
+                        default_pipeline_version_id: 7
+                        referer: https://example.com/course
+                        updated_at: '2026-03-18T09:15:00+00:00'
+                      lessons:
+                        - id: 501
+                          project_id: 101
+                          name: Введение
+                          source_filename: lessons/501.mp3
+                          audio_duration_seconds: 1800
+                          audio_duration_label: 30м
+                          download_status: loaded
+                          runs:
+                            - id: 9001
+                              lesson_id: 501
+                              status: done
+                              pipeline_version_id: 7
+                              pipeline_title: Базовый шаблон
+                              pipeline_version: 3
+                              pipeline_label: Базовый шаблон • v3
+                              steps_count: 3
+                              done_steps_count: 3
+                              created_at: '2026-03-18T08:00:00+00:00'
+                        - id: 502
+                          project_id: 101
+                          name: Источники влияния
+                          source_filename: null
+                          audio_duration_seconds: null
+                          audio_duration_label: null
+                          download_status: running
+                          runs:
+                            - id: 9002
+                              lesson_id: 502
+                              status: queued
+                              pipeline_version_id: 7
+                              pipeline_title: Базовый шаблон
+                              pipeline_version: 3
+                              pipeline_label: Базовый шаблон • v3
+                              steps_count: 3
+                              done_steps_count: 0
+                              created_at: '2026-03-18T09:10:00+00:00'
+        '401':
+          description: Отсутствует или неверен bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Проект не существует или недоступен текущему пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+              example:
+                message: Not Found.
+    post:
+      tags:
+        - Lessons
+      summary: Добавить урок в проект через загрузку аудиофайла
+      operationId: createProjectLessonFromAudio
+      parameters:
+        - $ref: '#/components/parameters/ProjectId'
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/StoreProjectLessonRequest'
+            encoding:
+              file:
+                contentType: audio/mpeg, audio/mp3, audio/wav, audio/x-wav, audio/mp4, audio/x-m4a, audio/aac, audio/ogg, audio/webm, audio/flac
+      responses:
+        '201':
+          description: Урок создан, нормализация аудио поставлена в очередь
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ProjectLessonCreateResponse'
+              examples:
+                default:
+                  summary: Пример успешного создания урока
+                  value:
+                    data:
+                      project:
+                        id: 101
+                        folder_id: 12
+                        name: История кино
+                        lessons_count: 9
+                        duration_seconds: 14400
+                        duration_label: 4ч 0м
+                        default_pipeline_version_id: 7
+                        referer: https://example.com/course
+                        updated_at: '2026-03-18T09:25:00+00:00'
+                      lesson:
+                        id: 503
+                        project_id: 101
+                        name: Новая лекция
+                        source_filename: null
+                        audio_duration_seconds: null
+                        audio_duration_label: null
+                        download_status: running
+                        runs:
+                          - id: 9003
+                            lesson_id: 503
+                            status: queued
+                            pipeline_version_id: 7
+                            pipeline_title: Базовый шаблон
+                            pipeline_version: 3
+                            pipeline_label: Базовый шаблон • v3
+                            steps_count: 3
+                            done_steps_count: 0
+                            created_at: '2026-03-18T09:25:00+00:00'
+        '401':
+          description: Отсутствует или неверен bearer token
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/UnauthorizedError'
+        '404':
+          description: Проект не существует или недоступен текущему пользователю
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/NotFoundError'
+              example:
+                message: Not Found.
+        '422':
+          description: Ошибка валидации запроса
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ValidationError'
+              examples:
+                missingDefaultPipeline:
+                  summary: В проекте не задан шаблон по умолчанию и не передан pipeline_version_id
+                  value:
+                    message: The given data was invalid.
+                    errors:
+                      pipeline_version_id:
+                        - Для проекта не задана версия шаблона по умолчанию.
+                invalidMimeType:
+                  summary: Загружен неподдерживаемый тип файла
+                  value:
+                    message: The given data was invalid.
+                    errors:
+                      file:
+                        - Поле аудиофайл должно быть файлом одного из типов: audio/mpeg, audio/mp3, audio/wav, audio/x-wav, audio/mp4, audio/x-m4a, audio/aac, audio/ogg, audio/webm, audio/flac.
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: access_token
+      description: Значение поля `users.access_token`
+  parameters:
+    ProjectId:
+      name: project
+      in: path
+      required: true
+      description: Числовой идентификатор проекта
+      schema:
+        type: integer
+        minimum: 1
+  schemas:
+    FoldersResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/FolderWithProjects'
+    FolderWithProjects:
+      allOf:
+        - $ref: '#/components/schemas/Folder'
+        - type: object
+          required:
+            - projects
+          properties:
+            projects:
+              type: array
+              items:
+                $ref: '#/components/schemas/Project'
+    Folder:
+      type: object
+      required:
+        - id
+        - name
+        - hidden
+        - projects_count
+      properties:
+        id:
+          type: integer
+          example: 12
+        name:
+          type: string
+          example: Курсы
+        hidden:
+          type: boolean
+          example: false
+        projects_count:
+          type: integer
+          example: 2
+    Project:
+      type: object
+      required:
+        - id
+        - folder_id
+        - name
+        - lessons_count
+        - duration_seconds
+        - duration_label
+        - default_pipeline_version_id
+        - referer
+        - updated_at
+      properties:
+        id:
+          type: integer
+          example: 101
+        folder_id:
+          type: integer
+          example: 12
+        name:
+          type: string
+          example: История кино
+        lessons_count:
+          type: integer
+          example: 8
+        duration_seconds:
+          type: integer
+          nullable: true
+          example: 14400
+        duration_label:
+          type: string
+          nullable: true
+          example: 4ч 0м
+        default_pipeline_version_id:
+          type: integer
+          nullable: true
+          example: 7
+        referer:
+          type: string
+          nullable: true
+          example: https://example.com/course
+        updated_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-03-18T09:15:00+00:00'
+    ProjectLessonsResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - project
+            - lessons
+          properties:
+            project:
+              $ref: '#/components/schemas/Project'
+            lessons:
+              type: array
+              items:
+                $ref: '#/components/schemas/Lesson'
+    ProjectLessonCreateResponse:
+      type: object
+      required:
+        - data
+      properties:
+        data:
+          type: object
+          required:
+            - project
+            - lesson
+          properties:
+            project:
+              $ref: '#/components/schemas/Project'
+            lesson:
+              $ref: '#/components/schemas/Lesson'
+    Lesson:
+      type: object
+      required:
+        - id
+        - project_id
+        - name
+        - source_filename
+        - audio_duration_seconds
+        - audio_duration_label
+        - download_status
+        - runs
+      properties:
+        id:
+          type: integer
+          example: 503
+        project_id:
+          type: integer
+          example: 101
+        name:
+          type: string
+          example: Новая лекция
+        source_filename:
+          type: string
+          nullable: true
+          example: lessons/503.mp3
+        audio_duration_seconds:
+          type: integer
+          nullable: true
+          example: 1800
+        audio_duration_label:
+          type: string
+          nullable: true
+          example: 30м
+        download_status:
+          type: string
+          enum:
+            - queued
+            - running
+            - failed
+            - loaded
+          example: running
+        runs:
+          type: array
+          items:
+            $ref: '#/components/schemas/PipelineRunSummary'
+    PipelineRunSummary:
+      type: object
+      required:
+        - id
+        - lesson_id
+        - status
+        - pipeline_version_id
+        - pipeline_title
+        - pipeline_version
+        - pipeline_label
+        - steps_count
+        - done_steps_count
+        - created_at
+      properties:
+        id:
+          type: integer
+          example: 9003
+        lesson_id:
+          type: integer
+          example: 503
+        status:
+          type: string
+          enum:
+            - queued
+            - running
+            - paused
+            - failed
+            - done
+          example: queued
+        pipeline_version_id:
+          type: integer
+          nullable: true
+          example: 7
+        pipeline_title:
+          type: string
+          nullable: true
+          example: Базовый шаблон
+        pipeline_version:
+          type: integer
+          nullable: true
+          example: 3
+        pipeline_label:
+          type: string
+          nullable: true
+          example: Базовый шаблон • v3
+        steps_count:
+          type: integer
+          example: 3
+        done_steps_count:
+          type: integer
+          example: 0
+        created_at:
+          type: string
+          format: date-time
+          nullable: true
+          example: '2026-03-18T09:25:00+00:00'
+    StoreProjectLessonRequest:
+      type: object
+      required:
+        - name
+        - file
+      properties:
+        name:
+          type: string
+          maxLength: 255
+          description: Название нового урока
+          example: Новая лекция
+        pipeline_version_id:
+          type: integer
+          nullable: true
+          description: >
+            Идентификатор версии шаблона. Если поле не передано, API использует
+            `projects.default_pipeline_version_id`.
+          example: 7
+        file:
+          type: string
+          format: binary
+          description: >
+            Аудиофайл размером до 500 MB. Допустимые MIME-типы: audio/mpeg,
+            audio/mp3, audio/wav, audio/x-wav, audio/mp4, audio/x-m4a,
+            audio/aac, audio/ogg, audio/webm, audio/flac.
+    UnauthorizedError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Unauthorized.
+    NotFoundError:
+      type: object
+      required:
+        - message
+      properties:
+        message:
+          type: string
+          example: Not Found.
+    ValidationError:
+      type: object
+      required:
+        - message
+        - errors
+      properties:
+        message:
+          type: string
+          example: The given data was invalid.
+        errors:
+          type: object
+          additionalProperties:
+            type: array
+            items:
+              type: string
