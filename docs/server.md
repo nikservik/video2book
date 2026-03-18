@@ -1,5 +1,13 @@
 # Переезд на серверную работу 
 
+## HTTP API
++ Legacy REST API сужен до трёх endpoint'ов для внешнего клиента.
++ `GET /api/folders` возвращает только доступные пользователю папки с вложенными проектами в read-only формате.
++ `GET /api/projects/{project}/lessons` возвращает уроки проекта только если проект видим через правила папки (`folders.hidden` / `visible_for`).
++ `POST /api/projects/{project}/lessons` создаёт урок по загруженному аудиофайлу; если `pipeline_version_id` не передан, используется `projects.default_pipeline_version_id`.
++ Авторизация в HTTP API выполняется через `Authorization: Bearer {users.access_token}` в middleware `AuthenticateApiAccessToken`.
++ Старые REST endpoint'ы для проектов, тегов, пайплайнов, прогонов и YouTube-download больше не подключены в `routes/api.php`.
+
 ## Проекты 
 + Добавлены папки проектов (`folders`) и связь `projects.folder_id`
 + Миграция создаёт первую папку `Проекты` и переносит в неё существующие проекты
@@ -132,6 +140,7 @@
 + Invite endpoint `/invite/{token}`: выставляет постоянный cookie и редиректит на главную
 + Проверка cookie-токена выполняется отдельным middleware; при ошибке показывается страница `Доступ закрыт`
 + `AuthenticateTeamAccessToken` подключён к `web` middleware group, поэтому проверка токена работает и для `livewire.update` запросов
++ Для узкого HTTP API используется отдельный bearer-token middleware `AuthenticateApiAccessToken`, который авторизует по тому же `users.access_token`
 + `team@local` используется как изначальный superadmin (`access_level=2`)
 + Консольные команды для Forge:
   + `auth:generate-invite` — создаёт/обновляет superadmin `team@local` и ротирует токен

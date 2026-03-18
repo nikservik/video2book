@@ -16,6 +16,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->append(\Illuminate\Http\Middleware\HandleCors::class);
         $middleware->web(append: \App\Http\Middleware\AuthenticateTeamAccessToken::class);
+        $middleware->alias([
+            'api.access-token' => \App\Http\Middleware\AuthenticateApiAccessToken::class,
+        ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->context(function (): array {

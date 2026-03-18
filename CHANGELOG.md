@@ -4,6 +4,13 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-18] refactor: сузили legacy API до read-only навигации и загрузки аудио
+- В `routes/api.php` оставлены только три endpoint'а: `GET /api/folders`, `GET /api/projects/{project}/lessons` и `POST /api/projects/{project}/lessons`.
+- Для HTTP API добавлен bearer-token middleware `AuthenticateApiAccessToken`, который использует тот же `users.access_token`, что и web invite/MCP flow.
+- Создание урока через API переведено на существующий action `CreateProjectLessonFromAudioAction`: endpoint принимает multipart-аудио, а `pipeline_version_id` можно опустить в пользу `projects.default_pipeline_version_id`.
+- Видимость папок и проектов в API теперь уважает `folders.hidden` и `visible_for`; старые legacy endpoint'ы проектов, уроков, тегов, пайплайнов и прогонов удалены из публикуемого API-контракта.
+- Добавлены новые feature-тесты на bearer-auth, дерево папок/проектов, список уроков проекта и загрузку аудио; старые API-контроллеры и старые API-тесты удалены из репозитория, `README.md` и `docs/server.md` обновлены под новый контракт.
+
 ## [2026-03-11] feat: блок последних обновлений на главной
 - На главной странице под блоком `Свежие проекты` добавлен статический блок `Последние обновления` с заголовком внутри карточки, датой `11 марта 2026` и ручным списком продуктовых изменений.
 - Обновлён feature-тест `HomePageTest`, а также документация в `README.md` и `docs/server.md`.

@@ -32,38 +32,6 @@ class LessonDownloadTest extends TestCase
         parent::tearDown();
     }
 
-    public function test_it_dispatches_download_job_for_lesson(): void
-    {
-        Storage::fake('local');
-        Queue::fake();
-
-        [$pipeline, $version] = $this->createPipelineWithSteps();
-        $project = Project::query()->create(['name' => 'Course', 'tags' => 'demo']);
-        $tag = ProjectTag::query()->create(['slug' => 'default', 'description' => null]);
-
-        $lesson = Lesson::query()->create([
-            'project_id' => $project->id,
-            'name' => 'Lesson download',
-            'tag' => $tag->slug,
-            'settings' => ['quality' => 'high'],
-        ]);
-
-        // создаём стартовый прогон, чтобы убедиться что dispatchQueuedRuns сможет его обработать
-        app(PipelineRunService::class)->createRun($lesson, $version, dispatchJob: false);
-
-        $response = $this->postJson("/api/lessons/{$lesson->id}/download", [
-            'url' => 'https://youtube.com/watch?v=demo',
-        ]);
-
-        $response->assertStatus(202)
-            ->assertJsonPath('data.settings.downloading', true)
-            ->assertJsonPath('data.settings.download_status', 'queued');
-
-        Queue::assertPushedOn(DownloadLessonAudioJob::QUEUE, DownloadLessonAudioJob::class, function (DownloadLessonAudioJob $job) use ($lesson) {
-            return $job->lessonId === $lesson->id;
-        });
-    }
-
     public function test_download_job_marks_lesson_complete_and_dispatches_pipeline(): void
     {
         Storage::fake('local');

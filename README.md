@@ -106,7 +106,7 @@ php artisan auth:show-invite
 
 - В проекте включён MCP endpoint `/mcp/video2book/{access_token}`.
 - Для MCP используется тот же `users.access_token`, что и в invite/web-auth flow; токен передаётся прямо в URL.
-- Через MCP доступны папки, проекты, уроки, прогоны, очередь и экспорты результатов без отдельного API-слоя.
+- Через MCP доступны папки, проекты, уроки, прогоны, очередь и экспорты результатов; HTTP API при этом намеренно оставлен узким и покрывает только внешнюю навигацию по папкам/проектам и загрузку урока через аудио.
 - Для экспорта проекта через MCP доступен режим `single_file`: он объединяет результаты всех подходящих уроков проекта в один Markdown/PDF/DOCX и полезен для сквозного поиска по теме.
 - При подключении агент получает русскоязычные server instructions и prompt `knowledge-base-search-guide` для подробной инструкции по поиску по внутренней базе знаний.
 - Для ручной проверки сервера можно открыть инспектор:
@@ -119,13 +119,13 @@ php artisan mcp:inspector /mcp/video2book/{access_token}
 
 ## Архитектура репозитория
 
-- `app/Http/Controllers` — API-контроллеры.
+- `app/Http/Controllers` — legacy reference controllers и текущий узкий API в `Api/`.
 - `app/Jobs` — фоновые задания.
 - `app/Models` — Eloquent-модели.
 - `app/Services/Lesson` — загрузка/подготовка медиа.
 - `app/Services/Pipeline` — запуск шагов, статусы, экспорт.
 - `app/Services/Llm` — интеграция с Laravel AI SDK, usage/cost и лимиты.
-- `routes/api.php` — REST API.
+- `routes/api.php` — узкий внешний API для папок/проектов и загрузки урока через аудио.
 - `routes/web.php` — веб-маршруты для серверного UI.
 - `resources/views` — Blade-шаблоны.
 - `tests/Feature`, `tests/Unit` — покрытие API/сервисов.
@@ -139,20 +139,14 @@ php artisan mcp:inspector /mcp/video2book/{access_token}
 - `PipelineRun` / `PipelineRunStep` — фактический прогон и шаги выполнения.
 - `ProjectTag` — теги проектов/уроков.
 
-## API (основное)
+## API (узкий внешний контракт)
 
-- `GET/POST/PUT /api/projects`
-- `POST /api/projects/youtube`
-- `GET/POST/PUT /api/lessons`
-- `POST /api/lessons/{lesson}/audio`
-- `POST /api/lessons/{lesson}/download`
-- `GET/POST/PUT /api/pipelines`
-- `GET /api/pipeline-versions/{id}/steps`
-- `GET/POST /api/pipeline-runs`
-- `POST /api/pipeline-runs/{run}/restart`
-- `GET /api/pipeline-runs/{run}/steps/{step}/export/pdf`
-- `GET /api/pipeline-runs/{run}/steps/{step}/export/md`
-- `GET /api/pipeline-runs/{run}/steps/{step}/export/docx`
+- `GET /api/folders` — список доступных папок с вложенными списками проектов в read-only режиме.
+- `GET /api/projects/{project}/lessons` — список уроков в доступном проекте.
+- `POST /api/projects/{project}/lessons` — добавление урока через multipart-загрузку аудиофайла (`name`, `file`, опционально `pipeline_version_id`).
+- Авторизация для всех API endpoint'ов: `Authorization: Bearer {users.access_token}`.
+- Если `pipeline_version_id` не передан, API использует `projects.default_pipeline_version_id`; если версия по умолчанию не задана или недоступна, возвращается `422`.
+- Старые endpoint'ы legacy API (`projects`, `lessons`, `pipelines`, `pipeline-runs`, `project-tags`) больше не публикуются в `routes/api.php`.
 
 ## Livewire-переход
 
@@ -162,7 +156,7 @@ php artisan mcp:inspector /mcp/video2book/{access_token}
 
 1. Строить новые пользовательские сценарии как Livewire-компоненты.
 2. Сложные операции оставлять в сервисах и очередях.
-3. API сохранять как стабильный контракт для внутренних и внешних клиентов.
+3. HTTP API держать узким и использовать только там, где нужен внешний клиент; основной продуктовый flow развивать через Livewire и MCP.
 
 Текущий статус UI:
 - Базовый серверный layout (`resources/views/layouts/app.blade.php`) уже подключён для web-страниц и содержит верхнюю навигацию, mobile-меню и контентный контейнер.
