@@ -34,6 +34,7 @@ class ProjectLessonsController extends Controller
         return response()->json([
             'data' => [
                 'project' => $this->mcpPresenter->project($project),
+                'pipeline_versions' => $this->pipelineVersionOptions($request),
                 'lessons' => $project->lessons
                     ->map(fn ($lesson): array => $this->mcpPresenter->lesson($lesson))
                     ->values()
@@ -94,12 +95,20 @@ class ProjectLessonsController extends Controller
      */
     private function availablePipelineVersionIds(Request $request): array
     {
-        $viewer = $request->user();
-
-        return collect($this->getPipelineVersionOptionsAction->handle($viewer instanceof User ? $viewer : null))
+        return collect($this->pipelineVersionOptions($request))
             ->pluck('id')
             ->map(fn (mixed $id): int => (int) $id)
             ->all();
+    }
+
+    /**
+     * @return array<int, array{id:int,label:string,description:string|null}>
+     */
+    private function pipelineVersionOptions(Request $request): array
+    {
+        $viewer = $request->user();
+
+        return $this->getPipelineVersionOptionsAction->handle($viewer instanceof User ? $viewer : null);
     }
 
     private function visibleProject(Request $request, Project $project): Project

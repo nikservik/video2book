@@ -2,6 +2,7 @@
 
 namespace Tests\Feature;
 
+use App\Actions\Pipeline\GetPipelineVersionOptionsAction;
 use App\Jobs\NormalizeUploadedLessonAudioJob;
 use App\Mcp\Support\McpPresenter;
 use App\Models\Folder;
@@ -43,12 +44,14 @@ class ProjectLessonsApiTest extends TestCase
             ->assertExactJson([
                 'data' => [
                     'project' => app(McpPresenter::class)->project($expectedProject),
+                    'pipeline_versions' => app(GetPipelineVersionOptionsAction::class)->handle($viewer),
                     'lessons' => $expectedProject->lessons
                         ->map(fn (Lesson $lesson): array => app(McpPresenter::class)->lesson($lesson))
                         ->values()
                         ->all(),
                 ],
-            ]);
+            ])
+            ->assertJsonPath('data.lessons.0.source_url', 'https://www.youtube.com/watch?v=abc123');
     }
 
     public function test_project_lessons_endpoint_returns_not_found_for_hidden_project(): void
@@ -96,6 +99,7 @@ class ProjectLessonsApiTest extends TestCase
             ->assertJsonPath('data.project.id', $project->id)
             ->assertJsonPath('data.project.lessons_count', 1)
             ->assertJsonPath('data.lesson.name', 'Audio Lesson')
+            ->assertJsonPath('data.lesson.source_url', null)
             ->assertJsonPath('data.lesson.download_status', 'running')
             ->assertJsonPath('data.lesson.runs.0.pipeline_version_id', $pipelineVersion->id);
 
@@ -172,7 +176,9 @@ class ProjectLessonsApiTest extends TestCase
             'name' => 'Lesson',
             'tag' => 'default',
             'source_filename' => null,
-            'settings' => [],
+            'settings' => [
+                'url' => 'https://www.youtube.com/watch?v=abc123',
+            ],
         ]);
         [, $pipelineVersion, $textStepVersion] = $this->createPipelineVersionWithTextStep();
 

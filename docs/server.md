@@ -3,8 +3,9 @@
 ## HTTP API
 + Legacy REST API сужен до трёх endpoint'ов для внешнего клиента.
 + `GET /api/folders` возвращает только доступные пользователю папки с вложенными проектами в read-only формате.
-+ `GET /api/projects/{project}/lessons` возвращает уроки проекта только если проект видим через правила папки (`folders.hidden` / `visible_for`).
++ `GET /api/projects/{project}/lessons` возвращает уроки проекта только если проект видим через правила папки (`folders.hidden` / `visible_for`); в payload также входят `pipeline_versions[]` (`id`, `label`, `description`) для выбора шаблона в клиентском UI.
 + `POST /api/projects/{project}/lessons` создаёт урок по загруженному аудиофайлу; если `pipeline_version_id` не передан, используется `projects.default_pipeline_version_id`.
++ В lesson payload добавлено поле `source_url`: для YouTube-урока это исходный URL, для урока из локального файла — `null`.
 + Авторизация в HTTP API выполняется через `Authorization: Bearer {users.access_token}` в middleware `AuthenticateApiAccessToken`.
 + Старые REST endpoint'ы для проектов, тегов, пайплайнов, прогонов и YouTube-download больше не подключены в `routes/api.php`.
 

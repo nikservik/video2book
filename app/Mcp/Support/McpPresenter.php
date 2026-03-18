@@ -66,6 +66,7 @@ class McpPresenter
             'project_id' => (int) $lesson->project_id,
             'name' => $lesson->name,
             'source_filename' => $lesson->source_filename,
+            'source_url' => $this->lessonSourceUrl($lesson),
             'audio_duration_seconds' => is_numeric($durationSeconds) ? (int) $durationSeconds : null,
             'audio_duration_label' => $this->audioDurationLabelFormatter->format($durationSeconds),
             'download_status' => $this->lessonDownloadStatus($lesson),
@@ -173,5 +174,18 @@ class McpPresenter
         }
 
         return 'queued';
+    }
+
+    private function lessonSourceUrl(Lesson $lesson): ?string
+    {
+        $sourceUrl = data_get($lesson->settings, 'url');
+
+        if (! is_string($sourceUrl)) {
+            return null;
+        }
+
+        $sourceUrl = trim($sourceUrl);
+
+        return $sourceUrl !== '' ? $sourceUrl : null;
     }
 }

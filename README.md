@@ -142,7 +142,7 @@ php artisan mcp:inspector /mcp/video2book/{access_token}
 ## API (узкий внешний контракт)
 
 - `GET /api/folders` — список доступных папок с вложенными списками проектов в read-only режиме.
-- `GET /api/projects/{project}/lessons` — список уроков в доступном проекте.
+- `GET /api/projects/{project}/lessons` — список уроков в доступном проекте вместе с `pipeline_versions[]` для dropdown выбора шаблона; у каждого урока есть `source_url` (`YouTube URL` или `null` для локального аудио).
 - `POST /api/projects/{project}/lessons` — добавление урока через multipart-загрузку аудиофайла (`name`, `file`, опционально `pipeline_version_id`).
 - Авторизация для всех API endpoint'ов: `Authorization: Bearer {users.access_token}`.
 - Если `pipeline_version_id` не передан, API использует `projects.default_pipeline_version_id`; если версия по умолчанию не задана или недоступна, возвращается `422`.

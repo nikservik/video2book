@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-18] feat: расширен узкий клиентский API данными о шаблонах и source URL
+- `GET /api/projects/{project}/lessons` теперь возвращает `data.pipeline_versions[]` с полями `id`, `label`, `description`, чтобы клиент мог строить dropdown выбора `pipeline_version_id` без отдельного запроса.
+- В lesson payload добавлено поле `source_url`: для уроков, созданных из YouTube, оно содержит исходный URL, а для уроков, созданных загрузкой локального аудио, возвращается `null`.
+- Обновлены feature-тесты API и OpenAPI-спецификация `docs/client-api.yaml`, а также синхронизированы `README.md` и `docs/server.md`.
+
 ## [2026-03-18] docs: инструкция для Electron + Vue клиента по точному повторению текущего UI
 - Добавлен документ `docs/client.md` с детальной спецификацией урезанного desktop-клиента на Vue.
 - В документ вынесены готовые copy-paste фрагменты для shell, header, breadcrumbs, страницы проектов, страницы проекта, theme toggle, dropdown сортировки и всех нужных SVG-иконок.

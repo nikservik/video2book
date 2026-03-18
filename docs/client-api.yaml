@@ -96,11 +96,16 @@ paths:
                         default_pipeline_version_id: 7
                         referer: https://example.com/course
                         updated_at: '2026-03-18T09:15:00+00:00'
+                      pipeline_versions:
+                        - id: 7
+                          label: Базовый шаблон • v3
+                          description: Базовая обработка лекции
                       lessons:
                         - id: 501
                           project_id: 101
                           name: Введение
                           source_filename: lessons/501.mp3
+                          source_url: https://www.youtube.com/watch?v=abc123
                           audio_duration_seconds: 1800
                           audio_duration_label: 30м
                           download_status: loaded
@@ -119,6 +124,7 @@ paths:
                           project_id: 101
                           name: Источники влияния
                           source_filename: null
+                          source_url: null
                           audio_duration_seconds: null
                           audio_duration_label: null
                           download_status: running
@@ -190,6 +196,7 @@ paths:
                         project_id: 101
                         name: Новая лекция
                         source_filename: null
+                        source_url: null
                         audio_duration_seconds: null
                         audio_duration_label: null
                         download_status: running
@@ -351,10 +358,15 @@ components:
           type: object
           required:
             - project
+            - pipeline_versions
             - lessons
           properties:
             project:
               $ref: '#/components/schemas/Project'
+            pipeline_versions:
+              type: array
+              items:
+                $ref: '#/components/schemas/PipelineVersionOption'
             lessons:
               type: array
               items:
@@ -374,6 +386,23 @@ components:
               $ref: '#/components/schemas/Project'
             lesson:
               $ref: '#/components/schemas/Lesson'
+    PipelineVersionOption:
+      type: object
+      required:
+        - id
+        - label
+        - description
+      properties:
+        id:
+          type: integer
+          example: 7
+        label:
+          type: string
+          example: Базовый шаблон • v3
+        description:
+          type: string
+          nullable: true
+          example: Базовая обработка лекции
     Lesson:
       type: object
       required:
@@ -381,6 +410,7 @@ components:
         - project_id
         - name
         - source_filename
+        - source_url
         - audio_duration_seconds
         - audio_duration_label
         - download_status
@@ -399,6 +429,10 @@ components:
           type: string
           nullable: true
           example: lessons/503.mp3
+        source_url:
+          type: string
+          nullable: true
+          example: https://www.youtube.com/watch?v=abc123
         audio_duration_seconds:
           type: integer
           nullable: true
