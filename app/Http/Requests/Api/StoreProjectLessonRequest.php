@@ -33,6 +33,7 @@ class StoreProjectLessonRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255'],
+            'source_url' => ['nullable', 'url', 'max:2048'],
             'pipeline_version_id' => ['nullable', 'integer', Rule::in($this->availablePipelineVersionIds())],
             'file' => [
                 'required',
@@ -50,6 +51,7 @@ class StoreProjectLessonRequest extends FormRequest
     {
         return [
             'name' => 'название урока',
+            'source_url' => 'ссылка на исходник',
             'pipeline_version_id' => 'версия шаблона',
             'file' => 'аудиофайл',
         ];
@@ -58,6 +60,19 @@ class StoreProjectLessonRequest extends FormRequest
     public function lessonName(): string
     {
         return trim((string) $this->validated('name'));
+    }
+
+    public function sourceUrl(): ?string
+    {
+        $sourceUrl = $this->validated('source_url');
+
+        if (! is_string($sourceUrl)) {
+            return null;
+        }
+
+        $sourceUrl = trim($sourceUrl);
+
+        return $sourceUrl !== '' ? $sourceUrl : null;
     }
 
     public function requestedPipelineVersionId(): ?int

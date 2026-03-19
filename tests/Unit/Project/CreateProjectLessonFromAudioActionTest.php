@@ -41,6 +41,7 @@ class CreateProjectLessonFromAudioActionTest extends TestCase
             lessonName: 'Урок из аудио',
             audioFile: $audioFile,
             pipelineVersionId: $pipelineVersion->id,
+            sourceUrl: 'https://www.youtube.com/watch?v=audio-source',
         );
 
         $this->assertDatabaseHas('lessons', [
@@ -57,6 +58,7 @@ class CreateProjectLessonFromAudioActionTest extends TestCase
 
         $this->assertSame('queued', data_get($lesson->settings, 'download_status'));
         $this->assertTrue((bool) data_get($lesson->settings, 'downloading'));
+        $this->assertSame('https://www.youtube.com/watch?v=audio-source', data_get($lesson->settings, 'url'));
 
         Queue::assertPushedOn(NormalizeUploadedLessonAudioJob::QUEUE, NormalizeUploadedLessonAudioJob::class, function (NormalizeUploadedLessonAudioJob $job) use ($lesson): bool {
             return $job->lessonId === $lesson->id

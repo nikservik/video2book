@@ -196,7 +196,7 @@ paths:
                         project_id: 101
                         name: Новая лекция
                         source_filename: null
-                        source_url: null
+                        source_url: https://www.youtube.com/watch?v=uploaded-audio-source
                         audio_duration_seconds: null
                         audio_duration_label: null
                         download_status: running
@@ -246,6 +246,13 @@ paths:
                     errors:
                       file:
                         - Поле аудиофайл должно быть файлом одного из типов: audio/mpeg, audio/mp3, audio/wav, audio/x-wav, audio/mp4, audio/x-m4a, audio/aac, audio/ogg, audio/webm, audio/flac.
+                invalidSourceUrl:
+                  summary: Передан некорректный URL исходника
+                  value:
+                    message: The given data was invalid.
+                    errors:
+                      source_url:
+                        - Поле ссылка на исходник имеет неверный формат.
 components:
   securitySchemes:
     bearerAuth:
@@ -520,6 +527,15 @@ components:
           maxLength: 255
           description: Название нового урока
           example: Новая лекция
+        source_url:
+          type: string
+          nullable: true
+          format: uri
+          maxLength: 2048
+          description: >
+            Необязательная ссылка на исходник урока. Если передана, API
+            сохраняет её и возвращает в `lesson.source_url`.
+          example: https://www.youtube.com/watch?v=uploaded-audio-source
         pipeline_version_id:
           type: integer
           nullable: true

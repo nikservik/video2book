@@ -23,15 +23,22 @@ class CreateProjectLessonFromAudioAction
         string $lessonName,
         UploadedFile $audioFile,
         int $pipelineVersionId,
+        ?string $sourceUrl = null,
     ): Lesson {
         $pipelineVersion = PipelineVersion::query()->findOrFail($pipelineVersionId);
 
-        $lesson = DB::transaction(function () use ($project, $lessonName, $pipelineVersion): Lesson {
+        $lesson = DB::transaction(function () use ($project, $lessonName, $pipelineVersion, $sourceUrl): Lesson {
+            $settings = ['quality' => 'low'];
+
+            if ($sourceUrl !== null) {
+                $settings['url'] = trim($sourceUrl);
+            }
+
             $lesson = Lesson::query()->create([
                 'project_id' => $project->id,
                 'name' => trim($lessonName),
                 'tag' => LessonTagResolver::resolve(null),
-                'settings' => ['quality' => 'low'],
+                'settings' => $settings,
             ]);
 
             $this->pipelineRunService->createRun($lesson, $pipelineVersion, dispatchJob: false);

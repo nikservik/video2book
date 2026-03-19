@@ -53,6 +53,7 @@ class ProjectLessonsController extends Controller
             lessonName: $request->lessonName(),
             audioFile: $request->audioFile(),
             pipelineVersionId: $pipelineVersionId,
+            sourceUrl: $request->sourceUrl(),
         );
 
         $lesson->setRelation('pipelineRuns', $this->lessonRunsQuery->get($lesson));

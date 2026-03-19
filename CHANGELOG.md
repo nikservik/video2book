@@ -4,6 +4,11 @@ All notable changes to this project are documented here.
 
 The format is inspired by Keep a Changelog. Versions aim to follow SemVer.
 
+## [2026-03-19] feat: HTTP API загрузки аудио принимает source URL
+- `POST /api/projects/{project}/lessons` теперь принимает необязательный параметр `source_url` и сохраняет его в уроке, чтобы клиент мог передавать исходную ссылку вместе с загружаемым аудио.
+- Ответ создания урока и последующий список уроков продолжают отдавать это значение через `lesson.source_url`.
+- Обновлены feature/unit-тесты, OpenAPI-спецификация `docs/client-api.yaml`, а также документация в `README.md` и `docs/server.md`.
+
 ## [2026-03-18] feat: расширен узкий клиентский API данными о шаблонах и source URL
 - `GET /api/projects/{project}/lessons` теперь возвращает `data.pipeline_versions[]` с полями `id`, `label`, `description`, чтобы клиент мог строить dropdown выбора `pipeline_version_id` без отдельного запроса.
 - В lesson payload добавлено поле `source_url`: для уроков, созданных из YouTube, оно содержит исходный URL, а для уроков, созданных загрузкой локального аудио, возвращается `null`.

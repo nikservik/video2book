@@ -90,6 +90,7 @@ class ProjectLessonsApiTest extends TestCase
         $response = $this->withToken((string) $viewer->access_token)
             ->post("/api/projects/{$project->id}/lessons", [
                 'name' => 'Audio Lesson',
+                'source_url' => 'https://www.youtube.com/watch?v=uploaded-audio-source',
                 'file' => UploadedFile::fake()->create('lesson.wav', 512, 'audio/wav'),
             ], [
                 'Accept' => 'application/json',
@@ -99,13 +100,14 @@ class ProjectLessonsApiTest extends TestCase
             ->assertJsonPath('data.project.id', $project->id)
             ->assertJsonPath('data.project.lessons_count', 1)
             ->assertJsonPath('data.lesson.name', 'Audio Lesson')
-            ->assertJsonPath('data.lesson.source_url', null)
+            ->assertJsonPath('data.lesson.source_url', 'https://www.youtube.com/watch?v=uploaded-audio-source')
             ->assertJsonPath('data.lesson.download_status', 'running')
             ->assertJsonPath('data.lesson.runs.0.pipeline_version_id', $pipelineVersion->id);
 
         $lesson = Lesson::query()->firstWhere('name', 'Audio Lesson');
 
         $this->assertNotNull($lesson);
+        $this->assertSame('https://www.youtube.com/watch?v=uploaded-audio-source', data_get($lesson->settings, 'url'));
         $this->assertDatabaseHas('pipeline_runs', [
             'lesson_id' => $lesson->id,
             'pipeline_version_id' => $pipelineVersion->id,
@@ -115,6 +117,32 @@ class ProjectLessonsApiTest extends TestCase
             NormalizeUploadedLessonAudioJob::QUEUE,
             NormalizeUploadedLessonAudioJob::class
         );
+    }
+
+    public function test_store_validates_source_url_when_it_is_present(): void
+    {
+        Queue::fake();
+
+        $viewer = $this->makeUser();
+        $folder = $this->createFolder();
+        $pipelineVersion = $this->createPipelineVersionWithTextStep()[1];
+        $project = Project::query()->create([
+            'folder_id' => $folder->id,
+            'name' => 'Project',
+            'tags' => null,
+            'default_pipeline_version_id' => $pipelineVersion->id,
+        ]);
+
+        $this->withToken((string) $viewer->access_token)
+            ->post("/api/projects/{$project->id}/lessons", [
+                'name' => 'Audio Lesson',
+                'source_url' => 'not-a-valid-url',
+                'file' => UploadedFile::fake()->create('lesson.wav', 512, 'audio/wav'),
+            ], [
+                'Accept' => 'application/json',
+            ])
+            ->assertStatus(422)
+            ->assertJsonValidationErrors(['source_url']);
     }
 
     public function test_store_requires_pipeline_version_when_project_default_is_missing(): void
